@@ -1,0 +1,26 @@
+# Configuration for MLLM Fine-Tuning Pipeline
+
+# Base Model Identifier (Hugging Face)
+model_id: "Qwen/Qwen2-VL-7B-Instruct"
+
+# Dataset Type: "meme" (Image-Text) or "video" (Audio-Visual / Frame-based)
+dataset_type: "meme"
+
+# Directory where raw images/videos are stored
+data_dir: "./data"
+
+# Output directory for logs and LoRA adapter checkpoints
+output_dir: "./results"
+
+# Fine-Tuning Hyperparameters
+epochs: 3
+batch_size: 2
+lr: 2.0e-5
+
+# PEFT/LoRA Parameters
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+
+# Use 4-bit Quantization (QLoRA) to save GPU Memory (Recommended)
+use_quantization: true
