@@ -4,6 +4,14 @@ This document compiles the architectural flow, class structures, UML use cases, 
 
 ---
 
+## 🖼️ System Architecture & Module Flow
+
+Below is the module flow diagram representing inputs and inference engines:
+
+![Ad Moderation System Architecture](./ad_moderation_architecture_1786244145364.jpg)
+
+---
+
 ## 👥 SafeAd AI UML Use Case Diagram
 
 ![SafeAd AI Use Case Diagram](./safead_use_case_diagram_1786244555881.jpg)
