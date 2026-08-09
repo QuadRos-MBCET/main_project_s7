@@ -8,13 +8,13 @@ This document compiles the architectural flow, class structures, UML use cases, 
 
 Below is the module flow diagram representing inputs and inference engines:
 
-![Ad Moderation System Architecture](./ad_moderation_architecture_1786244145364.jpg)
+![Ad Moderation System Architecture](./architecture_diagram.jpg)
 
 ---
 
 ## 👥 SafeAd AI UML Use Case Diagram
 
-![SafeAd AI Use Case Diagram](./safead_use_case_diagram_1786244555881.jpg)
+![SafeAd AI Use Case Diagram](./use_case_diagram.jpg)
 
 ### Interactive Mermaid Use Case representation:
 
@@ -51,7 +51,7 @@ usecaseDiagram
 
 DFD Level 0 models the overall boundary of the system as a single process and its interactions with external entities:
 
-![SafeAd AI DFD Level 0 Context Diagram](./safead_dfd_level_0_1786245777157.jpg)
+![SafeAd AI DFD Level 0 Context Diagram](./dfd_level_0.jpg)
 
 ### Interactive Mermaid DFD Level 0 Flow:
 
@@ -79,7 +79,7 @@ graph LR
 
 DFD Level 1 breaks down the SafeAd AI System process block into sub-processes, data stores, and internal data routes:
 
-![SafeAd AI DFD Level 1 Process Diagram](./safead_dfd_level_1_1786245794530.jpg)
+![SafeAd AI DFD Level 1 Process Diagram](./dfd_level_1.jpg)
 
 ### Interactive Mermaid DFD Level 1 Flow:
 
