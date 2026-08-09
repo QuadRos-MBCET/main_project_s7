@@ -96,29 +96,15 @@ usecaseDiagram
 
 ## 🔄 Data Flow Diagram (DFD Level 0 - Context Diagram)
 
-DFD Level 0 models the overall boundary of the system as a single process and its interactions with external entities:
+DFD Level 0 represents the system boundary as a single process block (`SafeAd AI System`) interacting with external actors.
 
 ![SafeAd AI DFD Level 0 Context Diagram](./dfd_level_0.jpg)
 
-### Interactive Mermaid DFD Level 0 Flow:
-
-```mermaid
-graph LR
-    Advertiser["Advertiser (External Entity)"]
-    SocialUser["Social User (External Entity)"]
-    Admin["Platform Admin (External Entity)"]
-    
-    System("(1.0) SafeAd AI System")
-    
-    Advertiser -- "Submit Ad (Keyframes, OCR, Audio)" --> System
-    System -- "Moderation Status & Rationale" --> Advertiser
-    
-    SocialUser -- "View Ad Request" --> System
-    System -- "Filtered, Age-Appropriate Ads" --> SocialUser
-    
-    Admin -- "Upload Policy Rules" --> System
-    System -- "Chain-of-Thought Audit Logs" --> Admin
-```
+### 🎙️ How to Explain DFD Level 0 Easily:
+You can explain this Context Diagram to a non-technical audience in three simple steps:
+1.  **The Advertiser Input & Output**: The advertiser submits the raw ad content (videos, memes, or text) to the system, and gets back a clear moderation decision (approved or flagged with safety reasons).
+2.  **The Social User Filtering**: When a user requests to view an ad, the system checks their estimated age and automatically delivers only age-appropriate ads.
+3.  **The Admin Governance**: The platform administrator provides safety policy guidelines to feed the AI, and in return, receives detailed Chain-of-Thought logs to audit the system's decisions.
 
 ---
 
