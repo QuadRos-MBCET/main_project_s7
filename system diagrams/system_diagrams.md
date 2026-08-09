@@ -4,6 +4,53 @@ This document compiles the architectural flow, class structures, UML use cases, 
 
 ---
 
+## 🏛️ UML Class Diagram
+
+Below is the UML Class Diagram showing implementation details, attributes, methods, and relationships:
+
+![SafeAd AI UML Class Diagram](./class_diagram.jpg)
+
+### Interactive Mermaid Class representation:
+
+```mermaid
+classDiagram
+    direction TB
+    
+    class AdItemInput {
+        +String adID
+        +List~Image~ keyframes
+        +String textOCR
+        +String audioTranscript
+        +preprocess() void
+    }
+
+    class AgeEstimationEngine {
+        +CNNModel faceNet
+        +BERTModel textNLP
+        +estimateUserAge() AgeBracket
+        +verifyAccess() boolean
+    }
+
+    class FAISSVectorIndex {
+        +IndexFlatIP index
+        +searchExemplars() List~Case~
+    }
+
+    class AdModerationEngine {
+        +MLLM vlmModel
+        +List~Rule~ policyRules
+        +analyzeAd() Result
+        +generateCoTRationale() String
+    }
+
+    AdItemInput --> AdModerationEngine : feeds preprocessed inputs
+    AdItemInput --> AgeEstimationEngine : sends face & text features
+    AgeEstimationEngine --> AdModerationEngine : provides verified age brackets
+    FAISSVectorIndex --> AdModerationEngine : retrieves contextual exemplars
+```
+
+---
+
 ## 🖼️ System Architecture & Module Flow
 
 Below is the module flow diagram representing inputs and inference engines:
@@ -116,45 +163,4 @@ graph TD
     D1 -- "Ad Review Status" --> Advertiser
     D1 -- "Approved Age-Appropriate Ads" --> SocialUser
     D3 -- "Review Audit Logs" --> Admin
-```
-
----
-
-## 🏛️ UML Class Diagram
-
-```mermaid
-classDiagram
-    direction TB
-    
-    class AdItemInput {
-        +String adID
-        +List~Image~ keyframes
-        +String textOCR
-        +String audioTranscript
-        +preprocess() void
-    }
-
-    class AgeEstimationEngine {
-        +CNNModel faceNet
-        +BERTModel textNLP
-        +estimateUserAge() AgeBracket
-        +verifyAccess() boolean
-    }
-
-    class FAISSVectorIndex {
-        +IndexFlatIP index
-        +searchExemplars() List~Case~
-    }
-
-    class AdModerationEngine {
-        +MLLM vlmModel
-        +List~Rule~ policyRules
-        +analyzeAd() Result
-        +generateCoTRationale() String
-    }
-
-    AdItemInput --> AdModerationEngine : feeds preprocessed inputs
-    AdItemInput --> AgeEstimationEngine : sends face & text features
-    AgeEstimationEngine --> AdModerationEngine : provides verified age brackets
-    FAISSVectorIndex --> AdModerationEngine : retrieves contextual exemplars
 ```
