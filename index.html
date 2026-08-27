@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>SafeAd AI - Multimodal Trust & Safety Framework</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.css" />
+    <style>
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #fafafa;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border-left-color: #0095f6;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .loading-text {
+        font-size: 18px;
+        color: #262626;
+        font-weight: 600;
+      }
+      .loading-subtext {
+        font-size: 14px;
+        color: #8e8e8e;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Loading Instagram SafeAd AI Portal...</div>
+      <div class="loading-subtext">Compiling Python & WebAssembly modules in your browser (takes ~20 seconds)...</div>
+    </div>
+
+    <div id="root"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.js"></script>
+    <script>
+      async function fetchText(url) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to load ${url}: ${response.statusText}`);
+          }
+          return await response.text();
+        } catch (err) {
+          console.error(err);
+          return "";
+        }
+      }
+
+      async function startApp() {
+        // Fetch files relative to the current site path
+        const instagramAppCode = await fetchText("website/instagram_app.py");
+        const pipelineCode = await fetchText("website/pipeline.py");
+        const classifierCode = await fetchText("website/classifier.py");
+        const databaseCode = await fetchText("website/database.py");
+
+        if (!instagramAppCode) {
+          // If running locally via file:// scheme, fetch might fail due to CORS. In that case, show simple prompt
+          document.querySelector(".loading-text").innerText = "WebAssembly Loading Blocked";
+          document.querySelector(".loading-subtext").innerHTML = "To run this directly from local files, you need a local web server (e.g. <code>python -m http.server</code>). <br><br><b>Good News:</b> Once pushed, it will load perfectly when opened on your <b>GitHub Pages URL</b>!";
+          return;
+        }
+
+        // Clean up package references to match local Pyodide requirements
+        const fixedPipeline = pipelineCode
+          .replace("from website.database import", "from database import")
+          .replace("from safead_system.database import", "from database import");
+
+        const fixedInstagram = instagramAppCode
+          .replace("from website.database import", "from database import")
+          .replace("from safead_system.database import", "from database import")
+          .replace("from website.pipeline import", "from pipeline import")
+          .replace("from safead_system.pipeline import", "from pipeline import")
+          .replace("from website.classifier import", "from classifier import")
+          .replace("from safead_system.classifier import", "from classifier import");
+
+        const fixedClassifier = classifierCode
+          .replace("from website.database import", "from database import")
+          .replace("from safead_system.database import", "from database import");
+
+        const fixedDatabase = databaseCode
+          .replace("from website.database import", "from database import")
+          .replace("from safead_system.database import", "from database import");
+
+        // Mount stlite application
+        stlite.mount(
+          {
+            requirements: ["scikit-learn", "pandas", "numpy", "pillow"],
+            entrypoint: "instagram_app.py",
+            files: {
+              "instagram_app.py": fixedInstagram,
+              "pipeline.py": fixedPipeline,
+              "classifier.py": fixedClassifier,
+              "database.py": fixedDatabase
+            },
+            onBeforeMount: () => {
+              // Hide overlay once stlite starts running
+              document.getElementById("loading-overlay").style.display = "none";
+            }
+          },
+          document.getElementById("root")
+        );
+      }
+
+      startApp();
+    </script>
+  </body>
+</html>
