@@ -75,15 +75,18 @@ Make sure Python 3.10+ and standard tools are installed. In this environment, ru
 pip install streamlit opencv-python scikit-learn pandas numpy pillow
 ```
 
-### Running the Web Application
-Launch the Streamlit interactive dashboard from the workspace directory:
-```bash
-streamlit run safead_system/app.py
-```
-This launches a browser interface containing:
-*   **Advertiser Portal**: Test ad submission and view explanation metrics.
-*   **Admin Dashboard**: Manage pending manual overrides and customize security rules.
-*   **Social User Feed**: Test real-time age-aware delivery (filters ads for underage users, replacing them with GK reels).
+### Running the Web Applications
+
+We have provided two interfaces:
+1.  **Administrative Portal (`app.py`)**: Launches the back-end moderation manager, review queues, and general feed:
+    ```bash
+    streamlit run safead_system/app.py
+    ```
+2.  **Instagram Social Interface (`instagram_app.py`)**: Launches a user-friendly Instagram clone containing a Login portal, a Photo feed, a Reels feed, and a Personal Profile page:
+    ```bash
+    streamlit run safead_system/instagram_app.py
+    ```
+
 
 ### Running automated Tests
 To evaluate pipeline performance metrics (Accuracy, F1-Score, Confusion Matrix, and Ablation Study):

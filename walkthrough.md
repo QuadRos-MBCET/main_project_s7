@@ -14,7 +14,13 @@ We have built a fully functional end-to-end multimodal advertisement moderation 
     *   **Advertiser Portal**: Upload campaigns and view safety scores.
     *   **Admin Dashboard**: View review queues and override AI actions.
     *   **Social User Feed**: Simulates a reels feed that filters out age-restricted ads for users classified as a `Child`.
-6.  **[README.md](file:///c:/s7/main%20project/safead_system/README.md)**: Standard document detailing system layout, setup commands, and an ER diagram in Mermaid format.
+6.  **[instagram_app.py](file:///c:/s7/main%20project/safead_system/instagram_app.py)**: Streamlit user-facing Instagram Clone containing:
+    *   **Login & Verification screen**: Performs facial scans or search survey history tracking to estimate child/adult status.
+    *   **📸 Photo Feed**: Visual stream of safe posts and advertisements (restricted items are dynamically filtered for minors).
+    *   **🎬 Reels Feed**: Video timeline playing safe uploads and educational general knowledge reels.
+    *   **👤 Profile (Personal Page)**: View user stats and post grid. Includes a "Publish Post" portal that runs uploads through real-time safety pipeline checks before release.
+    *   **🛡️ Safety Logs**: Dynamic viewer rendering AI predictions and database actions.
+7.  **[README.md](file:///c:/s7/main%20project/safead_system/README.md)**: Standard document detailing system layout, setup commands, and an ER diagram in Mermaid format.
 
 ---
 
@@ -60,7 +66,11 @@ Ablated: No Visual analysis   66.67%     -33.33%
     ```bash
     pip install streamlit opencv-python scikit-learn pandas numpy pillow
     ```
-3.  Launch the Streamlit server:
+3.  Launch the Streamlit Instagram clone:
+    ```bash
+    streamlit run safead_system/instagram_app.py
+    ```
+4.  Launch the admin portal manager:
     ```bash
     streamlit run safead_system/app.py
     ```
