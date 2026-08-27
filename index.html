@@ -1,8 +1,6 @@
 <!DOCTYPE html>
-<!-- SafeAd AI Build Release V1.1.2 -->
 <html lang="en">
   <head>
-
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
@@ -52,83 +50,1177 @@
     <div id="loading-overlay">
       <div class="spinner"></div>
       <div class="loading-text">Loading Instagram SafeAd AI Portal...</div>
-      <div class="loading-subtext">Compiling Python & WebAssembly modules in your browser (takes ~20 seconds)...</div>
+      <div class="loading-subtext">Initializing WebAssembly & python execution context...</div>
     </div>
 
     <div id="root"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.js"></script>
     <script>
-      async function fetchText(url) {
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Failed to load ${url}: ${response.statusText}`);
-          }
-          return await response.text();
-        } catch (err) {
-          console.error(err);
-          return "";
-        }
-      }
+      stlite.mount(
+        {
+          requirements: ["numpy", "pillow"],
+          entrypoint: "instagram_app.py",
+          files: {
+            "instagram_app.py": `import streamlit as st
+import sqlite3
+import os
+import time
+import numpy as np
+import cv2
+from PIL import Image
+from database import get_connection, init_database
+from pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
+from classifier import estimate_age_from_face, estimate_age_from_behavior
 
-      async function startApp() {
-        // Fetch files relative to the current site path
-        const instagramAppCode = await fetchText("website/instagram_app.py");
-        const pipelineCode = await fetchText("website/pipeline.py");
-        const classifierCode = await fetchText("website/classifier.py");
-        const databaseCode = await fetchText("website/database.py");
+init_database()
 
-        if (!instagramAppCode) {
-          // If running locally via file:// scheme, fetch might fail due to CORS. In that case, show simple prompt
-          document.querySelector(".loading-text").innerText = "WebAssembly Loading Blocked";
-          document.querySelector(".loading-subtext").innerHTML = "To run this directly from local files, you need a local web server (e.g. <code>python -m http.server</code>). <br><br><b>Good News:</b> Once pushed, it will load perfectly when opened on your <b>GitHub Pages URL</b>!";
-          return;
-        }
+st.set_page_config(page_title="Instagram Clone - SafeAd AI", layout="wide")
 
-        // Clean up package references to match local Pyodide requirements
-        const fixedPipeline = pipelineCode
-          .replace("from website.database import", "from database import")
-          .replace("from safead_system.database import", "from database import");
+# Instagram Theme CSS Styling
+st.markdown("""
+    <style>
+    /* Global Styles */
+    .stApp {
+        background-color: #fafafa;
+        color: #262626;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Instagram Header */
+    .insta-header {
+        font-family: "Georgia", serif;
+        font-size: 32px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 20px;
+        color: #262626;
+        border-bottom: 1px solid #dbdbdb;
+        padding-bottom: 10px;
+    }
+    
+    /* Post Cards */
+    .post-card {
+        background-color: #ffffff;
+        border: 1px solid #dbdbdb;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        padding: 0px;
+    }
+    .post-header {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid #efefef;
+    }
+    .post-username {
+        font-weight: 600;
+        font-size: 14px;
+        margin-left: 10px;
+        color: #262626;
+    }
+    .post-caption {
+        padding: 12px;
+        font-size: 14px;
+        color: #262626;
+    }
+    
+    /* Profile Grid */
+    .profile-header {
+        display: flex;
+        align-items: center;
+        padding: 24px 0px;
+        border-bottom: 1px solid #dbdbdb;
+        margin-bottom: 20px;
+    }
+    .profile-username {
+        font-size: 28px;
+        font-weight: 300;
+        margin-right: 20px;
+    }
+    .profile-stats {
+        display: flex;
+        gap: 30px;
+        margin-top: 10px;
+        font-size: 16px;
+    }
+    .stat-number {
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-        const fixedInstagram = instagramAppCode
-          .replace("from website.database import", "from database import")
-          .replace("from safead_system.database import", "from database import")
-          .replace("from website.pipeline import", "from pipeline import")
-          .replace("from safead_system.pipeline import", "from pipeline import")
-          .replace("from website.classifier import", "from classifier import")
-          .replace("from safead_system.classifier import", "from classifier import");
+# Initialize Session States
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "username" not in st.session_state:
+    st.session_state["username"] = ""
+if "age_category" not in st.session_state:
+    st.session_state["age_category"] = "Not a Child"
+if "age_confidence" not in st.session_state:
+    st.session_state["age_confidence"] = 1.0
+if "current_tab" not in st.session_state:
+    st.session_state["current_tab"] = "🏠 Feed"
 
-        const fixedClassifier = classifierCode
-          .replace("from website.database import", "from database import")
-          .replace("from safead_system.database import", "from database import");
+# =====================================================================
+# LOGIN & AGE ASSESSMENT PORTAL
+# =====================================================================
+if not st.session_state["logged_in"]:
+    st.markdown("<div class='insta-header'>Instagram</div>", unsafe_allow_html=True)
+    
+    col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
+    
+    with col_l2:
+        st.subheader("Login to your account")
+        with st.form("login_form"):
+            user_input = st.text_input("Username / Email", "RD_Sourav")
+            password_input = st.text_input("Password", type="password")
+            
+            st.markdown("---")
+            st.markdown("#### Trust & Safety Age Check Verification")
+            auth_mode = st.radio("Choose Verification Method", ["Facial Face Scan", "Behavioral Search Survey"])
+            
+            face_sim = st.selectbox("Simulate Face Scanner (If selected)", ["Adult Face Profile", "Baby/Child Face Profile"])
+            
+            survey_q1 = st.text_input("Search query simulation (e.g. 'roblox, toys' vs 'stocks, ML')", "python coding, machine learning jobs")
+            survey_q2 = st.slider("GK Reels View Time (seconds out of 60)", 0, 60, 15)
+            survey_q3 = st.slider("Adult/Ad Reels View Time (seconds out of 100)", 0, 100, 85)
+            
+            submit_login = st.form_submit_button("Log In Securely")
+            
+        if submit_login:
+            if not user_input:
+                st.error("Please enter a username.")
+            else:
+                # 1. Run Age Assessment
+                if auth_mode == "Facial Face Scan":
+                    # Draw a mock face representing selection
+                    dummy_face = np.ones((128, 128, 3), dtype=np.uint8) * 240
+                    if face_sim == "Baby/Child Face Profile":
+                        cv2.ellipse(dummy_face, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+                        cv2.circle(dummy_face, (49, 69), 7, (40, 40, 40), -1)
+                        cv2.circle(dummy_face, (79, 69), 7, (40, 40, 40), -1)
+                    else:
+                        cv2.ellipse(dummy_face, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+                        cv2.circle(dummy_face, (49, 54), 4, (40, 40, 40), -1)
+                        cv2.circle(dummy_face, (79, 54), 4, (40, 40, 40), -1)
+                    
+                    category, conf = estimate_age_from_face(dummy_face)
+                else:
+                    # Behavioral Survey check
+                    queries = [q.strip() for q in survey_q1.split(",")]
+                    gk_watches = [{"duration_watched": survey_q2, "total_duration": 60}]
+                    adult_watches = [{"duration_watched": survey_q3, "total_duration": 100}]
+                    category, conf = estimate_age_from_behavior(queries, gk_watches, adult_watches)
+                    
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = user_input
+                st.session_state["age_category"] = category
+                st.session_state["age_confidence"] = conf
+                
+                # Check / Insert User in DB
+                conn = get_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM Users WHERE username = ?", (user_input,))
+                usr = cursor.fetchone()
+                if not usr:
+                    cursor.execute("INSERT INTO Users (username, password_hash, role) VALUES (?, 'mock_hash', 'social_user')", (user_input,))
+                    user_id = cursor.lastrowid
+                else:
+                    user_id = usr[0]
+                    
+                cursor.execute("""
+                    INSERT INTO AgeProfiles (user_id, method, prediction_class, confidence)
+                    VALUES (?, ?, ?, ?)
+                """, (user_id, "facial" if auth_mode == "Facial Face Scan" else "behavioral", category, conf))
+                conn.commit()
+                conn.close()
+                
+                st.success(f"Logged in successfully as {user_input}!")
+                time.sleep(0.5)
+                st.rerun()
 
-        const fixedDatabase = databaseCode
-          .replace("from website.database import", "from database import")
-          .replace("from safead_system.database import", "from database import");
+# =====================================================================
+# MAIN INSTAGRAM SYSTEM FEED & INTERFACE
+# =====================================================================
+else:
+    # Header bar
+    st.markdown("<div class='insta-header'>Instagram</div>", unsafe_allow_html=True)
+    
+    # Top navbar / Tab selector
+    tabs_sel = st.radio(
+        "Navigation",
+        ["🏠 Feed", "🎬 Reels", "➕ Create Post", "👤 Profile (Personal Page)", "🛡️ Safety Logs"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    
+    st.session_state["current_tab"] = tabs_sel
+    
+    # Helper to check if a text contains restricted safety words
+    def is_age_restricted(text: str) -> bool:
+        text_lower = text.lower()
+        for policy, langs in MULTILINGUAL_KEYWORDS.items():
+            for lang, words in langs.items():
+                for w in words:
+                    if w in text_lower:
+                        return True
+        return False
 
-        // Mount stlite application
-        stlite.mount(
-          {
-            requirements: ["numpy", "pillow"],
+    # Get User Details
+    username = st.session_state["username"]
+    age_category = st.session_state["age_category"]
+    age_conf = st.session_state["age_confidence"]
 
-            entrypoint: "instagram_app.py",
-            files: {
-              "instagram_app.py": fixedInstagram,
-              "pipeline.py": fixedPipeline,
-              "classifier.py": fixedClassifier,
-              "database.py": fixedDatabase
-            },
-            onBeforeMount: () => {
-              // Hide overlay once stlite starts running
-              document.getElementById("loading-overlay").style.display = "none";
-            }
+    # =================================================================
+    # TAB A: PHOTO FEED
+    # =================================================================
+    if st.session_state["current_tab"] == "🏠 Feed":
+        st.subheader("Photo Ingestion Timeline")
+        
+        # Load posts from DB
+        conn = get_connection()
+        cursor = conn.cursor()
+        # Query approved photo posts (which are not videos)
+        cursor.execute("""
+            SELECT A.id, A.title, A.caption, A.file_path, U.username 
+            FROM Advertisements A
+            JOIN Users U ON A.advertiser_id = U.id
+            WHERE A.status = 'approved' AND A.file_path NOT LIKE '%.mp4'
+            ORDER BY A.id DESC
+        """)
+        posts = cursor.fetchall()
+        conn.close()
+        
+        # Filter feed based on age check
+        filtered_posts = []
+        for post in posts:
+            pid, ptitle, pcap, pfile, puser = post
+            full_txt = f"{ptitle} {pcap or ''} {pfile}"
+            
+            # If viewer is a child, filter out any restricted terms
+            if age_category == "Child" and is_age_restricted(full_txt):
+                continue
+            filtered_posts.append(post)
+            
+        if not filtered_posts:
+            st.info("No photo posts found in feed.")
+        else:
+            for pid, ptitle, pcap, pfile, puser in filtered_posts:
+                # Render Instagram-style Card
+                st.markdown(f"""
+                <div class="post-card">
+                    <div class="post-header">
+                        <div style="width: 32px; height: 32px; background-color: #dbdbdb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #555;">
+                            {puser[0].upper()}
+                        </div>
+                        <div class="post-username">{puser}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Image Content
+                if os.path.exists(pfile):
+                    st.image(pfile, use_container_width=True)
+                else:
+                    # Draw a fallback safe placeholder card
+                    placeholder_img = np.ones((400, 600, 3), dtype=np.uint8) * 240
+                    cv2.putText(placeholder_img, ptitle, (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (40, 40, 40), 2)
+                    st.image(placeholder_img, use_container_width=True)
+                    
+                st.markdown(f"<div class='post-caption'><b>{puser}</b> {pcap or ''}</div>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 0px 0px 20px 0px; border: 0; border-top: 1px solid #dbdbdb;'>", unsafe_allow_html=True)
+
+    # =================================================================
+    # TAB B: REELS FEED (VIDEOS)
+    # =================================================================
+    elif st.session_state["current_tab"] == "🎬 Reels":
+        st.subheader("Short-Video Reels Feed")
+        
+        # General Knowledge Reels Database
+        GK_REELS = [
+            {"id": "gk1", "title": "The Solar System for Kids", "file_path": "solar_system.mp4", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True},
+            {"id": "gk2", "title": "Why is the Sky Blue?", "file_path": "sky_blue.mp4", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True},
+            {"id": "gk3", "title": "How Do Plants Make Food?", "file_path": "photosynthesis.mp4", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True}
+        ]
+        
+        # Load Video posts from DB
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT A.id, A.title, A.caption, A.file_path, U.username 
+            FROM Advertisements A
+            JOIN Users U ON A.advertiser_id = U.id
+            WHERE A.status = 'approved' AND A.file_path LIKE '%.mp4'
+            ORDER BY A.id DESC
+        """)
+        db_reels = cursor.fetchall()
+        conn.close()
+        
+        reels_feed = []
+        
+        # Add GK reels if child
+        if age_category == "Child":
+            st.warning("Child Mode: Safe and Educational Reels injected.")
+            for gk in GK_REELS:
+                reels_feed.append(gk)
+                
+            for r in db_reels:
+                rid, rtitle, rcap, rfile, ruser = r
+                full_txt = f"{rtitle} {rcap or ''} {rfile}"
+                if not is_age_restricted(full_txt):
+                    reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "username": ruser})
+        else:
+            st.success("Adult Reels Feed Active.")
+            for r in db_reels:
+                rid, rtitle, rcap, rfile, ruser = r
+                reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "username": ruser})
+            for gk in GK_REELS:
+                reels_feed.append(gk)
+                
+        if not reels_feed:
+            st.info("No video reels available.")
+        else:
+            for item in reels_feed:
+                is_gk = item.get("gk", False)
+                u = item.get("username", "SystemGK")
+                
+                st.markdown(f"""
+                <div class="post-card">
+                    <div class="post-header">
+                        <div style="width: 32px; height: 32px; background-color: #4a90e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff;">
+                            {u[0].upper()}
+                        </div>
+                        <div class="post-username">{u} <span style="color:#8e8e8e; font-weight:300;">• {'GK Lesson' if is_gk else 'Ad Creative'}</span></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Render video file
+                if not is_gk and os.path.exists(item["file_path"]):
+                    st.video(item["file_path"])
+                else:
+                    # Draw visual block for educational video
+                    ph_img = np.ones((250, 500, 3), dtype=np.uint8) * 40
+                    cv2.putText(ph_img, f"Video: {item['title']}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                    cv2.putText(ph_img, "Simulated Video Playback", (20, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+                    st.image(ph_img, use_container_width=True)
+                    
+                st.write(f"**{item['title']}**: {item.get('desc', '')}")
+                st.markdown("<hr style='margin: 20px 0px;'>", unsafe_allow_html=True)
+
+    # =================================================================
+    # TAB C: NEW POST UPLOAD WITH REAL-TIME AI MODERATION
+    # =================================================================
+    elif st.session_state["current_tab"] == "➕ Create Post":
+        st.subheader("Publish a New Creative / Post")
+        
+        col_c1, col_c2 = st.columns([1, 1.2])
+        
+        with col_c1:
+            with st.form("new_post_form", clear_on_submit=True):
+                post_title = st.text_input("Creative Title", "Organic Fruit Basket")
+                post_caption = st.text_area("Caption / Hashtags", "Fresh healthy apples and organic grapes for diet.")
+                post_type = st.radio("Creative Modality Type", ["Photo (Image)", "Reel (Video)"])
+                post_file = st.file_uploader("Upload Creative File", type=["png", "jpg", "jpeg", "mp4"])
+                share_btn = st.form_submit_button("Publish to Instagram")
+                
+            if share_btn:
+                if not post_file:
+                    st.error("Please select a file to upload.")
+                else:
+                    # Save locally
+                    os.makedirs("website/uploads", exist_ok=True)
+                    ext = ".mp4" if post_type == "Reel (Video)" else ".jpg"
+                    f_name = f"user_{username}_{int(time.time())}{ext}"
+                    file_path = os.path.join("website/uploads", f_name)
+                    with open(file_path, "wb") as f:
+                        f.write(post_file.getbuffer())
+                        
+                    # Insert in DB under logged-in user context
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    # Resolve user ID
+                    cursor.execute("SELECT id FROM Users WHERE username = ?", (username,))
+                    usr_row = cursor.fetchone()
+                    uid = usr_row[0] if usr_row else 1
+                    
+                    cursor.execute("""
+                        INSERT INTO Advertisements (title, advertiser_id, caption, file_path, status)
+                        VALUES (?, ?, ?, ?, 'under_review')
+                    """, (post_title, uid, post_caption, file_path))
+                    ad_id = cursor.lastrowid
+                    conn.commit()
+                    conn.close()
+                    
+                    # Run safety engine checks instantly!
+                    with st.spinner("Analyzing upload content safety policies..."):
+                        mod_res = run_multimodal_moderation(ad_id)
+                        
+                    st.session_state["latest_post_mod"] = mod_res
+                    st.success("Analysis complete!")
+                    
+        with col_c2:
+            st.subheader("Trust & Safety Feedback")
+            if "latest_post_mod" in st.session_state:
+                mr = st.session_state["latest_post_mod"]
+                status = mr["status"].upper()
+                score = mr["final_score"]
+                
+                if status == "APPROVED":
+                    st.success(f"✅ Published successfully! Status: APPROVED (Risk: {score:.1f}%)")
+                    st.info("Your post is now live and visible to compliant feeds.")
+                elif status == "REJECTED":
+                    st.error(f"❌ Upload Blocked: REJECTED (Risk: {score:.1f}%)")
+                    st.markdown(f"**Policy Infractions Detected**: \`{', '.join(mr['violations'])}\`")
+                    st.markdown(f"**AI Rejection Rationale**: *{mr['explanation']}*")
+                else:
+                    st.warning(f"⚠️ Held for Audit: UNDER REVIEW (Risk: {score:.1f}%)")
+                    st.markdown("Your upload contains borderline signals. It will become visible on feeds once manual administrators audit and approve the content.")
+
+    # =================================================================
+    # TAB D: PROFILE PAGE (GRID VIEW OF USER'S POSTS)
+    # =================================================================
+    elif st.session_state["current_tab"] == "👤 Profile (Personal Page)":
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM Users WHERE username = ?", (username,))
+        usr_row = cursor.fetchone()
+        uid = usr_row[0] if usr_row else 1
+        
+        # Load user posts
+        cursor.execute("""
+            SELECT id, title, caption, file_path, status 
+            FROM Advertisements 
+            WHERE advertiser_id = ?
+            ORDER BY id DESC
+        """, (uid,))
+        user_posts = cursor.fetchall()
+        conn.close()
+        
+        # Profile Header
+        st.markdown(f"""
+        <div class="profile-header">
+            <div style="width: 90px; height: 90px; background-color: #dbdbdb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #555; margin-right: 30px;">
+                {username[0].upper()}
+            </div>
+            <div>
+                <div style="display:flex; align-items:center;">
+                    <div class="profile-username">{username}</div>
+                    <div style="background-color:#efefef; padding:5px 10px; border-radius:4px; font-size:14px; font-weight:600;">{age_category} Profile</div>
+                </div>
+                <div class="profile-stats">
+                    <div><span class="stat-number">{len(user_posts)}</span> posts</div>
+                    <div><span class="stat-number">234</span> followers</div>
+                    <div><span class="stat-number">412</span> following</div>
+                </div>
+                <div style="margin-top: 15px; font-size:14px;">
+                    <b>{username}</b><br>
+                    SafeAd AI test profile. Verified Safety Status: <i>{age_category}</i> (Confidence: {age_conf:.1%})
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Profile Grid
+        st.subheader("Your Posts Grid")
+        if not user_posts:
+            st.info("You haven't posted anything yet. Go to 'Create Post' to publish your first content.")
+        else:
+            # Create a 3-column grid
+            cols = st.columns(3)
+            for idx, post in enumerate(user_posts):
+                pid, ptitle, pcap, pfile, pstatus = post
+                col_idx = idx % 3
+                
+                with cols[col_idx]:
+                    # Render small card with Status Tag
+                    st.markdown(f"**{ptitle}**")
+                    if pstatus == "approved":
+                        st.caption("🟢 Approved")
+                    elif pstatus == "rejected":
+                        st.caption("🔴 Rejected")
+                    else:
+                        st.caption("🟡 In Review Queue")
+                        
+                    if os.path.exists(pfile):
+                        if pfile.lower().endswith('.mp4'):
+                            # Thumbnail for video
+                            st.caption("🎥 Reel Video")
+                            st.video(pfile)
+                        else:
+                            st.image(pfile, use_container_width=True)
+                    else:
+                        # Fallback image block
+                        st.caption("Creative Media Not Found")
+                    st.markdown("---")
+
+    # =================================================================
+    # TAB E: SAFETY CENTER LOGS
+    # =================================================================
+    elif st.session_state["current_tab"] == "🛡️ Safety Logs":
+        st.subheader("SafeAd AI System Audit Logs")
+        st.markdown(f"**Current Viewer Age Category**: \`{age_category}\` (Confidence: {age_conf:.2%})")
+        
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT A.id, A.ad_id, A.timestamp, A.model_version, A.final_decision, A.log_details 
+            FROM AuditLogs A
+            ORDER BY A.id DESC LIMIT 15
+        """)
+        logs = cursor.fetchall()
+        conn.close()
+        
+        if logs:
+            dict_logs = [{"Log ID": l[0], "Ad ID": l[1], "Timestamp": l[2], "Framework Version": l[3], "Decision": l[4], "AI Audit Notes": l[5]} for l in logs]
+            st.dataframe(dict_logs, use_container_width=True)
+        else:
+
+            st.info("No audit logs recorded in database.")
+            
+        st.markdown("### SafeAd System Information")
+        st.info("SafeAd AI operates a unified multimodal fusion pipeline scoring policy compliance across visual, textual, and acoustic layers. Non-compliant, high-risk, or restricted postings are automatically held or blocked from minor streams.")
+        
+        # Add Logout button
+        st.markdown("---")
+        if st.button("Log Out of Session"):
+            st.session_state["logged_in"] = False
+            st.session_state["username"] = ""
+            st.session_state["age_category"] = "Not a Child"
+            st.rerun()
+`,
+            "pipeline.py": `import os
+import cv2
+import numpy as np
+from PIL import Image
+import sqlite3
+from database import get_connection
+
+# Multilingual Safety Keyword Dictionaries
+MULTILINGUAL_KEYWORDS = {
+    "Adult/Sexual Content": {
+        "english": ["sexy", "adult", "porn", "xxx", "erotic", "nude", "sensual"],
+        "hinglish": ["ganda", "nanga", "ashleel"],
+        "manglish": ["kadi", "leela", "vaanam", "thundu"]
+    },
+    "Gambling": {
+        "english": ["bet", "casino", "poker", "jackpot", "win money", "lottery", "slot machine"],
+        "hinglish": ["satta", "juwa", "dream11", "paisa jeeto", "khelo aur jeeto"],
+        "manglish": ["panthayam", "kuri", "paisa kalikkam", "lucky draw"]
+    },
+    "Violence": {
+        "english": ["kill", "blood", "fight", "murder", "weapon", "shoot", "gun", "stab", "dead"],
+        "hinglish": ["maar", "khoon", "dhamaka", "bandook", "ladai"],
+        "manglish": ["krouryam", "chora", "idi", "vettu", "kolapathakam", "thokku"]
+    },
+    "Alcohol/Tobacco": {
+        "english": ["whiskey", "beer", "wine", "alcohol", "smoke", "vape", "cigarette", "bar"],
+        "hinglish": ["sharaab", "daru", "sutta", "sigret", "nashe"],
+        "manglish": ["madhyam", "kallu", "vellamadi", "vali", "beedi"]
+    },
+    "Drugs": {
+        "english": ["weed", "marijuana", "cocaine", "heroin", "narcotic", "pills", "drugs"],
+        "hinglish": ["charas", "ganja", "nasha", "dawai"],
+        "manglish": ["kanjavu", "lahari", "marunnu"]
+    },
+    "Misleading Advertisement": {
+        "english": ["earn cash fast", "paisa double", "get rich quick", "free gift card", "guaranteed returns", "giveaway", "click here to win"],
+        "hinglish": ["paisa double", "free prize", "raato raat ameer", "lakhpati"],
+        "manglish": ["paisa double", "panam nedam", "free gift", "parasyam", "thattippu"]
+    }
+}
+
+def extract_video_keyframes(video_path: str, num_frames: int = 8) -> list:
+    """
+    Uniformly samples keyframes from a video.
+    """
+    if not os.path.exists(video_path):
+        return []
+    cap = cv2.VideoCapture(video_path)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total_frames <= 0:
+        cap.release()
+        return []
+        
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    frames = []
+    
+    for idx in range(total_frames):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if idx in indices:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(Image.fromarray(frame_rgb))
+    cap.release()
+    return frames
+
+def extract_ocr_text(media_path: str) -> str:
+    """
+    Runs pytesseract OCR if available, else uses metadata/heuristic parsing fallback.
+    """
+    # Attempt import
+    try:
+        import pytesseract
+        # Verify tesseract is in PATH, otherwise fallback
+        pytesseract.get_tesseract_version()
+        if media_path.lower().endswith(('.mp4', '.avi', '.mov')):
+            # OCR on center frame
+            cap = cv2.VideoCapture(media_path)
+            total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            cap.set(cv2.CAP_PROP_POS_FRAMES, total // 2)
+            ret, frame = cap.read()
+            cap.release()
+            if ret:
+                return pytesseract.image_to_string(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+        else:
+            return pytesseract.image_to_string(Image.open(media_path))
+    except Exception:
+        pass
+        
+    # Heuristic fallback: Extract matching keywords from the file name or mock metadata
+    base = os.path.basename(media_path).lower()
+    found_tokens = []
+    # Check filename for keywords
+    for policy, langs in MULTILINGUAL_KEYWORDS.items():
+        for lang, words in langs.items():
+            for w in words:
+                if w in base:
+                    found_tokens.append(w)
+    return " ".join(found_tokens) if found_tokens else "safe normal advertisement"
+
+def extract_audio_transcript(video_path: str) -> str:
+    """
+    Parses audio from video. If moviepy/whisper is not configured, runs fallback metadata analyzer.
+    """
+    base = os.path.basename(video_path).lower()
+    found_tokens = []
+    for policy, langs in MULTILINGUAL_KEYWORDS.items():
+        for lang, words in langs.items():
+            for w in words:
+                if w in base:
+                    found_tokens.append(w)
+    return " ".join(found_tokens) if found_tokens else "safe voiceover transcript"
+
+def analyze_text_risk(text: str) -> tuple:
+    """
+    Computes text safety risk scores and maps to specific policy violations.
+    """
+    scores = {}
+    violations = []
+    text_lower = text.lower()
+    
+    for policy, langs in MULTILINGUAL_KEYWORDS.items():
+        hits = 0
+        total_keywords = 0
+        for lang, words in langs.items():
+            for w in words:
+                total_keywords += 1
+                if w in text_lower:
+                    hits += 1
+        
+        # Calculate raw risk score for this policy
+        policy_score = min(hits * 35, 100)
+        scores[policy] = policy_score
+        if policy_score > 0:
+            violations.append(policy)
+            
+    max_score = max(scores.values()) if scores else 0
+    return max_score, violations
+
+def run_multimodal_moderation(ad_id: int) -> dict:
+    """
+    Combines visual, OCR, and speech analysis to calculate risk scores,
+    map policy violations, and write results to the database.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT title, caption, file_path FROM Advertisements WHERE id = ?", (ad_id,))
+    ad = cursor.fetchone()
+    if not ad:
+        conn.close()
+        return {}
+        
+    title, caption, file_path = ad
+    
+    # 1. OCR Processing
+    ocr_text = extract_ocr_text(file_path)
+    cursor.execute("INSERT INTO OCRResults (ad_id, extracted_text) VALUES (?, ?)", (ad_id, ocr_text))
+    
+    # 2. Text Risk Scores (OCR + Caption/NLP)
+    nlp_text = f"{title} {caption or ''} {ocr_text}"
+    nlp_risk, nlp_violations = analyze_text_risk(nlp_text)
+    
+    # 3. Speech Risk Scores
+    speech_text = ""
+    if file_path.lower().endswith(('.mp4', '.avi', '.mov')):
+        speech_text = extract_audio_transcript(file_path)
+    speech_risk, speech_violations = analyze_text_risk(speech_text)
+    
+    # 4. Visual Risk Scores (Mocking standard computer vision/NSFW risk based on file names)
+    visual_risk = 0.0
+    visual_violations = []
+    base_name = os.path.basename(file_path).lower()
+    if "violence" in base_name or "fight" in base_name or "blood" in base_name:
+        visual_risk = 90.0
+        visual_violations.append("Violence")
+    elif "sexy" in base_name or "nudity" in base_name or "adult" in base_name:
+        visual_risk = 95.0
+        visual_violations.append("Adult/Sexual Content")
+    elif "casino" in base_name or "bet" in base_name:
+        visual_risk = 80.0
+        visual_violations.append("Gambling")
+    elif "sharaab" in base_name or "beer" in base_name or "wine" in base_name:
+        visual_risk = 70.0
+        visual_violations.append("Alcohol/Tobacco")
+        
+    # Fused Risk Calculation (Visual 40%, OCR/NLP 30%, Speech 30%)
+    fused_score = (visual_risk * 0.4) + (nlp_risk * 0.3) + (speech_risk * 0.3)
+    
+    # Final Decision mapping
+    status = "approved"
+    if fused_score > 75:
+        status = "rejected"
+    elif fused_score >= 35:
+        status = "under_review"  # Sent to Human Review Queue
+        
+    # Save Model Predictions
+    predictions = [
+        ("visual", "unsafe" if visual_risk > 50 else "safe", visual_risk),
+        ("ocr", "unsafe" if nlp_risk > 50 else "safe", nlp_risk),
+        ("speech", "unsafe" if speech_risk > 50 else "safe", speech_risk)
+    ]
+    cursor.executemany("INSERT INTO ModelPredictions (ad_id, modality, prediction_label, score) VALUES (?, ?, ?, ?)", 
+                       [(ad_id, m, l, s) for m, l, s in predictions])
+                       
+    # Save Risk Scores
+    cursor.execute("""
+    INSERT INTO RiskScores (ad_id, visual_score, ocr_score, speech_score, final_score)
+    VALUES (?, ?, ?, ?, ?)
+    """, (ad_id, visual_risk, nlp_risk, speech_risk, fused_score))
+    
+    # Update Ad Status
+    cursor.execute("UPDATE Advertisements SET status = ? WHERE id = ?", (status, ad_id))
+    
+    # Generate CoT Explanation Reason
+    all_violations = list(set(nlp_violations + speech_violations + visual_violations))
+    violation_str = ", ".join(all_violations) if all_violations else "None"
+    
+    explanation = f"AI Decision: {status.upper()} (Risk: {fused_score:.1f}%). Violated Policies: {violation_str}. "
+    if status == "rejected":
+        explanation += f"Rejection triggered due to high-risk multimodal indicators exceeding the safety threshold (75%)."
+    elif status == "under_review":
+        explanation += "Borderline scores mapped to administrative review queue for manual auditing."
+    else:
+        explanation += "No significant policy violations detected across visual, textual, or speech layers."
+        
+    cursor.execute("""
+    INSERT INTO ModerationResults (ad_id, final_decision, explanation)
+    VALUES (?, ?, ?)
+    """, (ad_id, status, explanation))
+    
+    # Log Audit Record
+    cursor.execute("""
+    INSERT INTO AuditLogs (ad_id, trigger_user_id, model_version, final_decision, log_details)
+    VALUES (?, 1, 'SafeAd_V1_BERT_Qwen2VL', ?, ?)
+    """, (ad_id, status, explanation))
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "ad_id": ad_id,
+        "visual_score": visual_risk,
+        "ocr_score": nlp_risk,
+        "speech_score": speech_risk,
+        "final_score": fused_score,
+        "status": status,
+        "violations": all_violations,
+        "explanation": explanation
+    }
+
+if __name__ == "__main__":
+    # Quick pipeline dry run
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO Advertisements (title, caption, file_path) VALUES ('Dhamaka Casino Offer', 'Earn cash fast! satta khelne ke liye click karein', 'casino_ad.mp4')")
+    ad_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    res = run_multimodal_moderation(ad_id)
+    print("Pipeline Output:", res)
+`,
+            "classifier.py": `import cv2
+import numpy as np
+import pandas as pd
+import random
+
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.pipeline import make_pipeline
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.neural_network import MLPClassifier
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+
+# =====================================================================
+# 1. FACIAL AGE ESTIMATION SYSTEM (Haar Cascade + Scikit-Learn MLP)
+# =====================================================================
+
+try:
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+except Exception:
+    face_cascade = None
+
+def detect_and_crop_face(image_np: np.ndarray) -> tuple:
+    if image_np is None:
+        return np.zeros((128, 128, 3), dtype=np.uint8), None
+    if face_cascade is None:
+        return cv2.resize(image_np, (128, 128)), None
+    gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+    try:
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    except Exception:
+        faces = []
+    if len(faces) == 0:
+        return cv2.resize(image_np, (128, 128)), None
+    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    cropped_face = image_np[y:y+h, x:x+w]
+
+    return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+
+def extract_facial_features(cropped_face: np.ndarray, bbox: tuple) -> np.ndarray:
+    if bbox is not None:
+        x, y, w, h = bbox
+        aspect_ratio = w / h
+        roundness = min(w, h) / max(w, h)
+    else:
+        aspect_ratio = 1.0
+        roundness = 1.0
+    gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
+    vertical_projection = np.mean(gray_face, axis=1)
+    projection_bins = np.array([np.mean(chunk) for chunk in np.array_split(vertical_projection, 10)])
+    projection_bins_normalized = (projection_bins - np.mean(projection_bins)) / (np.std(projection_bins) + 1e-6)
+    return np.concatenate(([aspect_ratio, roundness], projection_bins_normalized))
+
+# Fit a static, robust reference model for face-based age estimation
+def _train_static_face_classifier():
+    features_list = []
+    labels_list = []
+    
+    # Generate Child round profiles (label=0) vs Adult long profiles (label=1)
+    for _ in range(100):
+        # Child Face
+        img_child = np.ones((128, 128, 3), dtype=np.uint8) * 240
+        cv2.ellipse(img_child, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+        cv2.circle(img_child, (49, 69), 7, (40, 40, 40), -1)
+        cv2.circle(img_child, (79, 69), 7, (40, 40, 40), -1)
+        cropped, bbox = detect_and_crop_face(img_child)
+        features_list.append(extract_facial_features(cropped, bbox))
+        labels_list.append(0)
+        
+        # Adult Face
+        img_adult = np.ones((128, 128, 3), dtype=np.uint8) * 240
+        cv2.ellipse(img_adult, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+        cv2.circle(img_adult, (49, 54), 4, (40, 40, 40), -1)
+        cv2.circle(img_adult, (79, 54), 4, (40, 40, 40), -1)
+        cropped, bbox = detect_and_crop_face(img_adult)
+        features_list.append(extract_facial_features(cropped, bbox))
+        labels_list.append(1)
+        
+    if HAS_SKLEARN:
+        clf = MLPClassifier(hidden_layer_sizes=(16, 8), max_iter=300, random_state=42)
+        clf.fit(np.array(features_list), np.array(labels_list))
+        return clf
+    return None
+
+face_age_clf = _train_static_face_classifier()
+
+def estimate_age_from_face(image_np: np.ndarray) -> tuple:
+    """
+    Returns estimated age classification ('Child' or 'Not a Child') and child probability.
+    """
+    cropped_face, bbox = detect_and_crop_face(image_np)
+    if not HAS_SKLEARN:
+        # Fallback heuristic: roundness threshold (child face is rounder)
+        if bbox is not None:
+            x, y, w, h = bbox
+            roundness = min(w, h) / max(w, h)
+        else:
+            roundness = 1.0
+        prob_child = float(np.clip((roundness - 0.7) / 0.3, 0.0, 1.0))
+        prediction = "Child" if prob_child > 0.5 else "Not a Child"
+        return prediction, prob_child
+
+    feats = extract_facial_features(cropped_face, bbox)
+    probs = face_age_clf.predict_proba([feats])[0]
+    prob_child = probs[0]
+    prediction = "Child" if prob_child > 0.5 else "Not a Child"
+    return prediction, prob_child
+
+# =====================================================================
+# 2. BEHAVIORAL AGE ESTIMATION SYSTEM (Search Queries + Reel Retention)
+# =====================================================================
+
+training_queries = [
+    # Child searches
+    {"queries": "cartoon animations free online games toy reviews fun math games", "label": "Child"},
+    {"queries": "minecraft speedrun roblox play online stories for kids baby shark", "label": "Child"},
+    {"queries": "science facts for school project dinosaurs drawing animals toys", "label": "Child"},
+    {"queries": "barbie dressup coloring books fairy tales rhymes cartoon songs", "label": "Child"},
+    # Adult searches
+    {"queries": "stock market predictions mortgage interest rates job search linkedin career", "label": "Not a Child"},
+    {"queries": "machine learning developer documentation coding tutorial python django", "label": "Not a Child"},
+    {"queries": "real estate investing credit cards travel insurance mutual fund", "label": "Not a Child"},
+    {"queries": "world news politics tax filings office dashboard analytics", "label": "Not a Child"}
+]
+
+if HAS_SKLEARN:
+    df_queries = pd.DataFrame(training_queries)
+    text_clf = make_pipeline(TfidfVectorizer(), MultinomialNB())
+    text_clf.fit(df_queries["queries"], df_queries["label"])
+else:
+    text_clf = None
+
+def estimate_age_from_behavior(session_queries: list, gk_watches: list, adult_watches: list) -> tuple:
+    """
+    Fuses search queries and video watch retention metrics to predict user category.
+    """
+    # 1. Evaluate search query text probability
+    if HAS_SKLEARN:
+        query_text = " ".join(session_queries) if session_queries else "normal browse"
+        text_probs = text_clf.predict_proba([query_text])[0]
+        classes = text_clf.classes_
+        child_text_prob = text_probs[np.where(classes == "Child")[0][0]]
+    else:
+        # Fallback keyword analyzer
+        child_keywords = ["minecraft", "roblox", "kids", "toy", "cartoon", "baby", "rhymes", "fun", "game", "dinosaur"]
+        query_text = " ".join(session_queries).lower() if session_queries else "normal browse"
+        hits = sum(1 for w in child_keywords if w in query_text)
+        child_text_prob = min(hits * 0.35, 1.0)
+
+    # 2. Evaluate video retention
+    # retention = duration_watched / total_duration
+    avg_gk_ret = np.mean([w["duration_watched"] / w["total_duration"] for w in gk_watches]) if gk_watches else 0.0
+    avg_adult_ret = np.mean([w["duration_watched"] / w["total_duration"] for w in adult_watches]) if adult_watches else 0.0
+
+    # Combine signals (40% searches, 60% watch retention bias)
+    fused_child_score = child_text_prob * 0.4 + (avg_gk_ret - avg_adult_ret + 1.0) / 2.0 * 0.6
+
+    prediction = "Child" if fused_child_score > 0.5 else "Not a Child"
+    return prediction, fused_child_score
+
+if __name__ == "__main__":
+    # Test face detection & behavior
+    dummy_child_face = np.ones((128, 128, 3), dtype=np.uint8) * 240
+    cv2.ellipse(dummy_child_face, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+    
+    pred_face, prob_face = estimate_age_from_face(dummy_child_face)
+    print(f"Face Classifier -> Pred: {pred_face}, Confidence: {prob_face:.2%}")
+
+    queries = ["minecraft videos", "dinosaur stories for kids"]
+    gk = [{"duration_watched": 50, "total_duration": 60}]
+    adult = [{"duration_watched": 5, "total_duration": 100}]
+    pred_behav, prob_behav = estimate_age_from_behavior(queries, gk, adult)
+    print(f"Behavioral Classifier -> Pred: {pred_behav}, Confidence: {prob_behav:.2%}")
+`,
+            "database.py": `import sqlite3
+import os
+from datetime import datetime
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "safead.db")
+
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+def init_database():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # 1. Users Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('advertiser', 'admin', 'social_user'))
+    )
+    """)
+
+    # 2. Advertisements Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Advertisements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        advertiser_id INTEGER,
+        caption TEXT,
+        file_path TEXT NOT NULL,
+        status TEXT DEFAULT 'under_review' CHECK(status IN ('approved', 'rejected', 'under_review')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(advertiser_id) REFERENCES Users(id)
+    )
+    """)
+
+    # 3. MediaFiles Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS MediaFiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        file_type TEXT CHECK(file_type IN ('video', 'image')),
+        duration_sec REAL,
+        width INTEGER,
+        height INTEGER,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
+    )
+    """)
+
+    # 4. OCRResults Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS OCRResults (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        extracted_text TEXT,
+        language TEXT,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
+    )
+    """)
+
+    # 5. PolicyRules Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS PolicyRules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT,
+        age_restriction INTEGER DEFAULT 0
+    )
+    """)
+
+    # 6. ModelPredictions Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ModelPredictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        modality TEXT CHECK(modality IN ('visual', 'ocr', 'speech', 'nlp')),
+        prediction_label TEXT,
+        score REAL,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
+    )
+    """)
+
+    # 7. RiskScores Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS RiskScores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        visual_score REAL DEFAULT 0,
+        ocr_score REAL DEFAULT 0,
+        speech_score REAL DEFAULT 0,
+        final_score REAL DEFAULT 0,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
+    )
+    """)
+
+    # 8. AgeProfiles Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS AgeProfiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        method TEXT CHECK(method IN ('facial', 'behavioral')),
+        prediction_class TEXT CHECK(prediction_class IN ('Child', 'Not a Child')),
+        confidence REAL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES Users(id)
+    )
+    """)
+
+    # 9. HumanReviews Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS HumanReviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        reviewer_id INTEGER,
+        action TEXT CHECK(action IN ('approve', 'reject', 'restrict')),
+        notes TEXT,
+        reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id),
+        FOREIGN KEY(reviewer_id) REFERENCES Users(id)
+    )
+    """)
+
+    # 9.5. ModerationResults Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ModerationResults (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        final_decision TEXT,
+        explanation TEXT,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
+    )
+    """)
+
+
+    # 10. AuditLogs Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS AuditLogs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER,
+        trigger_user_id INTEGER,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        model_version TEXT,
+        final_decision TEXT,
+        log_details TEXT,
+        FOREIGN KEY(ad_id) REFERENCES Advertisements(id),
+        FOREIGN KEY(trigger_user_id) REFERENCES Users(id)
+    )
+    """)
+
+    conn.commit()
+
+    # Seed Default Users (Password Hash represents a simple seed for testing)
+    cursor.execute("SELECT COUNT(*) FROM Users")
+    if cursor.fetchone()[0] == 0:
+        default_users = [
+            ("advertiser1", "hash_advertiser", "advertiser"),
+            ("admin1", "hash_admin", "admin"),
+            ("guest_user", "hash_guest", "social_user")
+        ]
+        cursor.executemany("INSERT INTO Users (username, password_hash, role) VALUES (?, ?, ?)", default_users)
+
+    # Seed Default Policies
+    cursor.execute("SELECT COUNT(*) FROM PolicyRules")
+    if cursor.fetchone()[0] == 0:
+        default_policies = [
+            ("Adult/Sexual Content", "Restricts explicit or sexually suggestive imagery/text.", 18),
+            ("Child Safety", "Blocks content containing child exploitation or harmful themes targeting children.", 0),
+            ("Violence", "Flags blood, gore, violence, or dangerous weapons.", 18),
+            ("Gambling", "Restricts betting platforms, lottery, and commercial gambling sites.", 18),
+            ("Alcohol/Tobacco", "Regulates ads promoting alcohol products or vaping/tobacco items.", 18),
+            ("Drugs", "Strictly bans illicit drugs, pharmaceutical sales infractions, and narcotics.", 18),
+            ("Hate/Abusive Content", "Flags harassment, hate speech, bullying, and racial/ethnic abuse.", 13),
+            ("Misleading Advertisement", "Flags deceptive claims, scam financial products, and fake giveaways.", 0),
+            ("Other Age-Restricted Content", "Catch-all policy for generalized restricted products.", 18)
+        ]
+        cursor.executemany("INSERT INTO PolicyRules (name, description, age_restriction) VALUES (?, ?, ?)", default_policies)
+
+    conn.commit()
+    conn.close()
+
+if __name__ == "__main__":
+    init_database()
+    print("Database initialized successfully at:", DB_PATH)
+`
           },
-          document.getElementById("root")
-        );
-      }
-
-      startApp();
+          onBeforeMount: () => {
+            document.getElementById("loading-overlay").style.display = "none";
+          }
+        },
+        document.getElementById("root")
+      );
     </script>
   </body>
 </html>
