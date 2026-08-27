@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import numpy as np
-from safead_system.database import get_connection, init_database
-from safead_system.pipeline import run_multimodal_moderation
+from website.database import get_connection, init_database
+from website.pipeline import run_multimodal_moderation
 
 # Define ground truth test cases
 TEST_CASES = [

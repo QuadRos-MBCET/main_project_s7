@@ -5,9 +5,9 @@ import time
 import numpy as np
 import cv2
 from PIL import Image
-from safead_system.database import get_connection, init_database
-from safead_system.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
-from safead_system.classifier import estimate_age_from_face, estimate_age_from_behavior
+from website.database import get_connection, init_database
+from website.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
+from website.classifier import estimate_age_from_face, estimate_age_from_behavior
 
 init_database()
 
@@ -65,8 +65,8 @@ with tabs[0]:
                 st.error("Please upload a media file.")
             else:
                 # Save uploaded file locally
-                os.makedirs("safead_system/uploads", exist_ok=True)
-                file_path = os.path.join("safead_system/uploads", uploaded_file.name)
+                os.makedirs("website/uploads", exist_ok=True)
+                file_path = os.path.join("website/uploads", uploaded_file.name)
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                     

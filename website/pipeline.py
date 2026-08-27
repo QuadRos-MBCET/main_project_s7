@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import sqlite3
-from safead_system.database import get_connection
+from website.database import get_connection
 
 # Multilingual Safety Keyword Dictionaries
 MULTILINGUAL_KEYWORDS = {

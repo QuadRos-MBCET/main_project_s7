@@ -5,9 +5,9 @@ import time
 import numpy as np
 import cv2
 from PIL import Image
-from safead_system.database import get_connection, init_database
-from safead_system.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
-from safead_system.classifier import estimate_age_from_face, estimate_age_from_behavior
+from website.database import get_connection, init_database
+from website.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
+from website.classifier import estimate_age_from_face, estimate_age_from_behavior
 
 init_database()
 
@@ -366,10 +366,10 @@ else:
                     st.error("Please select a file to upload.")
                 else:
                     # Save locally
-                    os.makedirs("safead_system/uploads", exist_ok=True)
+                    os.makedirs("website/uploads", exist_ok=True)
                     ext = ".mp4" if post_type == "Reel (Video)" else ".jpg"
                     f_name = f"user_{username}_{int(time.time())}{ext}"
-                    file_path = os.path.join("safead_system/uploads", f_name)
+                    file_path = os.path.join("website/uploads", f_name)
                     with open(file_path, "wb") as f:
                         f.write(post_file.getbuffer())
                         

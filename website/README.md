@@ -80,16 +80,16 @@ pip install streamlit opencv-python scikit-learn pandas numpy pillow
 We have provided two interfaces:
 1.  **Administrative Portal (`app.py`)**: Launches the back-end moderation manager, review queues, and general feed:
     ```bash
-    streamlit run safead_system/app.py
+    streamlit run website/app.py
     ```
 2.  **Instagram Social Interface (`instagram_app.py`)**: Launches a user-friendly Instagram clone containing a Login portal, a Photo feed, a Reels feed, and a Personal Profile page:
     ```bash
-    streamlit run safead_system/instagram_app.py
+    streamlit run website/instagram_app.py
     ```
 
 
 ### Running automated Tests
 To evaluate pipeline performance metrics (Accuracy, F1-Score, Confusion Matrix, and Ablation Study):
 ```bash
-python -m safead_system.test_suite
+python -m website.test_suite
 ```
