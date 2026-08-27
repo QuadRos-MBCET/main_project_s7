@@ -230,8 +230,9 @@ with tabs[1]:
         policies = cursor.fetchall()
         conn.close()
         
-        df_p = pd.DataFrame(policies, columns=["ID", "Policy Name", "Description", "Min Age Allowed"])
-        st.dataframe(df_p, use_container_width=True)
+        dict_p = [{"ID": p[0], "Policy Name": p[1], "Description": p[2], "Min Age Allowed": p[3]} for p in policies]
+        st.dataframe(dict_p, use_container_width=True)
+
 
 # =====================================================================
 # TAB 3: SOCIAL USER FEED (AGE-AWARE DELIVERY SIMULATION)
@@ -378,7 +379,8 @@ logs = cursor.fetchall()
 conn.close()
 
 if logs:
-    df_l = pd.DataFrame(logs, columns=["Log ID", "Ad ID", "Timestamp", "Framework Version", "Decision", "AI Audit Notes"])
-    st.dataframe(df_l, use_container_width=True)
+    dict_l = [{"Log ID": l[0], "Ad ID": l[1], "Timestamp": l[2], "Framework Version": l[3], "Decision": l[4], "AI Audit Notes": l[5]} for l in logs]
+    st.dataframe(dict_l, use_container_width=True)
+
 else:
     st.caption("No audit logs recorded yet.")

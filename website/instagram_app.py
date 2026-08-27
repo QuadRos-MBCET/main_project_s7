@@ -509,9 +509,10 @@ else:
         conn.close()
         
         if logs:
-            df_logs = pd.DataFrame(logs, columns=["Log ID", "Ad ID", "Timestamp", "Model Version", "Decision", "Audit Explanation"])
-            st.dataframe(df_logs, use_container_width=True)
+            dict_logs = [{"Log ID": l[0], "Ad ID": l[1], "Timestamp": l[2], "Framework Version": l[3], "Decision": l[4], "AI Audit Notes": l[5]} for l in logs]
+            st.dataframe(dict_logs, use_container_width=True)
         else:
+
             st.info("No audit logs recorded in database.")
             
         st.markdown("### SafeAd System Information")

@@ -108,7 +108,8 @@
         // Mount stlite application
         stlite.mount(
           {
-            requirements: ["scikit-learn", "pandas", "numpy", "pillow"],
+            requirements: ["numpy", "pillow"],
+
             entrypoint: "instagram_app.py",
             files: {
               "instagram_app.py": fixedInstagram,
