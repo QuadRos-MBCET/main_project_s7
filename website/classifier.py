@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
-import pandas as pd
 import random
 
 try:
+    import pandas as pd
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.naive_bayes import MultinomialNB
     from sklearn.pipeline import make_pipeline
@@ -12,6 +12,8 @@ try:
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
+    pd = None
+
 
 # =====================================================================
 # 1. FACIAL AGE ESTIMATION SYSTEM (Haar Cascade + Scikit-Learn MLP)
