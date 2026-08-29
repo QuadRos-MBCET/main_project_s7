@@ -108,73 +108,87 @@ if not st.session_state["logged_in"]:
     
     with col_l2:
         st.subheader("Login to your account")
-        with st.form("login_form"):
-            user_input = st.text_input("Username / Email", "RD_Sourav")
-            password_input = st.text_input("Password", type="password")
+        user_input = st.text_input("Username / Email", "RD_Sourav")
+        password_input = st.text_input("Password", type="password")
+        
+        st.markdown("---")
+        st.markdown("#### Trust & Safety Age Check Verification")
+        auth_mode = st.radio("Choose Verification Method", ["Facial Face Scan (Webcam Camera)", "Behavioral Search Survey"])
+        
+        category, conf = None, None
+        
+        if auth_mode == "Facial Face Scan (Webcam Camera)":
+            st.info("Snap a photo to verify your age category using real-time facial feature roundness estimation.")
+            cam_image = st.camera_input("Capture Profile Face Photo")
             
-            st.markdown("---")
-            st.markdown("#### Trust & Safety Age Check Verification")
-            auth_mode = st.radio("Choose Verification Method", ["Facial Face Scan", "Behavioral Search Survey"])
+            st.markdown("**(Optional Fallback)** If camera permissions are blocked, select face type:")
+            face_sim = st.selectbox("Simulate Face Shape", ["Select shape...", "Adult Face Profile (Oval shape)", "Baby/Child Face Profile (Round shape)"])
             
-            face_sim = st.selectbox("Simulate Face Scanner (If selected)", ["Adult Face Profile", "Baby/Child Face Profile"])
-            
+            if cam_image:
+                # Capture real face photo
+                try:
+                    image = Image.open(cam_image)
+                    image_np = np.array(image)
+                    category, conf = estimate_age_from_face(image_np)
+                except Exception as e:
+                    st.error(f"Camera analysis error: {e}")
+            elif face_sim != "Select shape...":
+                dummy_face = np.ones((128, 128, 3), dtype=np.uint8) * 240
+                if face_sim == "Baby/Child Face Profile (Round shape)":
+                    cv2.ellipse(dummy_face, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+                    cv2.circle(dummy_face, (49, 69), 7, (40, 40, 40), -1)
+                    cv2.circle(dummy_face, (79, 69), 7, (40, 40, 40), -1)
+                else:
+                    cv2.ellipse(dummy_face, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+                    cv2.circle(dummy_face, (49, 54), 4, (40, 40, 40), -1)
+                    cv2.circle(dummy_face, (79, 54), 4, (40, 40, 40), -1)
+                category, conf = estimate_age_from_face(dummy_face)
+                
+        else: # Behavioral Search Survey
             survey_q1 = st.text_input("Search query simulation (e.g. 'roblox, toys' vs 'stocks, ML')", "python coding, machine learning jobs")
             survey_q2 = st.slider("GK Reels View Time (seconds out of 60)", 0, 60, 15)
             survey_q3 = st.slider("Adult/Ad Reels View Time (seconds out of 100)", 0, 100, 85)
             
-            submit_login = st.form_submit_button("Log In Securely")
+            if st.button("Analyze Search Behavior"):
+                queries = [q.strip() for q in survey_q1.split(",")]
+                gk_watches = [{"duration_watched": survey_q2, "total_duration": 60}]
+                adult_watches = [{"duration_watched": survey_q3, "total_duration": 100}]
+                category, conf = estimate_age_from_behavior(queries, gk_watches, adult_watches)
+        
+        if category is not None:
+            st.success(f"Age scan complete: **{category}** detected (Confidence: {conf:.1%})!")
             
-        if submit_login:
-            if not user_input:
-                st.error("Please enter a username.")
-            else:
-                # 1. Run Age Assessment
-                if auth_mode == "Facial Face Scan":
-                    # Draw a mock face representing selection
-                    dummy_face = np.ones((128, 128, 3), dtype=np.uint8) * 240
-                    if face_sim == "Baby/Child Face Profile":
-                        cv2.ellipse(dummy_face, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
-                        cv2.circle(dummy_face, (49, 69), 7, (40, 40, 40), -1)
-                        cv2.circle(dummy_face, (79, 69), 7, (40, 40, 40), -1)
+            if st.button("Confirm & Enter Instagram Feed"):
+                if not user_input:
+                    st.error("Please enter a username.")
+                else:
+                    st.session_state["logged_in"] = True
+                    st.session_state["username"] = user_input
+                    st.session_state["age_category"] = category
+                    st.session_state["age_confidence"] = conf
+                    
+                    # Check / Insert User in DB
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id FROM Users WHERE username = ?", (user_input,))
+                    usr = cursor.fetchone()
+                    if not usr:
+                        cursor.execute("INSERT INTO Users (username, password_hash, role) VALUES (?, 'mock_hash', 'social_user')", (user_input,))
+                        user_id = cursor.lastrowid
                     else:
-                        cv2.ellipse(dummy_face, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
-                        cv2.circle(dummy_face, (49, 54), 4, (40, 40, 40), -1)
-                        cv2.circle(dummy_face, (79, 54), 4, (40, 40, 40), -1)
+                        user_id = usr[0]
+                        
+                    cursor.execute("""
+                        INSERT INTO AgeProfiles (user_id, method, prediction_class, confidence)
+                        VALUES (?, ?, ?, ?)
+                    """, (user_id, "facial" if "Facial" in auth_mode else "behavioral", category, conf))
+                    conn.commit()
+                    conn.close()
                     
-                    category, conf = estimate_age_from_face(dummy_face)
-                else:
-                    # Behavioral Survey check
-                    queries = [q.strip() for q in survey_q1.split(",")]
-                    gk_watches = [{"duration_watched": survey_q2, "total_duration": 60}]
-                    adult_watches = [{"duration_watched": survey_q3, "total_duration": 100}]
-                    category, conf = estimate_age_from_behavior(queries, gk_watches, adult_watches)
-                    
-                st.session_state["logged_in"] = True
-                st.session_state["username"] = user_input
-                st.session_state["age_category"] = category
-                st.session_state["age_confidence"] = conf
-                
-                # Check / Insert User in DB
-                conn = get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT id FROM Users WHERE username = ?", (user_input,))
-                usr = cursor.fetchone()
-                if not usr:
-                    cursor.execute("INSERT INTO Users (username, password_hash, role) VALUES (?, 'mock_hash', 'social_user')", (user_input,))
-                    user_id = cursor.lastrowid
-                else:
-                    user_id = usr[0]
-                    
-                cursor.execute("""
-                    INSERT INTO AgeProfiles (user_id, method, prediction_class, confidence)
-                    VALUES (?, ?, ?, ?)
-                """, (user_id, "facial" if auth_mode == "Facial Face Scan" else "behavioral", category, conf))
-                conn.commit()
-                conn.close()
-                
-                st.success(f"Logged in successfully as {user_input}!")
-                time.sleep(0.5)
-                st.rerun()
+                    st.success(f"Logged in successfully as {user_input}!")
+                    time.sleep(0.5)
+                    st.rerun()
+
 
 # =====================================================================
 # MAIN INSTAGRAM SYSTEM FEED & INTERFACE
