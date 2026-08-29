@@ -276,9 +276,15 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Image Content
+                # Image Content (Read as bytes for robust WebAssembly blob rendering)
                 if os.path.exists(pfile):
-                    st.image(pfile, use_container_width=True)
+                    try:
+                        with open(pfile, "rb") as f:
+                            img_bytes = f.read()
+                        st.image(img_bytes, use_container_width=True)
+                    except Exception:
+                        st.image(pfile, use_container_width=True)
+
                 else:
                     # Draw a fallback safe placeholder card
                     placeholder_img = np.ones((400, 600, 3), dtype=np.uint8) * 240
@@ -399,9 +405,15 @@ else:
                 file_path = item.get("file_path", None)
                 video_url = item.get("video_url", None)
                 if file_path and os.path.exists(file_path):
-                    st.video(file_path)
+                    try:
+                        with open(file_path, "rb") as f:
+                            vid_bytes = f.read()
+                        st.video(vid_bytes)
+                    except Exception:
+                        st.video(file_path)
                 elif video_url:
                     st.video(video_url)
+
                 else:
                     # Draw visual block fallback
                     ph_img = np.ones((250, 500, 3), dtype=np.uint8) * 40
