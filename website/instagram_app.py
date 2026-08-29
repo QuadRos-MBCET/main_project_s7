@@ -295,26 +295,27 @@ else:
     elif st.session_state["current_tab"] == "🎬 Reels":
         st.subheader("Short-Video Reels Feed")
         
-        # General Knowledge Reels Database
+        # General Knowledge Reels Database with actual streaming video URLs
         GK_REELS = [
-            {"id": "gk1", "title": "The Solar System for Kids", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True, "restricted": False, "username": "SystemGK"},
-            {"id": "gk2", "title": "Why is the Sky Blue?", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True, "restricted": False, "username": "SystemGK"},
-            {"id": "gk3", "title": "How Do Plants Make Food?", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True, "restricted": False, "username": "SystemGK"}
+            {"id": "gk1", "title": "The Solar System for Kids", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True, "restricted": False, "username": "SystemGK", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"},
+            {"id": "gk2", "title": "Why is the Sky Blue?", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True, "restricted": False, "username": "SystemGK", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"},
+            {"id": "gk3", "title": "How Do Plants Make Food?", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True, "restricted": False, "username": "SystemGK", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"}
         ]
         
-        # 10 Video Safety Datasets from Python settings
+        # 10 Video Safety Datasets with actual streaming video URLs for adult review (Slide 9/16/17 implementation)
         VIDEO_SAFETY_DATASETS = [
-            {"id": "ds_01", "title": "SAFEWATCH-BENCH Dataset Split", "topic": "General Video Safety", "desc": "Large-scale video safety guardrail benchmark containing Real-world splits across 6 safety categories.", "restricted": False, "gk": False, "username": "SafeWatchTeam"},
-            {"id": "ds_02", "title": "KuaiMod Short Video Dataset Split", "topic": "Short Video Governance", "desc": "SVP content governance dataset from Kuaishou covering 15 categories of policy violations.", "restricted": True, "gk": False, "username": "KuaishouTeam"},
-            {"id": "ds_03", "title": "XD-Violence Dataset Split", "topic": "Audio-Visual Violence Detection", "desc": "Surveillance crime, combat, explosion, and weapon fights containing both video and audio tracks.", "restricted": True, "gk": False, "username": "XDViolenceTeam"},
-            {"id": "ds_04", "title": "UCF-Crime Dataset Split", "topic": "Crime Anomaly Detection", "desc": "Surveillance videos capturing real-world anomalies, crimes, and platform safety hazards.", "restricted": True, "gk": False, "username": "UCFCrimeTeam"},
-            {"id": "ds_05", "title": "FakeSV Fake News Dataset Split", "topic": "Fake News Verification", "desc": "Multimodal fake news detection split containing social media video visual and transcript cues.", "restricted": True, "gk": False, "username": "FakeSVTeam"},
-            {"id": "ds_06", "title": "Autoshot Dataset Split", "topic": "Shot Boundary Detection", "desc": "Standard normal short-video transitions used to analyze shot boundary cuts.", "restricted": False, "gk": False, "username": "AutoShotTeam"},
-            {"id": "ds_07", "title": "VHD11K Dataset Split", "topic": "Video Harmfulness Recognition", "desc": "11,000 video samples for training and verifying toxic and harmful visual filters.", "restricted": True, "gk": False, "username": "VHD11KTeam"},
-            {"id": "ds_08", "title": "Violent Scenes Dataset (VSD) Split", "topic": "Violence Scene Recognition", "desc": "Contains movie clips and video segments labeled for action violence and acoustic screams.", "restricted": True, "gk": False, "username": "VSDTeam"},
-            {"id": "ds_09", "title": "BLM-Guard Dataset Split", "topic": "Commercial Ad Policy Violations", "desc": "Real-world commercial short-video ads dataset structured across seven safety risk tiers.", "restricted": True, "gk": False, "username": "BLMGuardTeam"},
-            {"id": "ds_10", "title": "LSPD Dataset Split", "topic": "Pornography and Age Restricted Detection", "desc": "Large-scale pornographic dataset for verifying adult content management filters.", "restricted": True, "gk": False, "username": "LSPDTeam"}
+            {"id": "ds_01", "title": "SAFEWATCH-BENCH Dataset Split", "topic": "General Video Safety", "desc": "Large-scale video safety guardrail benchmark containing Real-world splits across 6 safety categories.", "restricted": False, "gk": False, "username": "SafeWatchTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"},
+            {"id": "ds_02", "title": "KuaiMod Short Video Dataset Split", "topic": "Short Video Governance", "desc": "SVP content governance dataset from Kuaishou covering 15 categories of policy violations.", "restricted": True, "gk": False, "username": "KuaishouTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"},
+            {"id": "ds_03", "title": "XD-Violence Dataset Split", "topic": "Audio-Visual Violence Detection", "desc": "Surveillance crime, combat, explosion, and weapon fights containing both video and audio tracks.", "restricted": True, "gk": False, "username": "XDViolenceTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"},
+            {"id": "ds_04", "title": "UCF-Crime Dataset Split", "topic": "Crime Anomaly Detection", "desc": "Surveillance videos capturing real-world anomalies, crimes, and platform safety hazards.", "restricted": True, "gk": False, "username": "UCFCrimeTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4"},
+            {"id": "ds_05", "title": "FakeSV Fake News Dataset Split", "topic": "Fake News Verification", "desc": "Multimodal fake news detection split containing social media video visual and transcript cues.", "restricted": True, "gk": False, "username": "FakeSVTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"},
+            {"id": "ds_06", "title": "Autoshot Dataset Split", "topic": "Shot Boundary Detection", "desc": "Standard normal short-video transitions used to analyze shot boundary cuts.", "restricted": False, "gk": False, "username": "AutoShotTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"},
+            {"id": "ds_07", "title": "VHD11K Dataset Split", "topic": "Video Harmfulness Recognition", "desc": "11,000 video samples for training and verifying toxic and harmful visual filters.", "restricted": True, "gk": False, "username": "VHD11KTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"},
+            {"id": "ds_08", "title": "Violent Scenes Dataset (VSD) Split", "topic": "Violence Scene Recognition", "desc": "Contains movie clips and video segments labeled for action violence and acoustic screams.", "restricted": True, "gk": False, "username": "VSDTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4"},
+            {"id": "ds_09", "title": "BLM-Guard Dataset Split", "topic": "Commercial Ad Policy Violations", "desc": "Real-world commercial short-video ads dataset structured across seven safety risk tiers.", "restricted": True, "gk": False, "username": "BLMGuardTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"},
+            {"id": "ds_10", "title": "LSPD Dataset Split", "topic": "Pornography and Age Restricted Detection", "desc": "Large-scale pornographic dataset for verifying adult content management filters.", "restricted": True, "gk": False, "username": "LSPDTeam", "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"}
         ]
+
         
         # Load Video posts from DB
         conn = get_connection()
@@ -394,17 +395,21 @@ else:
                 """, unsafe_allow_html=True)
 
                 
-                # Render video file or mock placeholder
+                # Render video file, stream live video URL, or draw mock placeholder
                 file_path = item.get("file_path", None)
+                video_url = item.get("video_url", None)
                 if file_path and os.path.exists(file_path):
                     st.video(file_path)
+                elif video_url:
+                    st.video(video_url)
                 else:
-                    # Draw visual block for dataset videos / educational videos
+                    # Draw visual block fallback
                     ph_img = np.ones((250, 500, 3), dtype=np.uint8) * 40
                     cv2.putText(ph_img, f"Video Stream: {item['title']}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
                     cv2.putText(ph_img, f"Topic: {item.get('topic', 'Content Safety')}", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
                     cv2.putText(ph_img, "Dataset Video Feed Active", (20, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 200, 100), 1)
                     st.image(ph_img, use_container_width=True)
+
                     
                 st.write(f"**{item['title']}**: {item.get('desc', '')}")
                 st.markdown("<hr style='margin: 20px 0px;'>", unsafe_allow_html=True)
