@@ -275,9 +275,23 @@ else:
         
         # General Knowledge Reels Database
         GK_REELS = [
-            {"id": "gk1", "title": "The Solar System for Kids", "file_path": "solar_system.mp4", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True},
-            {"id": "gk2", "title": "Why is the Sky Blue?", "file_path": "sky_blue.mp4", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True},
-            {"id": "gk3", "title": "How Do Plants Make Food?", "file_path": "photosynthesis.mp4", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True}
+            {"id": "gk1", "title": "The Solar System for Kids", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True, "restricted": False, "username": "SystemGK"},
+            {"id": "gk2", "title": "Why is the Sky Blue?", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True, "restricted": False, "username": "SystemGK"},
+            {"id": "gk3", "title": "How Do Plants Make Food?", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True, "restricted": False, "username": "SystemGK"}
+        ]
+        
+        # 10 Video Safety Datasets from Python settings
+        VIDEO_SAFETY_DATASETS = [
+            {"id": "ds_01", "title": "SAFEWATCH-BENCH Dataset Split", "topic": "General Video Safety", "desc": "Large-scale video safety guardrail benchmark containing Real-world splits across 6 safety categories.", "restricted": False, "gk": False, "username": "SafeWatchTeam"},
+            {"id": "ds_02", "title": "KuaiMod Short Video Dataset Split", "topic": "Short Video Governance", "desc": "SVP content governance dataset from Kuaishou covering 15 categories of policy violations.", "restricted": True, "gk": False, "username": "KuaishouTeam"},
+            {"id": "ds_03", "title": "XD-Violence Dataset Split", "topic": "Audio-Visual Violence Detection", "desc": "Surveillance crime, combat, explosion, and weapon fights containing both video and audio tracks.", "restricted": True, "gk": False, "username": "XDViolenceTeam"},
+            {"id": "ds_04", "title": "UCF-Crime Dataset Split", "topic": "Crime Anomaly Detection", "desc": "Surveillance videos capturing real-world anomalies, crimes, and platform safety hazards.", "restricted": True, "gk": False, "username": "UCFCrimeTeam"},
+            {"id": "ds_05", "title": "FakeSV Fake News Dataset Split", "topic": "Fake News Verification", "desc": "Multimodal fake news detection split containing social media video visual and transcript cues.", "restricted": True, "gk": False, "username": "FakeSVTeam"},
+            {"id": "ds_06", "title": "Autoshot Dataset Split", "topic": "Shot Boundary Detection", "desc": "Standard normal short-video transitions used to analyze shot boundary cuts.", "restricted": False, "gk": False, "username": "AutoShotTeam"},
+            {"id": "ds_07", "title": "VHD11K Dataset Split", "topic": "Video Harmfulness Recognition", "desc": "11,000 video samples for training and verifying toxic and harmful visual filters.", "restricted": True, "gk": False, "username": "VHD11KTeam"},
+            {"id": "ds_08", "title": "Violent Scenes Dataset (VSD) Split", "topic": "Violence Scene Recognition", "desc": "Contains movie clips and video segments labeled for action violence and acoustic screams.", "restricted": True, "gk": False, "username": "VSDTeam"},
+            {"id": "ds_09", "title": "BLM-Guard Dataset Split", "topic": "Commercial Ad Policy Violations", "desc": "Real-world commercial short-video ads dataset structured across seven safety risk tiers.", "restricted": True, "gk": False, "username": "BLMGuardTeam"},
+            {"id": "ds_10", "title": "LSPD Dataset Split", "topic": "Pornography and Age Restricted Detection", "desc": "Large-scale pornographic dataset for verifying adult content management filters.", "restricted": True, "gk": False, "username": "LSPDTeam"}
         ]
         
         # Load Video posts from DB
@@ -295,22 +309,32 @@ else:
         
         reels_feed = []
         
-        # Add GK reels if child
+        # Build feed content based on user age category
         if age_category == "Child":
-            st.warning("Child Mode: Safe and Educational Reels injected.")
+            st.warning("Child Mode Active: Filtering restricted datasets and ads...")
+            # Inject GK reels
             for gk in GK_REELS:
                 reels_feed.append(gk)
-                
+            # Inject safe datasets
+            for ds in VIDEO_SAFETY_DATASETS:
+                if not ds["restricted"]:
+                    reels_feed.append(ds)
+            # Inject safe database uploads
             for r in db_reels:
                 rid, rtitle, rcap, rfile, ruser = r
                 full_txt = f"{rtitle} {rcap or ''} {rfile}"
                 if not is_age_restricted(full_txt):
-                    reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "username": ruser})
+                    reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": False, "username": ruser})
         else:
-            st.success("Adult Reels Feed Active.")
+            st.success("Adult Reels Feed Active. Showing all datasets and ads.")
+            # Inject all DB uploads
             for r in db_reels:
                 rid, rtitle, rcap, rfile, ruser = r
-                reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "username": ruser})
+                reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": is_age_restricted(f"{rtitle} {rcap}"), "username": ruser})
+            # Inject all datasets
+            for ds in VIDEO_SAFETY_DATASETS:
+                reels_feed.append(ds)
+            # Inject GK reels
             for gk in GK_REELS:
                 reels_feed.append(gk)
                 
@@ -319,31 +343,46 @@ else:
         else:
             for item in reels_feed:
                 is_gk = item.get("gk", False)
-                u = item.get("username", "SystemGK")
+                is_restricted = item.get("restricted", False)
+                u = item.get("username", "System")
                 
+                # Tag display info
+                tag_label = "Ad Creative"
+                if is_gk:
+                    tag_label = "GK Lesson"
+                elif "Dataset" in item["title"]:
+                    tag_label = "Dataset Video Source"
+                    
                 st.markdown(f"""
-                <div class="post-card">
-                    <div class="post-header">
-                        <div style="width: 32px; height: 32px; background-color: #4a90e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff;">
+                <div class="post-card" style="border: 2px solid {'#f87171' if is_restricted else '#dbdbdb'};">
+                    <div class="post-header" style="background-color: {'#fef2f2' if is_restricted else '#ffffff'};">
+                        <div style="width: 32px; height: 32px; background-color: {'#ef4444' if is_restricted else '#4a90e2'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff;">
                             {u[0].upper()}
                         </div>
-                        <div class="post-username">{u} <span style="color:#8e8e8e; font-weight:300;">• {'GK Lesson' if is_gk else 'Ad Creative'}</span></div>
+                        <div class="post-username">
+                            {u} 
+                            <span style="color:#8e8e8e; font-weight:300;">• {tag_label}</span>
+                            {f'<span style="color:#ef4444; font-weight:600; margin-left: 10px;">[RESTRICTED 18+]</span>' if is_restricted else ''}
+                        </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Render video file
-                if not is_gk and os.path.exists(item["file_path"]):
-                    st.video(item["file_path"])
+                # Render video file or mock placeholder
+                file_path = item.get("file_path", None)
+                if file_path and os.path.exists(file_path):
+                    st.video(file_path)
                 else:
-                    # Draw visual block for educational video
+                    # Draw visual block for dataset videos / educational videos
                     ph_img = np.ones((250, 500, 3), dtype=np.uint8) * 40
-                    cv2.putText(ph_img, f"Video: {item['title']}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                    cv2.putText(ph_img, "Simulated Video Playback", (20, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+                    cv2.putText(ph_img, f"Video Stream: {item['title']}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+                    cv2.putText(ph_img, f"Topic: {item.get('topic', 'Content Safety')}", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+                    cv2.putText(ph_img, "Dataset Video Feed Active", (20, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 200, 100), 1)
                     st.image(ph_img, use_container_width=True)
                     
                 st.write(f"**{item['title']}**: {item.get('desc', '')}")
                 st.markdown("<hr style='margin: 20px 0px;'>", unsafe_allow_html=True)
+
 
     # =================================================================
     # TAB C: NEW POST UPLOAD WITH REAL-TIME AI MODERATION
