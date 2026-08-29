@@ -295,12 +295,12 @@ else:
         # Load posts from DB
         conn = get_connection()
         cursor = conn.cursor()
-        # Query approved photo posts (which are not videos)
+        # Query photo posts (not videos) - include all statuses to let adults view restricted/rejected ads
         cursor.execute("""
-            SELECT A.id, A.title, A.caption, A.file_path, U.username 
+            SELECT A.id, A.title, A.caption, A.file_path, U.username, A.status 
             FROM Advertisements A
             JOIN Users U ON A.advertiser_id = U.id
-            WHERE A.status = 'approved' AND A.file_path NOT LIKE '%.mp4'
+            WHERE A.file_path NOT LIKE '%.mp4'
             ORDER BY A.id DESC
         """)
         posts = cursor.fetchall()
@@ -309,26 +309,33 @@ else:
         # Filter feed based on age check
         filtered_posts = []
         for post in posts:
-            pid, ptitle, pcap, pfile, puser = post
+            pid, ptitle, pcap, pfile, puser, pstatus = post
             full_txt = f"{ptitle} {pcap or ''} {pfile}"
             
-            # If viewer is a child, filter out any restricted terms
-            if age_category == "Child" and is_age_restricted(full_txt):
+            # Identify if it is restricted (rejected, under review, or manually age restricted)
+            is_flagged = (pstatus in ['rejected', 'under_review']) or is_age_restricted(full_txt)
+            
+            # If viewer is a child, completely filter out restricted/flagged ads
+            if age_category == "Child" and is_flagged:
                 continue
-            filtered_posts.append(post)
+                
+            filtered_posts.append((pid, ptitle, pcap, pfile, puser, pstatus, is_flagged))
             
         if not filtered_posts:
             st.info("No photo posts found in feed.")
         else:
-            for pid, ptitle, pcap, pfile, puser in filtered_posts:
+            for pid, ptitle, pcap, pfile, puser, pstatus, is_flagged in filtered_posts:
                 # Render Instagram-style Card
                 st.markdown(f"""
-                <div class="post-card">
-                    <div class="post-header">
-                        <div style="width: 32px; height: 32px; background-color: #dbdbdb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #555;">
+                <div class="post-card" style="border: 2px solid {'#f87171' if is_flagged else '#dbdbdb'};">
+                    <div class="post-header" style="background-color: {'#fef2f2' if is_flagged else '#ffffff'};">
+                        <div style="width: 32px; height: 32px; background-color: {'#ef4444' if is_flagged else '#4a90e2'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: #fff;">
                             {puser[0].upper()}
                         </div>
-                        <div class="post-username">{puser}</div>
+                        <div class="post-username">
+                            {puser} 
+                            {f'<span style="color:#ef4444; font-weight:600; margin-left: 10px;">[RESTRICTED AD: {pstatus.upper()}]</span>' if is_flagged else ''}
+                        </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -344,6 +351,7 @@ else:
                     
                 st.markdown(f"<div class='post-caption'><b>{puser}</b> {pcap or ''}</div>", unsafe_allow_html=True)
                 st.markdown("<hr style='margin: 0px 0px 20px 0px; border: 0; border-top: 1px solid #dbdbdb;'>", unsafe_allow_html=True)
+
 
     # =================================================================
     # TAB B: REELS FEED (VIDEOS)
@@ -376,10 +384,10 @@ else:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT A.id, A.title, A.caption, A.file_path, U.username 
+            SELECT A.id, A.title, A.caption, A.file_path, U.username, A.status 
             FROM Advertisements A
             JOIN Users U ON A.advertiser_id = U.id
-            WHERE A.status = 'approved' AND A.file_path LIKE '%.mp4'
+            WHERE A.file_path LIKE '%.mp4'
             ORDER BY A.id DESC
         """)
         db_reels = cursor.fetchall()
@@ -397,24 +405,26 @@ else:
             for ds in VIDEO_SAFETY_DATASETS:
                 if not ds["restricted"]:
                     reels_feed.append(ds)
-            # Inject safe database uploads
+            # Inject safe database uploads (only approved, non-restricted)
             for r in db_reels:
-                rid, rtitle, rcap, rfile, ruser = r
+                rid, rtitle, rcap, rfile, ruser, rstatus = r
                 full_txt = f"{rtitle} {rcap or ''} {rfile}"
-                if not is_age_restricted(full_txt):
-                    reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": False, "username": ruser})
+                if rstatus == 'approved' and not is_age_restricted(full_txt):
+                    reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": False, "status": "approved", "username": ruser})
         else:
             st.success("Adult Reels Feed Active. Showing all datasets and ads.")
-            # Inject all DB uploads
+            # Inject all DB uploads (even restricted/rejected/under_review)
             for r in db_reels:
-                rid, rtitle, rcap, rfile, ruser = r
-                reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": is_age_restricted(f"{rtitle} {rcap}"), "username": ruser})
+                rid, rtitle, rcap, rfile, ruser, rstatus = r
+                is_flagged = (rstatus in ['rejected', 'under_review']) or is_age_restricted(f"{rtitle} {rcap}")
+                reels_feed.append({"title": rtitle, "desc": rcap, "file_path": rfile, "gk": False, "restricted": is_flagged, "status": rstatus, "username": ruser})
             # Inject all datasets
             for ds in VIDEO_SAFETY_DATASETS:
                 reels_feed.append(ds)
             # Inject GK reels
             for gk in GK_REELS:
                 reels_feed.append(gk)
+
                 
         if not reels_feed:
             st.info("No video reels available.")
@@ -431,6 +441,7 @@ else:
                 elif "Dataset" in item["title"]:
                     tag_label = "Dataset Video Source"
                     
+                status_label = item.get("status", "REJECTED").upper()
                 st.markdown(f"""
                 <div class="post-card" style="border: 2px solid {'#f87171' if is_restricted else '#dbdbdb'};">
                     <div class="post-header" style="background-color: {'#fef2f2' if is_restricted else '#ffffff'};">
@@ -440,11 +451,12 @@ else:
                         <div class="post-username">
                             {u} 
                             <span style="color:#8e8e8e; font-weight:300;">• {tag_label}</span>
-                            {f'<span style="color:#ef4444; font-weight:600; margin-left: 10px;">[RESTRICTED 18+]</span>' if is_restricted else ''}
+                            {f'<span style="color:#ef4444; font-weight:600; margin-left: 10px;">[RESTRICTED AD: {status_label}]</span>' if is_restricted else ''}
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+
                 
                 # Render video file or mock placeholder
                 file_path = item.get("file_path", None)
