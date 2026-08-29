@@ -25,19 +25,44 @@ except Exception:
 def detect_and_crop_face(image_np: np.ndarray) -> tuple:
     if image_np is None:
         return np.zeros((128, 128, 3), dtype=np.uint8), None
+    h_img, w_img = image_np.shape[:2]
+    
     if face_cascade is None:
-        return cv2.resize(image_np, (128, 128)), None
+        # Default center box fallback if cascade classifier is missing
+        w = int(w_img * 0.4)
+        h = int(w_img * 0.5) # standard portrait ratio
+        x = int((w_img - w) / 2)
+        y = int((h_img - h) / 2)
+        cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
+        return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+        
     gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
     try:
+        # Pass 1: Standard high-precision cascade pass
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        if len(faces) == 0:
+            # Pass 2: High sensitivity pass for difficult lighting/angles
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
     except Exception:
         faces = []
+        
     if len(faces) == 0:
-        return cv2.resize(image_np, (128, 128)), None
+        # Pass 3: Center-of-frame box fallback (assuming user is facing the camera)
+        w = int(w_img * 0.4)
+        h = int(w_img * 0.5)
+        x = int((w_img - w) / 2)
+        y = int((h_img - h) / 2)
+        faces = [(x, y, w, h)]
+        
     x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
-    cropped_face = image_np[y:y+h, x:x+w]
+    y_start = max(0, y)
+    y_end = min(h_img, y+h)
+    x_start = max(0, x)
+    x_end = min(w_img, x+w)
+    cropped_face = image_np[y_start:y_end, x_start:x_end]
 
     return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+
 
 def extract_facial_features(cropped_face: np.ndarray, bbox: tuple) -> np.ndarray:
     if bbox is not None:
