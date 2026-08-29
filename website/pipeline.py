@@ -212,17 +212,28 @@ def run_multimodal_moderation(ad_id: int) -> dict:
     # Update Ad Status
     cursor.execute("UPDATE Advertisements SET status = ? WHERE id = ?", (status, ad_id))
     
+    # Query FAISS index for similar exemplars (Slide 10/12/14/16/17 implementation)
+    try:
+        from website.faiss_index import search_similar_exemplar
+        similar_case = search_similar_exemplar(nlp_text)
+    except Exception:
+        similar_case = None
+
     # Generate CoT Explanation Reason
     all_violations = list(set(nlp_violations + speech_violations + visual_violations))
     violation_str = ", ".join(all_violations) if all_violations else "None"
     
     explanation = f"AI Decision: {status.upper()} (Risk: {fused_score:.1f}%). Violated Policies: {violation_str}. "
+    if similar_case:
+        explanation += f"FAISS Nearest Match: '{similar_case['title']}' (Decision: {similar_case['decision'].upper()}, Distance: {similar_case['distance']:.3f}). "
+    
     if status == "rejected":
         explanation += f"Rejection triggered due to high-risk multimodal indicators exceeding the safety threshold (75%)."
     elif status == "under_review":
         explanation += "Borderline scores mapped to administrative review queue for manual auditing."
     else:
         explanation += "No significant policy violations detected across visual, textual, or speech layers."
+
         
     cursor.execute("""
     INSERT INTO ModerationResults (ad_id, final_decision, explanation)
