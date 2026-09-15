@@ -67,11 +67,64 @@ with tabs[0]:
     
     with sub_tab1:
         st.subheader("Facial Age Classification")
-        input_type = st.radio("Select Input Method:", ["Use Webcam Camera", "Upload Image File", "Simulated Face Preset"], key="tab1_input_type")
+        input_type = st.radio("Select Input Method:", ["Real-Time Video Stream Tracking", "Use Webcam Camera (Snapshot)", "Upload Image File", "Simulated Face Preset"], key="tab1_input_type")
         
         image_np = None
         
-        if input_type == "Use Webcam Camera":
+        if input_type == "Real-Time Video Stream Tracking":
+            st.info("Continuous real-time age tracking active. As you move your face, a bounding box and live age estimation overlay will track your face continuously.")
+            run_live = st.checkbox("▶️ Start Live Continuous Video Stream", value=False, key="start_live_stream")
+            
+            frame_placeholder = st.empty()
+            status_placeholder = st.empty()
+            
+            if run_live:
+                cap = cv2.VideoCapture(0)
+                if not cap.isOpened():
+                    st.error("Error: Could not access webcam. Please ensure your camera is connected and not in use by another application.")
+                else:
+                    status_placeholder.success("🎥 Camera feed active — tracking face and age in real time...")
+                    
+                    frame_counter = 0
+                    last_detailed = None
+                    
+                    while run_live:
+                        ret, frame = cap.read()
+                        if not ret:
+                            st.error("Failed to read frame from camera.")
+                            break
+                        
+                        frame_counter += 1
+                        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        
+                        if frame_counter % 2 == 1 or last_detailed is None:
+                            last_detailed = estimate_detailed_age_from_face(rgb_frame)
+                            
+                        detailed = last_detailed
+                        age_range = detailed["age_range"]
+                        norm_group = detailed["normalized_group"]
+                        conf = detailed["confidence"]
+                        
+                        annotated = rgb_frame.copy()
+                        if detailed.get("pipeline_result") and detailed["pipeline_result"].get("faces"):
+                            for face in detailed["pipeline_result"]["faces"]:
+                                x1, y1, x2, y2 = face["bbox"]
+                                box_color = (255, 0, 0) if norm_group == "CHILD" else (0, 255, 0)
+                                label = f"Age: {age_range} ({norm_group}) | {conf:.0%}"
+                                
+                                cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 3)
+                                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+                                y_start = max(0, y1 - 35)
+                                cv2.rectangle(annotated, (x1, y_start), (x1 + tw + 10, y_start + 30), box_color, -1)
+                                cv2.putText(annotated, label, (x1 + 5, y_start + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                        
+                        frame_placeholder.image(annotated, channels="RGB", width=600)
+                        time.sleep(0.03)
+                        
+                    cap.release()
+                    status_placeholder.info("Live camera stream stopped.")
+
+        elif input_type == "Use Webcam Camera (Snapshot)":
             cam_image = st.camera_input("Capture Profile Face Photo", key="tab1_webcam")
             if cam_image is not None:
                 image = Image.open(cam_image).convert("RGB")
