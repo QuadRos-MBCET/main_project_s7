@@ -18,6 +18,15 @@ except ImportError:
 # =====================================================================
 
 try:
+    from ai.face_age.face_age_pipeline import FaceAgePipeline
+    from PIL import Image
+    _FACE_AGE_PIPELINE = FaceAgePipeline()
+    HAS_PIPELINE = True
+except Exception:
+    _FACE_AGE_PIPELINE = None
+    HAS_PIPELINE = False
+
+try:
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 except Exception:
     face_cascade = None
@@ -27,6 +36,20 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         return np.zeros((128, 128, 3), dtype=np.uint8), None
     h_img, w_img = image_np.shape[:2]
     
+    if HAS_PIPELINE:
+        try:
+            pil_img = Image.fromarray(image_np)
+            faces = _FACE_AGE_PIPELINE.detector.detect_faces(pil_img)
+            if faces:
+                main_face = max(faces, key=lambda f: f["detection_confidence"])
+                x1, y1, x2, y2 = main_face["bbox"]
+                w = max(1, x2 - x1)
+                h = max(1, y2 - y1)
+                face_crop = np.array(main_face["face_crop"])
+                return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
+        except Exception:
+            pass
+
     if face_cascade is None:
         # Default center box fallback if cascade classifier is missing
         w = int(w_img * 0.4)
@@ -114,10 +137,25 @@ face_age_clf = _train_static_face_classifier()
 def estimate_age_from_face(image_np: np.ndarray) -> tuple:
     """
     Returns estimated age classification ('Child' or 'Not a Child') and child probability.
+    Uses MTCNN + ViT Age Classifier pipeline when available.
     """
+    if HAS_PIPELINE and image_np is not None:
+        try:
+            pil_img = Image.fromarray(image_np)
+            res = _FACE_AGE_PIPELINE.analyze(pil_img)
+            if res.get("faces_detected", 0) > 0:
+                face = res["faces"][0]
+                norm_group = face["normalized_age_group"]
+                conf = face["age_estimation"]["confidence"]
+                if norm_group == "CHILD":
+                    return "Child", float(conf)
+                else:
+                    return "Not a Child", float(max(0.0, 1.0 - conf))
+        except Exception:
+            pass
+
     cropped_face, bbox = detect_and_crop_face(image_np)
-    if not HAS_SKLEARN:
-        # Fallback heuristic: roundness threshold (child face is rounder)
+    if not HAS_SKLEARN or face_age_clf is None:
         if bbox is not None:
             x, y, w, h = bbox
             roundness = min(w, h) / max(w, h)
