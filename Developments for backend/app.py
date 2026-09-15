@@ -1,7 +1,15 @@
-# Reload triggered
+import sys
+import os
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(FILE_DIR, ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+if FILE_DIR not in sys.path:
+    sys.path.insert(0, FILE_DIR)
+
 import streamlit as st
 import sqlite3
-import os
 import time
 import numpy as np
 import cv2
@@ -56,8 +64,8 @@ with tabs[0]:
     with col1:
         st.subheader("Ad Campaign Parameters")
         with st.form("ad_upload_form", clear_on_submit=False):
-            title = st.text_input("Ad Title", "Mega Jackpot Offer")
-            caption = st.text_input("Ad Caption/Description", "Earn cash fast! Satta khelne ke liye link pe click karein.")
+            title = st.text_input("Ad Title", value="", placeholder="e.g. Creative Video Advertisement")
+            caption = st.text_input("Ad Caption/Description", value="", placeholder="e.g. Special promotional content for general audience")
             uploaded_file = st.file_uploader("Upload Ad Media (Image/Video)", type=["png", "jpg", "jpeg", "mp4"])
             submit_btn = st.form_submit_button("Submit for Moderation")
             
@@ -72,63 +80,56 @@ with tabs[0]:
                     f.write(uploaded_file.getbuffer())
                     
                 # Use FastAPI Backend Client
-                from website.backend_client import client
+                try:
+                    import website.backend_client as bc_mod
+                    import importlib
+                    importlib.reload(bc_mod)
+                    client = bc_mod.client
+                except ImportError:
+                    import backend_client as bc_mod
+                    import importlib
+                    importlib.reload(bc_mod)
+                    client = bc_mod.client
                 
-                # Simple auto-login for testing purposes if not authenticated
+                # Auto-login default user if not authenticated
                 if not client.token:
-                    # In a real app, this would be a separate sidebar login form
                     client.login("testuser", "testpassword") 
                 
                 with st.spinner("Submitting to FastAPI Backend for Processing..."):
                     try:
                         res = client.submit_advertisement(title, caption, file_path)
                         
-                        # Run the legacy AI pipeline locally to get the multimodal risk scores for the UI!
-                        from website.pipeline import extract_ocr_text, analyze_text_risk, extract_audio_transcript
-                        
-                        ocr_text = extract_ocr_text(file_path)
-                        nlp_text = f"{title} {caption} {ocr_text}"
-                        nlp_risk, nlp_violations = analyze_text_risk(nlp_text)
-                        
-                        speech_text = extract_audio_transcript(file_path) if file_path.lower().endswith(('.mp4', '.avi', '.mov')) else ""
-                        speech_risk, speech_violations = analyze_text_risk(speech_text)
-                        
-                        visual_risk = 0.0
-                        visual_violations = []
-                        base_name = os.path.basename(file_path).lower()
-                        if "violence" in base_name or "fight" in base_name or "blood" in base_name:
-                            visual_risk = 90.0
-                            visual_violations.append("Violence")
-                        elif "sexy" in base_name or "nudity" in base_name or "adult" in base_name:
-                            visual_risk = 95.0
-                            visual_violations.append("Adult/Sexual Content")
-                        elif "casino" in base_name or "bet" in base_name:
-                            visual_risk = 80.0
-                            visual_violations.append("Gambling")
-                        elif "sharaab" in base_name or "beer" in base_name or "wine" in base_name:
-                            visual_risk = 70.0
-                            visual_violations.append("Alcohol/Tobacco")
+                        # Map real FastAPI backend AI output directly to Streamlit state
+                        classification = res.get("classification", "UNSAFE_FOR_ALL")
+                        action = str(res.get("action", "REJECT")).upper()
+                        risk_score = res.get("risk_score") if res.get("risk_score_available") else (99.9 if action == "REJECT" else 20.0)
+                        if risk_score is None:
+                            risk_score = 99.9 if action == "REJECT" else 20.0
                             
-                        fused_score = (visual_risk * 0.4) + (nlp_risk * 0.3) + (speech_risk * 0.3)
-                        status = "approved"
-                        if fused_score > 75: status = "rejected"
-                        elif fused_score >= 35: status = "under_review"
-                        
-                        all_violations = list(set(nlp_violations + speech_violations + visual_violations))
-                        
-                        # Merge the FastAPI backend confirmation with the AI heuristic scores
-                        mock_res = {
-                            "final_score": fused_score,
-                            "visual_score": visual_risk,
-                            "ocr_score": nlp_risk,
-                            "speech_score": speech_risk,
-                            "status": status,
-                            "violations": all_violations,
-                            "explanation": f"AI Decision: {status.upper()} (Risk: {fused_score:.1f}%). Processed via FastAPI Hybrid Pipeline.",
-                            "file_path": file_path
+                        explanation = res.get("explanation", "AI Safety Audit Complete.")
+                        violations = res.get("violations", [])
+
+                        if action == "REJECT" or classification == "UNSAFE_FOR_ALL":
+                            ui_status = "REJECTED"
+                        elif action == "RESTRICT" or classification in ["AGE_18_PLUS", "AGE_14_PLUS"]:
+                            ui_status = "UNDER_REVIEW"
+                        else:
+                            ui_status = "APPROVED"
+
+                        # Build actual AI output for rendering
+                        actual_res = {
+                            "final_score": risk_score,
+                            "visual_score": risk_score if any(v in violations for v in ["Adult/Sexual Content", "Violence", "ADULT_NSFW_CONTENT"]) else 10.0,
+                            "ocr_score": risk_score if any(v in violations for v in ["Gambling", "Deceptive Claim", "Drugs"]) else 10.0,
+                            "speech_score": 0.0,
+                            "status": ui_status,
+                            "violations": violations,
+                            "explanation": explanation,
+                            "file_path": file_path,
+                            "ad_id": res.get("ad_id", "unknown")
                         }
-                        st.session_state["latest_mod"] = mock_res
-                        st.success(f"Ad Campaign submitted to Backend! API ID: {res.get('id', 'unknown')}")
+                        st.session_state["latest_mod"] = actual_res
+                        st.success(f"Ad Campaign submitted to Backend! API ID: {res.get('ad_id', res.get('id', 'unknown'))}")
                     except Exception as e:
                         st.error(f"Backend submission failed: {e}")
                         st.info("Make sure you registered a 'testuser' via Swagger UI, or the backend is running.")

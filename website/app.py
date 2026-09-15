@@ -1,6 +1,15 @@
+import sys
+import os
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(FILE_DIR, ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+if FILE_DIR not in sys.path:
+    sys.path.insert(0, FILE_DIR)
+
 import streamlit as st
 import sqlite3
-import os
 import time
 import numpy as np
 import cv2
@@ -55,8 +64,8 @@ with tabs[0]:
     with col1:
         st.subheader("Ad Campaign Parameters")
         with st.form("ad_upload_form", clear_on_submit=False):
-            title = st.text_input("Ad Title", "Mega Jackpot Offer")
-            caption = st.text_input("Ad Caption/Description", "Earn cash fast! Satta khelne ke liye link pe click karein.")
+            title = st.text_input("Ad Title", value="", placeholder="e.g. Creative Video Advertisement")
+            caption = st.text_input("Ad Caption/Description", value="", placeholder="e.g. Special promotional content for general audience")
             uploaded_file = st.file_uploader("Upload Ad Media (Image/Video)", type=["png", "jpg", "jpeg", "mp4"])
             submit_btn = st.form_submit_button("Submit for Moderation")
             
