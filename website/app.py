@@ -3,6 +3,7 @@ import sqlite3
 import os
 import time
 import sys
+import subprocess
 from pathlib import Path
 
 # Ensure parent directory is in sys.path for website package imports
@@ -13,11 +14,11 @@ import cv2
 from PIL import Image
 from website.database import get_connection, init_database
 from website.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
-from website.classifier import estimate_age_from_face, estimate_age_from_behavior
+from website.classifier import estimate_age_from_face, estimate_detailed_age_from_face, estimate_age_from_behavior, detect_and_crop_face
 
 init_database()
 
-st.set_page_config(page_title="SafeAd AI: Trust & Safety Framework", layout="wide")
+st.set_page_config(page_title="SafeAd AI: Trust & Safety Framework", layout="wide", page_icon="🛡️")
 
 st.markdown("""
     <style>
@@ -45,15 +46,129 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='main-title'>SafeAd AI (SAFE-VISION)</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Multimodal Trust & Safety Framework for Social Media Advertisement Moderation</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Multimodal Trust & Safety Framework & MTCNN + ViT Deep Learning Face Age Estimation</div>", unsafe_allow_html=True)
 
-# Navigation
-tabs = st.tabs(["Advertiser Portal", "Admin Auditing Dashboard", "Social User Feed (Age-Aware)"])
+# Navigation Tabs
+tabs = st.tabs([
+    "👤 Facial & Behavioral Age Classifier",
+    "📢 Advertiser Portal",
+    "🛡️ Admin Auditing Dashboard",
+    "📱 Social User Feed (Age-Aware)"
+])
 
 # =====================================================================
-# TAB 1: ADVERTISER PORTAL
+# TAB 1: FACIAL & BEHAVIORAL AGE ESTIMATION FRAMEWORK
 # =====================================================================
 with tabs[0]:
+    st.header("👤 Face Age Estimation & Behavioral Profiling System")
+    st.markdown("Early detection of age categories (Child vs. Not a Child / Adult) using MTCNN face detection and HuggingFace ViT age classification.")
+    
+    sub_tab1, sub_tab2 = st.tabs(["📸 Facial Age Classifier (MTCNN + ViT)", "📊 Behavioral Age Classifier"])
+    
+    with sub_tab1:
+        st.subheader("Facial Age Classification")
+        input_type = st.radio("Select Input Method:", ["Use Webcam Camera", "Upload Image File", "Simulated Face Preset"], key="tab1_input_type")
+        
+        image_np = None
+        
+        if input_type == "Use Webcam Camera":
+            cam_image = st.camera_input("Capture Profile Face Photo", key="tab1_webcam")
+            if cam_image is not None:
+                image = Image.open(cam_image).convert("RGB")
+                image_np = np.array(image)
+                
+        elif input_type == "Upload Image File":
+            uploaded_file = st.file_uploader("Choose a photo with a face...", type=["jpg", "jpeg", "png"], key="tab1_file")
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file).convert("RGB")
+                image_np = np.array(image)
+                
+        elif input_type == "Simulated Face Preset":
+            face_choice = st.selectbox("Select Preset Face Profile", ["Child Face (Round)", "Adult Face (Oval)"], key="tab1_preset")
+            dummy_face = np.ones((128, 128, 3), dtype=np.uint8) * 240
+            if face_choice == "Child Face (Round)":
+                cv2.ellipse(dummy_face, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+                cv2.circle(dummy_face, (49, 69), 7, (40, 40, 40), -1)
+                cv2.circle(dummy_face, (79, 69), 7, (40, 40, 40), -1)
+            else:
+                cv2.ellipse(dummy_face, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+                cv2.circle(dummy_face, (49, 54), 4, (40, 40, 40), -1)
+                cv2.circle(dummy_face, (79, 54), 4, (40, 40, 40), -1)
+            image_np = dummy_face
+            
+        if image_np is not None:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Original Input Image")
+                st.image(image_np, width=350)
+                
+            with col2:
+                st.subheader("Face Detection & ViT Age Analysis")
+                cropped_face, bbox = detect_and_crop_face(image_np)
+                
+                st.image(cropped_face, width=160, caption="Cropped 128x128 Face")
+                if bbox is not None:
+                    st.caption(f"Bounding Box Coordinates: `{bbox}`")
+                
+                detailed = estimate_detailed_age_from_face(image_np)
+                age_range = detailed["age_range"]
+                norm_group = detailed["normalized_group"]
+                confidence = detailed["confidence"]
+                category = detailed["category"]
+                
+                st.markdown("### 📊 ViT Age Prediction Results")
+                st.info(f"🎯 **Predicted Age Range**: **{age_range}**")
+                
+                if category == "Child":
+                    st.warning(f"🏷️ **Category**: **{norm_group}** (`Child Profile`)")
+                else:
+                    st.success(f"🏷️ **Category**: **{norm_group}** (`Adult / Non-Child Profile`)")
+                    
+                st.metric("ViT Model Confidence", f"{confidence:.1%}")
+                st.progress(float(confidence))
+                
+                if detailed.get("pipeline_result"):
+                    with st.expander("🔍 View Raw Pipeline JSON Output"):
+                        st.json(detailed["pipeline_result"])
+
+        st.markdown("---")
+        st.markdown("### 🎥 Open Live Desktop Camera Window")
+        st.caption("Click below to open the real-time OpenCV window (`camera_app.py`) for live bounding box drawing and continuous webcam age detection.")
+        if st.button("Launch Desktop OpenCV Camera Window"):
+            try:
+                subprocess.Popen([sys.executable, "camera_app.py"])
+                st.success("OpenCV Camera Window opened! Check your desktop window.")
+            except Exception as e:
+                st.error(f"Error launching camera window: {e}")
+
+    with sub_tab2:
+        st.header("Behavioral Age Profiling")
+        st.markdown("Analyze user search queries and reel watch duration to classify age group.")
+        
+        search_queries = st.text_input("Enter Search Queries (comma-separated):", "minecraft speedrun, cartoon videos, fun games", key="tab1_queries")
+        gk_watch = st.slider("Educational / GK Video Watch Time (seconds):", 0, 60, 45, key="tab1_gk")
+        adult_watch = st.slider("Adult / Ad Video Watch Time (seconds):", 0, 100, 10, key="tab1_adult")
+        
+        if st.button("Run Behavioral Classification", key="tab1_beh_btn"):
+            queries_list = [q.strip() for q in search_queries.split(",") if q.strip()]
+            gk_watches = [{"duration_watched": gk_watch, "total_duration": 60}]
+            adult_watches = [{"duration_watched": adult_watch, "total_duration": 100}]
+            
+            category, confidence = estimate_age_from_behavior(queries_list, gk_watches, adult_watches)
+            
+            st.subheader("Behavioral Analysis Results")
+            if category == "Child":
+                st.warning(f"🚨 Predicted Category: **{category}**")
+            else:
+                st.success(f"✅ Predicted Category: **{category}**")
+                
+            st.metric("Child Behavioral Score", f"{confidence:.1%}")
+            st.progress(float(confidence))
+
+# =====================================================================
+# TAB 2: ADVERTISER PORTAL
+# =====================================================================
+with tabs[1]:
     st.header("Upload & Moderate Advertisements")
     
     col1, col2 = st.columns([1, 1.2])
@@ -99,43 +214,39 @@ with tabs[0]:
         st.subheader("Real-time Safety Audit Report")
         if "latest_mod" in st.session_state:
             res = st.session_state["latest_mod"]
-            fused_score = res["final_score"]
-            status = res["status"].upper()
             
-            # Status Indicator card
-            if status == "APPROVED":
-                st.success(f"✅ AD APPROVED (Safety Decision: {status})")
-            elif status == "REJECTED":
-                st.error(f"❌ AD BLOCKED / REJECTED (Safety Decision: {status})")
-            else:
-                st.warning(f"⚠️ HELD FOR HUMAN AUDIT (Safety Decision: {status})")
-                
-            # Score Metrics
-            mcol1, mcol2, mcol3, mcol4 = st.columns(4)
-            mcol1.metric("Unified Risk", f"{fused_score:.1f}%")
-            mcol2.metric("Visual Risk", f"{res['visual_score']:.1f}%")
-            mcol3.metric("OCR/Text Risk", f"{res['ocr_score']:.1f}%")
-            mcol4.metric("Speech Risk", f"{res['speech_score']:.1f}%")
+            status_color = "#10b981" if res["status"] == "approved" else "#ef4444" if res["status"] == "rejected" else "#f59e0b"
+            st.markdown(f"### Status: <span style='color:{status_color}; font-weight:bold;'>{res['status'].upper()}</span>", unsafe_allow_html=True)
             
-            # Explanation details
+            # Metric Columns
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Overall Risk Score", f"{res['final_score']:.2f}")
+            m2.metric("Visual Risk", f"{res['visual_score']:.2f}")
+            m3.metric("NLP / OCR Risk", f"{res['ocr_score']:.2f}")
+            m4.metric("Speech Risk", f"{res['speech_score']:.2f}")
+            
+            st.markdown("---")
             st.markdown("### Modality-specific Findings")
             st.write(f"**Violated Policies**: {', '.join(res['violations']) if res['violations'] else 'None'}")
             st.info(f"**Explainable AI Reason**: {res['explanation']}")
             
-            # Display uploaded media
-            if os.path.exists(res.get("file_path", "")):
+            # Display uploaded media safely
+            media_path = res.get("file_path", "")
+            if media_path and os.path.exists(media_path):
                 st.markdown("### Uploaded Creative Preview")
-                if res["file_path"].lower().endswith(('.mp4')):
-                    st.video(res["file_path"])
+                if media_path.lower().endswith('.mp4'):
+                    st.video(media_path)
                 else:
-                    st.image(res["file_path"], width=300)
+                    st.image(media_path, width=300)
+            elif media_path:
+                st.info(f"Uploaded Media Path: `{media_path}`")
         else:
             st.info("Upload an advertisement and submit to see audit predictions here.")
 
 # =====================================================================
-# TAB 2: ADMIN AUDITING DASHBOARD
+# TAB 3: ADMIN AUDITING DASHBOARD
 # =====================================================================
-with tabs[1]:
+with tabs[2]:
     st.header("Admin Policy & Audit Panel")
     
     adm_tab1, adm_tab2 = st.tabs(["Pending Human Review Queue", "Configure Policy Rules"])
@@ -163,34 +274,27 @@ with tabs[1]:
                     col_a, col_b = st.columns([1, 1.2])
                     
                     with col_a:
-                        if ad_file_path.lower().endswith('.mp4'):
-                            st.video(ad_file_path)
+                        if ad_file_path and os.path.exists(ad_file_path):
+                            if ad_file_path.lower().endswith('.mp4'):
+                                st.video(ad_file_path)
+                            else:
+                                st.image(ad_file_path, width=250)
                         else:
-                            st.image(ad_file_path, width=250)
+                            st.info(f"Ad File: `{ad_file_path}` (No preview available)")
                             
                     with col_b:
-                        # Get AI scores
                         conn = get_connection()
                         cursor = conn.cursor()
                         cursor.execute("SELECT final_score, visual_score, ocr_score, speech_score FROM RiskScores WHERE ad_id = ?", (ad_id,))
                         scores = cursor.fetchone()
-                        
-                        cursor.execute("SELECT explanation FROM ModerationResults WHERE ad_id = ?", (ad_id,))
-                        expl = cursor.fetchone()
                         conn.close()
                         
                         if scores:
-                            st.markdown(f"**AI Risk Score**: `{scores[0]:.1f}%` (Visual: {scores[1]}%, OCR: {scores[2]}%, Speech: {scores[3]}%)")
-                        if expl:
-                            st.markdown(f"**AI Prediction Reason**: *{expl[0]}*")
-                            
-                        st.markdown(f"**Description/Caption**: {ad_caption}")
+                            st.write(f"**AI Risk Score**: {scores[0]:.2f} (Visual: {scores[1]:.2f}, OCR: {scores[2]:.2f}, Speech: {scores[3]:.2f})")
+                        st.write(f"**Ad Caption**: {ad_caption}")
                         
-                        # Admin Actions
-                        st.markdown("#### Auditing Override Actions")
+                        notes = st.text_input("Reviewer Audit Notes", key=f"notes_{ad_id}")
                         action_col1, action_col2, action_col3 = st.columns(3)
-                        
-                        notes = st.text_input("Manual Audit Action Notes", placeholder="Reason for action...", key=f"notes_{ad_id}")
                         
                         if action_col1.button("✅ Approve", key=f"app_{ad_id}"):
                             conn = get_connection()
@@ -219,7 +323,7 @@ with tabs[1]:
                         if action_col3.button("⚠️ Age-Restrict", key=f"rest_{ad_id}"):
                             conn = get_connection()
                             cursor = conn.cursor()
-                            cursor.execute("UPDATE Advertisements SET status = 'approved' WHERE id = ?", (ad_id,))  # Mark as approved but restriction noted in audit logs
+                            cursor.execute("UPDATE Advertisements SET status = 'approved' WHERE id = ?", (ad_id,))
                             cursor.execute("INSERT INTO HumanReviews (ad_id, reviewer_id, action, notes) VALUES (?, 2, 'restrict', ?)", (ad_id, notes))
                             cursor.execute("INSERT INTO AuditLogs (ad_id, trigger_user_id, model_version, final_decision, log_details) VALUES (?, 2, 'Human_Override', 'restricted_18', ?)", (ad_id, f"Override: Restricted to Adults (18+). Notes: {notes}"))
                             conn.commit()
@@ -239,40 +343,38 @@ with tabs[1]:
         dict_p = [{"ID": p[0], "Policy Name": p[1], "Description": p[2], "Min Age Allowed": p[3]} for p in policies]
         st.dataframe(dict_p, use_container_width=True)
 
-
 # =====================================================================
-# TAB 3: SOCIAL USER FEED (AGE-AWARE DELIVERY SIMULATION)
+# TAB 4: SOCIAL USER FEED (AGE-AWARE DELIVERY SIMULATION)
 # =====================================================================
-with tabs[2]:
+with tabs[3]:
     st.header("Simulated Social User Reels Feed")
     
     col_u1, col_u2 = st.columns([1.2, 2])
     
     with col_u1:
         st.subheader("1. User Profile Setup")
-        username = st.text_input("Social User Handle", "guest_user")
+        username = st.text_input("Social User Handle", "guest_user", key="tab4_username")
         
-        # User Age Authentication Options
-        auth_mode = st.radio("Age Assessment Method", ["Behavioral History Tracker", "Facial Verification Camera Scan"])
+        auth_mode = st.radio("Age Assessment Method", ["Facial Verification Camera Scan", "Behavioral History Tracker"], key="tab4_auth")
         
         user_category = "Not a Child"
         user_confidence = 1.0
         
         if auth_mode == "Facial Verification Camera Scan":
             st.info("Snap or upload a face photo to verify your age category using MTCNN + ViT deep learning age estimation.")
-            input_mode = st.radio("Choose Input Method:", ["Live Webcam Camera", "Upload Image File", "Simulated Preset Profile"], key="app_face_mode")
+            input_mode = st.radio("Choose Input Method:", ["Live Webcam Camera", "Upload Image File", "Simulated Preset Profile"], key="tab4_face_mode")
             
             image_np = None
             if input_mode == "Live Webcam Camera":
-                cam_image = st.camera_input("Capture Profile Face Photo", key="app_cam_input")
+                cam_image = st.camera_input("Capture Profile Face Photo", key="tab4_cam_input")
                 if cam_image:
                     image_np = np.array(Image.open(cam_image).convert("RGB"))
             elif input_mode == "Upload Image File":
-                uploaded = st.file_uploader("Upload Profile Image", type=["jpg", "jpeg", "png"], key="app_file_upload")
+                uploaded = st.file_uploader("Upload Profile Image", type=["jpg", "jpeg", "png"], key="tab4_file_upload")
                 if uploaded:
                     image_np = np.array(Image.open(uploaded).convert("RGB"))
             else:
-                face_sim = st.selectbox("Simulate Face Profile Camera Input", ["Round Baby Face (Child Profile)", "Oval Face (Adult Profile)"])
+                face_sim = st.selectbox("Simulate Face Profile Camera Input", ["Round Baby Face (Child Profile)", "Oval Face (Adult Profile)"], key="tab4_sim")
                 dummy_img = np.ones((128, 128, 3), dtype=np.uint8) * 240
                 if face_sim == "Round Baby Face (Child Profile)":
                     cv2.ellipse(dummy_img, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
@@ -292,9 +394,9 @@ with tabs[2]:
             
         else:
             st.info("Track age dynamically from recent searches & watch traces.")
-            search_input = st.text_area("Recent User Search Terms (comma separated)", "minecraft speedrun, cartoon videos, school drawing")
-            gk_retention = st.slider("GK/Educational Video Retention Ratio", 0.0, 1.0, 0.90)
-            adult_retention = st.slider("Adult/Gambling Video Retention Ratio", 0.0, 1.0, 0.05)
+            search_input = st.text_area("Recent User Search Terms (comma separated)", "minecraft speedrun, cartoon videos, school drawing", key="tab4_search")
+            gk_retention = st.slider("GK/Educational Video Retention Ratio", 0.0, 1.0, 0.90, key="tab4_gk_ret")
+            adult_retention = st.slider("Adult/Gambling Video Retention Ratio", 0.0, 1.0, 0.05, key="tab4_ad_ret")
             
             queries_list = [q.strip() for q in search_input.split(",")]
             gk_watches = [{"duration_watched": gk_retention * 60, "total_duration": 60}]
@@ -302,7 +404,6 @@ with tabs[2]:
             
             user_category, user_confidence = estimate_age_from_behavior(queries_list, gk_watches, adult_watches)
             
-        # Log Age Profile prediction in DB
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM Users WHERE username = ?", (username,))
@@ -315,63 +416,54 @@ with tabs[2]:
             conn.commit()
         conn.close()
         
-        # UI Card for profile results
+        st.markdown("---")
+        st.markdown("### 📊 Active Profile Classification")
         if user_category == "Child":
-            st.error(f"🔴 CLASSIFIED ROLE: {user_category} (Score: {user_confidence:.1%})")
-            st.caption("Safety policy rule applies: Content restricted for children under 18 will be filtered out.")
+            st.error(f"🚨 **PROFILE CLASSIFIED AS CHILD** (Score: {user_confidence:.1%})")
+            st.warning("Age-Restricted Advertisements (Gambling, Alcohol, Adult content) will be blocked from your feed.")
         else:
-            st.success(f"🟢 CLASSIFIED ROLE: {user_category} (Adult Score: {1.0 - user_confidence:.1%})")
-            st.caption("Standard browsing profile. Eligible for general and restricted advertisements.")
-            
+            st.success(f"✅ **PROFILE CLASSIFIED AS ADULT / NON-CHILD** (Score: {user_confidence:.1%})")
+            st.info("Standard ad delivery active.")
+
     with col_u2:
-        st.subheader("2. Personalized Age-Aware Media Feed")
+        st.subheader("2. Age-Filtered Feed Output")
         
-        # Query approved ads from database
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT A.id, A.title, A.caption, A.file_path, R.final_score 
-            FROM Advertisements A
-            LEFT JOIN RiskScores R ON A.id = R.ad_id
-            WHERE A.status = 'approved'
-        """)
+        cursor.execute("SELECT id, title, caption, file_path, status FROM Advertisements WHERE status = 'approved'")
         approved_ads = cursor.fetchall()
-        conn.close()
         
-        # General Knowledge reels database
         GK_REELS = [
-            {"title": "The Solar System for Kids", "topic": "Space Science", "desc": "Explore planets, stars, and galaxies in this fun guide.", "gk": True},
-            {"title": "Why is the Sky Blue?", "topic": "Physics Experiments", "desc": "Understanding sunlight scattering and atmosphere molecules.", "gk": True},
-            {"title": "How Do Plants Make Food?", "topic": "Biology Class", "desc": "Learn all about photosynthesis, water, and sunlight.", "gk": True}
+            {"title": "Fun Science: Why is the Sky Blue?", "topic": "Physics for Kids", "desc": "Light scattering explanation in simple words."},
+            {"title": "Quick Math Trick: Multiply by 11", "topic": "Educational Math", "desc": "Easy mental math trick for school students."},
+            {"title": "Space Exploration: Mars Rover Discoveries", "topic": "Astronomy", "desc": "What Perseverance found on the Red Planet."}
         ]
         
         feed_items = []
         
-        # Build feed content based on user age category
         if user_category == "Child":
-            st.warning("Child Protection Mode is ACTIVE. Filtering unsafe/age-restricted advertisements...")
-            
-            # Filter ads: only keep ads that are safe and do not trigger safety violations
+            st.caption("🔒 Filtered Mode: Restricted Ads are omitted from feed.")
             for ad in approved_ads:
-                ad_id, ad_title, ad_caption, ad_file_path, score = ad
-                # Exclude ads containing keywords triggers (Alcohol, Casino, Vegas, Dating, Combat, Satta)
-                lower_text = f"{ad_title} {ad_caption or ''} {ad_file_path}".lower()
-                is_restricted = any(w in lower_text for langs in MULTILINGUAL_KEYWORDS.values() for lang in langs.values() for w in lang)
+                ad_id, ad_title, ad_caption, ad_file_path, status = ad
+                cursor.execute("SELECT final_decision FROM AuditLogs WHERE ad_id = ? ORDER BY id DESC LIMIT 1", (ad_id,))
+                log = cursor.fetchone()
+                is_restricted = (log and log[0] == 'restricted_18') or any(kw in (ad_title + " " + ad_caption).lower() for kw in ['casino', 'betting', 'gambling', 'satta', 'alcohol', 'poker'])
+                
                 if not is_restricted:
                     feed_items.append({"title": f"[Safe Ad] {ad_title}", "desc": ad_caption, "file": ad_file_path, "gk": False})
                     
-            # Inject GK reels
             for gk in GK_REELS:
                 feed_items.append({"title": f"[GK Reel] {gk['title']}", "desc": f"Topic: {gk['topic']} - {gk['desc']}", "file": None, "gk": True})
         else:
             st.success("Adult Feed Active. Delivery includes general and age-appropriate advertisements.")
             for ad in approved_ads:
-                ad_id, ad_title, ad_caption, ad_file_path, score = ad
+                ad_id, ad_title, ad_caption, ad_file_path, status = ad
                 feed_items.append({"title": f"[Ad Campaign] {ad_title}", "desc": ad_caption, "file": ad_file_path, "gk": False})
             for gk in GK_REELS:
                 feed_items.append({"title": f"[GK Reel] {gk['title']}", "desc": f"Topic: {gk['topic']} - {gk['desc']}", "file": None, "gk": True})
                 
-        # Render Feed
+        conn.close()
+        
         if not feed_items:
             st.info("No content available for your feed profile.")
         else:
@@ -386,6 +478,8 @@ with tabs[2]:
                                 st.video(item["file"])
                             else:
                                 st.image(item["file"], width=200)
+                        else:
+                            st.info(f"Ad Creative: `{item['file']}`")
 
 # =====================================================================
 # SYSTEM AUDIT LOG VIEWER (PERSISTENT ON BOTTOM)
@@ -401,6 +495,5 @@ conn.close()
 if logs:
     dict_l = [{"Log ID": l[0], "Ad ID": l[1], "Timestamp": l[2], "Framework Version": l[3], "Decision": l[4], "AI Audit Notes": l[5]} for l in logs]
     st.dataframe(dict_l, use_container_width=True)
-
 else:
     st.caption("No audit logs recorded yet.")

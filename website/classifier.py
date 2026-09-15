@@ -134,10 +134,14 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
-def estimate_age_from_face(image_np: np.ndarray) -> tuple:
+def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     """
-    Returns estimated age classification ('Child' or 'Not a Child') and child probability.
-    Uses MTCNN + ViT Age Classifier pipeline when available.
+    Returns full detailed age estimation dictionary using MTCNN + ViT Age Pipeline:
+    - age_range: e.g. "20-29", "10-19", "0-2", "30-39"
+    - normalized_group: "ADULT", "CHILD", "TEEN", "UNKNOWN"
+    - confidence: float score (e.g. 0.7401)
+    - category: "Child" or "Not a Child"
+    - pipeline_result: full dict from FaceAgePipeline
     """
     if HAS_PIPELINE and image_np is not None:
         try:
@@ -145,31 +149,38 @@ def estimate_age_from_face(image_np: np.ndarray) -> tuple:
             res = _FACE_AGE_PIPELINE.analyze(pil_img)
             if res.get("faces_detected", 0) > 0:
                 face = res["faces"][0]
-                norm_group = face["normalized_age_group"]
-                conf = face["age_estimation"]["confidence"]
-                if norm_group == "CHILD":
-                    return "Child", float(conf)
-                else:
-                    return "Not a Child", float(max(0.0, 1.0 - conf))
+                age_range = face["age_estimation"].get("age_range", "Unknown")
+                norm_group = face.get("normalized_age_group", "UNKNOWN")
+                conf = face["age_estimation"].get("confidence", 0.0)
+                category = "Child" if norm_group == "CHILD" else "Not a Child"
+                return {
+                    "age_range": age_range,
+                    "normalized_group": norm_group,
+                    "confidence": float(conf),
+                    "category": category,
+                    "pipeline_result": res,
+                    "faces_detected": res["faces_detected"]
+                }
         except Exception:
             pass
 
-    cropped_face, bbox = detect_and_crop_face(image_np)
-    if not HAS_SKLEARN or face_age_clf is None:
-        if bbox is not None:
-            x, y, w, h = bbox
-            roundness = min(w, h) / max(w, h)
-        else:
-            roundness = 1.0
-        prob_child = float(np.clip((roundness - 0.7) / 0.3, 0.0, 1.0))
-        prediction = "Child" if prob_child > 0.5 else "Not a Child"
-        return prediction, prob_child
+    cat, prob = estimate_age_from_face(image_np)
+    return {
+        "age_range": "0-12 (Child)" if cat == "Child" else "18+ (Adult)",
+        "normalized_group": "CHILD" if cat == "Child" else "ADULT",
+        "confidence": prob,
+        "category": cat,
+        "pipeline_result": None,
+        "faces_detected": 1
+    }
 
-    feats = extract_facial_features(cropped_face, bbox)
-    probs = face_age_clf.predict_proba([feats])[0]
-    prob_child = probs[0]
-    prediction = "Child" if prob_child > 0.5 else "Not a Child"
-    return prediction, prob_child
+def estimate_age_from_face(image_np: np.ndarray) -> tuple:
+    """
+    Returns estimated age classification ('Child' or 'Not a Child') and child probability.
+    Uses MTCNN + ViT Age Classifier pipeline when available.
+    """
+    detailed = estimate_detailed_age_from_face(image_np)
+    return detailed["category"], detailed["confidence"]
 
 # =====================================================================
 # 2. BEHAVIORAL AGE ESTIMATION SYSTEM (Search Queries + Reel Retention)
