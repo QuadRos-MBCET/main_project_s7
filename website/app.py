@@ -85,9 +85,16 @@ with tabs[0]:
                 else:
                     status_placeholder.success("🎥 Fast live camera active — move your face for real-time tracking...")
                     
-                    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                    cascade = None
+                    try:
+                        if hasattr(cv2, 'CascadeClassifier') and hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                            cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                    except Exception:
+                        cascade = None
+                        
                     frame_counter = 0
                     last_detailed = None
+                    scale = 1.0
                     
                     while run_live:
                         ret, frame = cap.read()
@@ -99,11 +106,12 @@ with tabs[0]:
                         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
                         # Downscale frame for 4x faster deep learning ViT analysis
-                        if frame_counter % 4 == 1 or last_detailed is None:
+                        if frame_counter % 3 == 1 or last_detailed is None:
                             h, w = rgb_frame.shape[:2]
-                            scale = 360.0 / float(w) if w > 360 else 1.0
+                            target_w = 360
+                            scale = target_w / float(w) if w > target_w else 1.0
                             if scale < 1.0:
-                                small_img = cv2.resize(rgb_frame, (360, int(h * scale)))
+                                small_img = cv2.resize(rgb_frame, (target_w, int(h * scale)))
                             else:
                                 small_img = rgb_frame
                             last_detailed = estimate_detailed_age_from_face(small_img)
@@ -114,19 +122,38 @@ with tabs[0]:
                         conf = detailed["confidence"]
                         
                         annotated = rgb_frame.copy()
-                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                        fast_faces = cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=5, minSize=(40, 40))
+                        drawn_boxes = False
                         
-                        if len(fast_faces) > 0:
-                            for (x, y, w_box, h_box) in fast_faces:
+                        if detailed.get("pipeline_result") and detailed["pipeline_result"].get("faces"):
+                            for face in detailed["pipeline_result"]["faces"]:
+                                x1, y1, x2, y2 = face["bbox"]
+                                if scale < 1.0 and scale > 0:
+                                    x1, y1, x2, y2 = int(x1 / scale), int(y1 / scale), int(x2 / scale), int(y2 / scale)
+                                    
                                 box_color = (255, 0, 0) if norm_group == "CHILD" else (0, 255, 0)
                                 label = f"Age: {age_range} ({norm_group}) | {conf:.0%}"
                                 
-                                cv2.rectangle(annotated, (x, y), (x + w_box, y + h_box), box_color, 3)
+                                cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 3)
                                 (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
-                                y_start = max(0, y - 30)
-                                cv2.rectangle(annotated, (x, y_start), (x + tw + 10, y_start + 28), box_color, -1)
-                                cv2.putText(annotated, label, (x + 5, y_start + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+                                y_start = max(0, y1 - 30)
+                                cv2.rectangle(annotated, (x1, y_start), (x1 + tw + 10, y_start + 28), box_color, -1)
+                                cv2.putText(annotated, label, (x1 + 5, y_start + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+                                drawn_boxes = True
+                                
+                        if not drawn_boxes and cascade is not None:
+                            try:
+                                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                                fast_faces = cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=5, minSize=(40, 40))
+                                for (x, y, w_box, h_box) in fast_faces:
+                                    box_color = (255, 0, 0) if norm_group == "CHILD" else (0, 255, 0)
+                                    label = f"Age: {age_range} ({norm_group}) | {conf:.0%}"
+                                    cv2.rectangle(annotated, (x, y), (x + w_box, y + h_box), box_color, 3)
+                                    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
+                                    y_start = max(0, y - 30)
+                                    cv2.rectangle(annotated, (x, y_start), (x + tw + 10, y_start + 28), box_color, -1)
+                                    cv2.putText(annotated, label, (x + 5, y_start + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+                            except Exception:
+                                pass
                         
                         frame_placeholder.image(annotated, channels="RGB", width=600)
                         time.sleep(0.01)
