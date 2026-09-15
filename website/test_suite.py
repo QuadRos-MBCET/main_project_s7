@@ -1,4 +1,10 @@
 import os
+import sys
+from pathlib import Path
+
+# Ensure parent directory is in sys.path for website package imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import pandas as pd
 import numpy as np
 from website.database import get_connection, init_database

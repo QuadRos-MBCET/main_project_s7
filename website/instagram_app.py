@@ -2,6 +2,12 @@ import streamlit as st
 import sqlite3
 import os
 import time
+import sys
+from pathlib import Path
+
+# Ensure parent directory is in sys.path for website package imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import cv2
 from PIL import Image

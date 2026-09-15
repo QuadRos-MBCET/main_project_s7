@@ -2,3 +2,12 @@
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Python / Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local databases
+*.db
