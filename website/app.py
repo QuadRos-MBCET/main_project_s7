@@ -259,22 +259,36 @@ with tabs[2]:
         user_confidence = 1.0
         
         if auth_mode == "Facial Verification Camera Scan":
-            st.info("Simulate age prediction from camera input.")
-            face_sim = st.selectbox("Simulate Face Profile Camera Input", ["Round Baby Face (Child Profile)", "Oval Beard Face (Adult Profile)"])
+            st.info("Snap or upload a face photo to verify your age category using MTCNN + ViT deep learning age estimation.")
+            input_mode = st.radio("Choose Input Method:", ["Live Webcam Camera", "Upload Image File", "Simulated Preset Profile"], key="app_face_mode")
             
-            # Draw synthetic images representing selected profile
-            dummy_img = np.ones((128, 128, 3), dtype=np.uint8) * 240
-            if face_sim == "Round Baby Face (Child Profile)":
-                cv2.ellipse(dummy_img, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
-                cv2.circle(dummy_img, (49, 69), 7, (40, 40, 40), -1)
-                cv2.circle(dummy_img, (79, 69), 7, (40, 40, 40), -1)
+            image_np = None
+            if input_mode == "Live Webcam Camera":
+                cam_image = st.camera_input("Capture Profile Face Photo", key="app_cam_input")
+                if cam_image:
+                    image_np = np.array(Image.open(cam_image).convert("RGB"))
+            elif input_mode == "Upload Image File":
+                uploaded = st.file_uploader("Upload Profile Image", type=["jpg", "jpeg", "png"], key="app_file_upload")
+                if uploaded:
+                    image_np = np.array(Image.open(uploaded).convert("RGB"))
             else:
-                cv2.ellipse(dummy_img, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
-                cv2.circle(dummy_img, (49, 54), 4, (40, 40, 40), -1)
-                cv2.circle(dummy_img, (79, 54), 4, (40, 40, 40), -1)
+                face_sim = st.selectbox("Simulate Face Profile Camera Input", ["Round Baby Face (Child Profile)", "Oval Face (Adult Profile)"])
+                dummy_img = np.ones((128, 128, 3), dtype=np.uint8) * 240
+                if face_sim == "Round Baby Face (Child Profile)":
+                    cv2.ellipse(dummy_img, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+                    cv2.circle(dummy_img, (49, 69), 7, (40, 40, 40), -1)
+                    cv2.circle(dummy_img, (79, 69), 7, (40, 40, 40), -1)
+                else:
+                    cv2.ellipse(dummy_img, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+                    cv2.circle(dummy_img, (49, 54), 4, (40, 40, 40), -1)
+                    cv2.circle(dummy_img, (79, 54), 4, (40, 40, 40), -1)
+                image_np = dummy_img
                 
-            st.image(dummy_img, width=120, caption="Simulated Scan")
-            user_category, user_confidence = estimate_age_from_face(dummy_img)
+            if image_np is not None:
+                st.image(image_np, width=160, caption="Input Face")
+                user_category, user_confidence = estimate_age_from_face(image_np)
+            else:
+                user_category, user_confidence = "Not a Child", 1.0
             
         else:
             st.info("Track age dynamically from recent searches & watch traces.")
