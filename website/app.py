@@ -83,8 +83,9 @@ with tabs[0]:
                 if not cap.isOpened():
                     st.error("Error: Could not access webcam. Please ensure your camera is connected and not in use by another application.")
                 else:
-                    status_placeholder.success("🎥 Camera feed active — tracking face and age in real time...")
+                    status_placeholder.success("🎥 Fast live camera active — move your face for real-time tracking...")
                     
+                    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
                     frame_counter = 0
                     last_detailed = None
                     
@@ -97,8 +98,15 @@ with tabs[0]:
                         frame_counter += 1
                         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         
-                        if frame_counter % 2 == 1 or last_detailed is None:
-                            last_detailed = estimate_detailed_age_from_face(rgb_frame)
+                        # Downscale frame for 4x faster deep learning ViT analysis
+                        if frame_counter % 4 == 1 or last_detailed is None:
+                            h, w = rgb_frame.shape[:2]
+                            scale = 360.0 / float(w) if w > 360 else 1.0
+                            if scale < 1.0:
+                                small_img = cv2.resize(rgb_frame, (360, int(h * scale)))
+                            else:
+                                small_img = rgb_frame
+                            last_detailed = estimate_detailed_age_from_face(small_img)
                             
                         detailed = last_detailed
                         age_range = detailed["age_range"]
@@ -106,20 +114,22 @@ with tabs[0]:
                         conf = detailed["confidence"]
                         
                         annotated = rgb_frame.copy()
-                        if detailed.get("pipeline_result") and detailed["pipeline_result"].get("faces"):
-                            for face in detailed["pipeline_result"]["faces"]:
-                                x1, y1, x2, y2 = face["bbox"]
+                        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                        fast_faces = cascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=5, minSize=(40, 40))
+                        
+                        if len(fast_faces) > 0:
+                            for (x, y, w_box, h_box) in fast_faces:
                                 box_color = (255, 0, 0) if norm_group == "CHILD" else (0, 255, 0)
                                 label = f"Age: {age_range} ({norm_group}) | {conf:.0%}"
                                 
-                                cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 3)
-                                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-                                y_start = max(0, y1 - 35)
-                                cv2.rectangle(annotated, (x1, y_start), (x1 + tw + 10, y_start + 30), box_color, -1)
-                                cv2.putText(annotated, label, (x1 + 5, y_start + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                                cv2.rectangle(annotated, (x, y), (x + w_box, y + h_box), box_color, 3)
+                                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
+                                y_start = max(0, y - 30)
+                                cv2.rectangle(annotated, (x, y_start), (x + tw + 10, y_start + 28), box_color, -1)
+                                cv2.putText(annotated, label, (x + 5, y_start + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
                         
                         frame_placeholder.image(annotated, channels="RGB", width=600)
-                        time.sleep(0.03)
+                        time.sleep(0.01)
                         
                     cap.release()
                     status_placeholder.info("Live camera stream stopped.")
