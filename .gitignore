@@ -1,10 +1,37 @@
-# System files
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment secrets
+.env
+!.env.example
+
+# Media files & large datasets
+*.mp4
+*.avi
+*.mov
+*.webm
+*.mkv
+*.db
+
+# IDE and OS files
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# Python bytecode & cache
-__pycache__/
-*.py[cod]
-*.pyc
-.env
+# Temporary upload directories
+uploads/
+backend/uploads/
+website/uploads/
+
+# Pytest and coverage
+.pytest_cache/

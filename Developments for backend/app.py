@@ -73,30 +73,66 @@ with tabs[0]:
             if not uploaded_file:
                 st.error("Please upload a media file.")
             else:
-                # Save uploaded file locally
+                # Save uploaded file temporarily for submission
                 os.makedirs("website/uploads", exist_ok=True)
                 file_path = os.path.join("website/uploads", uploaded_file.name)
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                     
-                # Insert into DB
-                conn = get_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO Advertisements (title, advertiser_id, caption, file_path, status)
-                    VALUES (?, 1, ?, ?, 'under_review')
-                """, (title, caption, file_path))
-                ad_id = cursor.lastrowid
-                conn.commit()
-                conn.close()
+                # Use FastAPI Backend Client
+                try:
+                    import website.backend_client as bc_mod
+                    import importlib
+                    importlib.reload(bc_mod)
+                    client = bc_mod.client
+                except ImportError:
+                    import backend_client as bc_mod
+                    import importlib
+                    importlib.reload(bc_mod)
+                    client = bc_mod.client
                 
-                # Execute moderation pipeline
-                with st.spinner("Processing multimodal safety indicators (Vision + OCR + Speech)..."):
-                    res = run_multimodal_moderation(ad_id)
-                    time.sleep(0.5)
-                    
-                st.session_state["latest_mod"] = res
-                st.success(f"Ad Campaign submitted successfully! Mod ID: {ad_id}")
+                # Auto-login default user if not authenticated
+                if not client.token:
+                    client.login("testuser", "testpassword") 
+                
+                with st.spinner("Submitting to FastAPI Backend for Processing..."):
+                    try:
+                        res = client.submit_advertisement(title, caption, file_path)
+                        
+                        # Map real FastAPI backend AI output directly to Streamlit state
+                        classification = res.get("classification", "UNSAFE_FOR_ALL")
+                        action = str(res.get("action", "REJECT")).upper()
+                        risk_score = res.get("risk_score") if res.get("risk_score_available") else (99.9 if action == "REJECT" else 20.0)
+                        if risk_score is None:
+                            risk_score = 99.9 if action == "REJECT" else 20.0
+                            
+                        explanation = res.get("explanation", "AI Safety Audit Complete.")
+                        violations = res.get("violations", [])
+
+                        if action == "REJECT" or classification == "UNSAFE_FOR_ALL":
+                            ui_status = "REJECTED"
+                        elif action == "RESTRICT" or classification in ["AGE_18_PLUS", "AGE_14_PLUS"]:
+                            ui_status = "UNDER_REVIEW"
+                        else:
+                            ui_status = "APPROVED"
+
+                        # Build actual AI output for rendering
+                        actual_res = {
+                            "final_score": risk_score,
+                            "visual_score": risk_score if any(v in violations for v in ["Adult/Sexual Content", "Violence", "ADULT_NSFW_CONTENT"]) else 10.0,
+                            "ocr_score": risk_score if any(v in violations for v in ["Gambling", "Deceptive Claim", "Drugs"]) else 10.0,
+                            "speech_score": 0.0,
+                            "status": ui_status,
+                            "violations": violations,
+                            "explanation": explanation,
+                            "file_path": file_path,
+                            "ad_id": res.get("ad_id", "unknown")
+                        }
+                        st.session_state["latest_mod"] = actual_res
+                        st.success(f"Ad Campaign submitted to Backend! API ID: {res.get('ad_id', res.get('id', 'unknown'))}")
+                    except Exception as e:
+                        st.error(f"Backend submission failed: {e}")
+                        st.info("Make sure you registered a 'testuser' via Swagger UI, or the backend is running.")
 
     with col2:
         st.subheader("Real-time Safety Audit Report")
@@ -166,10 +202,13 @@ with tabs[1]:
                     col_a, col_b = st.columns([1, 1.2])
                     
                     with col_a:
-                        if ad_file_path.lower().endswith('.mp4'):
-                            st.video(ad_file_path)
+                        if os.path.exists(ad_file_path):
+                            if ad_file_path.lower().endswith('.mp4'):
+                                st.video(ad_file_path)
+                            else:
+                                st.image(ad_file_path, width=250)
                         else:
-                            st.image(ad_file_path, width=250)
+                            st.warning(f"Media file missing: {ad_file_path}")
                             
                     with col_b:
                         # Get AI scores

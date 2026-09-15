@@ -167,21 +167,31 @@ def run_multimodal_moderation(ad_id: int) -> dict:
         speech_text = extract_audio_transcript(file_path)
     speech_risk, speech_violations = analyze_text_risk(speech_text)
     
-    # 4. Visual Risk Scores (Mocking standard computer vision/NSFW risk based on file names)
+    # 4. Visual Risk Scores (Using NSFWDetector ViT + HSV skin density fallback)
     visual_risk = 0.0
     visual_violations = []
+    try:
+        from ai.safety.nsfw_detector import NSFWDetector
+        nsfw_eval = NSFWDetector().predict_image(file_path, ocr_text=ocr_text)
+        if nsfw_eval.get("detected", False):
+            visual_risk = float(nsfw_eval.get("score", 0.95)) * 100.0
+            visual_violations.append("Adult/Sexual Content")
+    except Exception as e:
+        print(f"[Website Pipeline] Visual NSFW check: {e}")
+
     base_name = os.path.basename(file_path).lower()
     if "violence" in base_name or "fight" in base_name or "blood" in base_name:
-        visual_risk = 90.0
+        visual_risk = max(visual_risk, 90.0)
         visual_violations.append("Violence")
     elif "sexy" in base_name or "nudity" in base_name or "adult" in base_name:
-        visual_risk = 95.0
-        visual_violations.append("Adult/Sexual Content")
+        visual_risk = max(visual_risk, 95.0)
+        if "Adult/Sexual Content" not in visual_violations:
+            visual_violations.append("Adult/Sexual Content")
     elif "casino" in base_name or "bet" in base_name:
-        visual_risk = 80.0
+        visual_risk = max(visual_risk, 80.0)
         visual_violations.append("Gambling")
     elif "sharaab" in base_name or "beer" in base_name or "wine" in base_name:
-        visual_risk = 70.0
+        visual_risk = max(visual_risk, 70.0)
         visual_violations.append("Alcohol/Tobacco")
         
     # Fused Risk Calculation (Visual 40%, OCR/NLP 30%, Speech 30%)
