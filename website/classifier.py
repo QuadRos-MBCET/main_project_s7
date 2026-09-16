@@ -164,11 +164,26 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
         except Exception:
             pass
 
-    cat, prob = estimate_age_from_face(image_np)
+    # Direct fallback implementation to prevent infinite recursion
+    cropped_face, bbox = detect_and_crop_face(image_np)
+    if not HAS_SKLEARN or face_age_clf is None:
+        if bbox is not None:
+            x, y, w, h = bbox
+            roundness = min(w, h) / max(w, h)
+        else:
+            roundness = 1.0
+        prob_child = float(np.clip((roundness - 0.7) / 0.3, 0.0, 1.0))
+        cat = "Child" if prob_child > 0.5 else "Not a Child"
+    else:
+        feats = extract_facial_features(cropped_face, bbox)
+        probs = face_age_clf.predict_proba([feats])[0]
+        prob_child = probs[0]
+        cat = "Child" if prob_child > 0.5 else "Not a Child"
+
     return {
         "age_range": "0-12 (Child)" if cat == "Child" else "18+ (Adult)",
         "normalized_group": "CHILD" if cat == "Child" else "ADULT",
-        "confidence": prob,
+        "confidence": float(prob_child if cat == "Child" else max(0.0, 1.0 - prob_child)),
         "category": cat,
         "pipeline_result": None,
         "faces_detected": 1
