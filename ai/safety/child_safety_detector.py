@@ -26,7 +26,7 @@ class ChildSafetyDetector:
 
     def __init__(
         self,
-        model_id: str = "meta-llama/Llama-Guard-3-8B-INT8",
+        model_id: str = "mrm8488/distilroberta-finetuned-toxic-content",
         device: str = DEVICE
     ):
         self.model_id = model_id

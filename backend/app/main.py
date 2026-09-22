@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Ensure project root is in Python module search path
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
@@ -11,7 +19,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="SafeAd AI (SAFE-VISION) Multimodal Trust & Safety Backend API",
     version="2.0.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url="/openapi.json"
 )
 
 # CORS configuration
@@ -23,15 +31,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Router Registrations
+# API V1 Router Registrations
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
 app.include_router(age.router, prefix=f"{settings.API_V1_STR}/age", tags=["Age Verification"])
 app.include_router(advertisements.router, prefix=f"{settings.API_V1_STR}/advertisements", tags=["Advertisements"])
 app.include_router(moderation.router, prefix=f"{settings.API_V1_STR}/moderation", tags=["Moderation & Audit"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["Admin Control"])
 
+# Direct Logical API Endpoint Aliases for standard integration
+app.include_router(moderation.router, prefix="/api", tags=["Direct Moderation API"])
+
+@app.get("/api/health", tags=["System"])
 @app.get("/health", tags=["System"])
 def health_check():
+    """Health check endpoint returning system status and DB type."""
     return {
         "status": "online",
         "service": settings.PROJECT_NAME,

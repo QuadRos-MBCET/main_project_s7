@@ -31,12 +31,13 @@ MULTILINGUAL_SAFETY_KEYWORDS = {
     }
 }
 
-def analyze_multimodal_text(title: str, caption: str, ocr_text: str, image_caption: str) -> dict:
+def analyze_multimodal_text(title: str = "", caption: str = "", ocr_text: str = "", image_caption: str = "", transcript: str = "") -> dict:
     """
-    Combines all textual modalities (Title + Caption + OCR + Image Caption)
+    Combines all textual modalities (Title + Caption + OCR + Image Caption + Audio Speech Transcript)
     and computes policy risk scores and category violations.
     """
-    combined_text = f"{title or ''} {caption or ''} {ocr_text or ''} {image_caption or ''}".lower()
+    combined_text = f"{title or ''} {caption or ''} {ocr_text or ''} {image_caption or ''} {transcript or ''}".lower()
+
     
     category_scores = {}
     violations = []

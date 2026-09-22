@@ -1,20 +1,25 @@
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Dict, Any
 from backend.app.db.models import SafetyClassification, ModerationAction
 
 class StandardizedModerationResponse(BaseModel):
     ad_id: int
+    status: str = "success"
     classification: SafetyClassification
+    display_label: str
     risk_score: Optional[float] = None
-    risk_score_available: bool
-    risk_category: str
-    explanation: str
-    age_restriction: Optional[int] = None
-    action: ModerationAction
+    confidence: Optional[float] = None
+    publication_action: ModerationAction
+    action_badge: str
     publishable: bool
-    violations: Optional[List[str]] = []
-    
+    detected_categories: List[str] = []
+    violations: List[str] = []
+    explanation: str
+    evidence: Dict[str, Any] = {}
+    extracted_ocr: Optional[str] = ""
+    audio_transcript: Optional[str] = ""
+    processing_time_seconds: Optional[float] = None
+
     class Config:
         from_attributes = True
 

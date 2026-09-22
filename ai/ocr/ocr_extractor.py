@@ -41,3 +41,28 @@ def extract_ocr_from_image(image_input) -> str:
         extracted_text = " ".join(tokens)
         
     return extracted_text if extracted_text else "No text detected in creative overlay."
+
+def extract_video_ocr(sampled_frames: list) -> str:
+    """
+    Extracts text from representative sampled video frames,
+    combines results, and removes duplicate lines/phrases.
+    """
+    if not sampled_frames:
+        return "No text detected in creative overlay."
+
+    seen_lines = set()
+    combined_lines = []
+
+    for frame in sampled_frames:
+        txt = extract_ocr_from_image(frame)
+        if txt and txt != "No text detected in creative overlay.":
+            for line in txt.splitlines():
+                line_clean = line.strip()
+                if line_clean and line_clean.lower() not in seen_lines:
+                    seen_lines.add(line_clean.lower())
+                    combined_lines.append(line_clean)
+
+    if combined_lines:
+        return " ".join(combined_lines)
+    return "No text detected in creative overlay."
+

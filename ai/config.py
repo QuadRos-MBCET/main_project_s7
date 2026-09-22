@@ -34,12 +34,20 @@ except ImportError:
 VRAM_SAFETY_LIMIT_MB = 12000 if IS_COLAB else 4000  # Threshold for warning/unloading
 
 # Video Processing Config
-MAX_VIDEO_FRAMES = 8
+MAX_VIDEO_FRAMES = 16
 FRAME_SAMPLE_STRATEGY = "uniform"  # "uniform", "keyframe", "temporal"
 
 # Model Execution Config
 MIXED_PRECISION_ENABLED = True
 BATCH_SIZE = 1  # Colab Free optimal batch size
 
+# Audio Processing Config
+WHISPER_MODEL = "base"  # Options: "tiny", "base", "small" (optimal for Google Colab Free)
+AUDIO_SAMPLE_RATE = 16000
+AUDIO_CACHE_DIR = os.path.join(OUTPUT_DIR, "audio_cache")
+os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
+
 print(f"[SafeAd AI Config] Environment: {'Google Colab' if IS_COLAB else 'Local Machine'}")
 print(f"[SafeAd AI Config] Execution Device: {DEVICE} (CUDA Available: {CUDA_AVAILABLE})")
+
+

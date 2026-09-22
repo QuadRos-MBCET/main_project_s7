@@ -1,105 +1,175 @@
-# 🛡️ SafeAd AI (SAFE-VISION)
-
-**A Multimodal Trust and Safety Framework for Early Detection of Harmful Advertisements and Age-Aware Content Moderation**
-
-Designed specifically around the constraints of **Google Colab Free** (VRAM caching, sequential model loading/unloading, lazy execution, `torch.inference_mode()`, batch size 1) with a decoupled **FastAPI Backend** and an interactive **Streamlit Frontend**.
+# SAFEAD AI (SAFE-VISION)
+## Multimodal Advertisement Safety & Policy Moderation Framework
 
 ---
 
-## ⚡ Phase 1: AI Safety-Detection Core (Google Colab Free)
+### Project Overview
 
-Phase 1 focuses on creating a reliable, Colab-compatible detection layer that accepts an advertisement image or video and produces structured safety evidence for:
-* **Child-Safety Risk**
-* **Violence Content**
-* **Adult / NSFW Content**
-* **Embedded Text (OCR)**
-
-### 🚀 How to Run Phase 1 in Google Colab Free
-
-1. Open **Google Colab Free** ([colab.research.google.com](https://colab.research.google.com/)).
-2. Upload or open the dedicated Phase 1 notebook:
-   `notebooks/safead_phase1_colab.ipynb`
-3. Execute **Cell 1** to inspect the Colab Environment (Python, PyTorch, CUDA, GPU Memory, System RAM, Disk Space).
-4. Run **Cell 2 & 3** to mount Google Drive and sync codebase files to local `/content` for high-speed disk I/O.
-5. Run **Cells 4 & 5** to perform sequential safety detection on sample image and video advertisements.
-6. Observe the standardized evidence JSON output and verify complete post-inference VRAM cleanup.
+**SafeAd AI** is a multimodal trust and safety moderation framework designed for pre-publication advertisement safety checking. The framework accepts uploaded image or video advertisements and evaluates their safety across visual content, video action sequences, embedded OCR text overlays, spoken audio transcripts, and contextual safety policies.
 
 ---
 
-## 📊 Pretrained AI Safety Models (Phase 1 Documentation Table)
+### System Pipeline Architecture
 
-| Model Name | Category | Input Format | Source / Training Dataset | License | Parameters / Model Size | GPU Requirements | Actual Output Format | Key Limitations |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **X3D-M** | Violence Content | Video Clips / Sampled Frames | `visionlab-ai/school-violence-detection-models` (School/Real-world Violence) | Apache 2.0 / MIT | ~3.8M params (~15MB) | ~1.2 GB VRAM (FP16) | `{"detected": bool, "score": float, "source": "video"}` | Trained on clip motion & physical combat; non-physical threats require multimodal context. |
-| **Image Violence Classifier** | Violence Content | Static Image (`.jpg`, `.png`, `.webp`) | Fine-tuned ImageNet / Threat Classification Datasets | MIT / Permissive | ~11M params (~44MB) | ~0.5 GB VRAM | `{"detected": bool, "score": float, "source": "image"}` | May flag non-violent action sports without semantic overlay analysis. |
-| **ViT NSFW Detector** | Adult / NSFW | Image / Sampled Video Frames | `Falconsai/nsfw_image_detection` (NSFW vs Normal Image Benchmark) | Apache 2.0 | ~86M params (~340MB) | ~1.5 GB VRAM | `{"detected": bool, "score": float, "mean_score": float}` | Frame sampling frequency determines sensitivity on rapid video transitions. |
-| **Llama Guard 3 / Open Safety Guard** | Child Safety Risk | Image Keyframes + OCR Overlay Text | Legitimate Open Safety Guardrails / Policy Datasets (No CSAM) | Llama 3 Community / Permissive | ~8B INT8 / Open Guard (~4.2GB) | ~4.5 GB VRAM (INT8) | `{"risk_detected": bool, "score": null, "category": "child_safety_risk"}` | Evaluates policy risk flags; score set to `null` as model outputs categorical risk labels. Zero CSAM data used. |
-| **PyTesseract Engine** | OCR Overlay Text | Image / Frame Crop | Tesseract OCR Multilingual Synthetic & Real Overlay Text | Apache 2.0 | CPU Utility | 0 MB VRAM (CPU) | `{"ocr_text": "..."}` | Stylized artistic fonts or low-contrast text require heuristic string fallback parsing. |
-
----
-
-## 🏗️ System Architecture
-
-```text
-               STREAMLIT FRONTEND (frontend/streamlit_app.py)
-                                    |
-                                    v
-                 FASTAPI BACKEND (backend/app/main.py)
-                                    |
-            +-----------------------+-----------------------+
-            |                                               |
-            v                                               v
-  SQL DATABASE (MySQL / SQLite)                   COLAB AI SERVICE LAYER (ai/)
-  - Users & Age Verification                      - Memory Manager (VRAM Release)
-  - Advertisements                                - Sequential Model Loader
-  - Moderation Results & Audit Logs               - OCR, Visual & Text Extractors
-                                                  - Safety Detection Core (ai/safety/)
-                                                    * violence_detector.py
-                                                    * nsfw_detector.py
-                                                    * child_safety_detector.py
-                                                    * safety_pipeline.py
-                                                    * model_manager.py
-                                                  - SafeAd 4-Class Adapter (Phase 2)
+```
+                 UPLOADED ADVERTISEMENT
+                          |
+             +------------+------------+
+             |                         |
+          IMAGE                     VIDEO
+             |                         |
+             |                  Keyframe Sampling
+             |                         |
+             |                  Frame Analysis
+             |                         |
+             +------------+------------+
+                          |
+                  MULTIMODAL ANALYSIS
+                          |
+       +------------------+------------------+
+       |                  |                  |
+     VISUAL              TEXT              AUDIO
+       |                  |                  |
+  Llama Guard           PP-OCR            Whisper
+    Vision                |                  |
+       |                  +---------+--------+
+       |                            |
+       +----------------------------+
+                    |
+             SAFETY EVIDENCE
+                    |
+          SafeAd Fusion Layer
+                    |
+              Risk Score
+                    |
+          Policy Decision Layer
+                    |
+       +------------+------------+
+       |                         |
+      SAFE                     UNSAFE
+       |                         |
+   Age Category              Reject
+       |
+ +-----+---------+
+ |       |       |
+All     14+     18+
 ```
 
 ---
 
-## 📦 Phase 1 Directory Structure
+### Key System Features & Modalities
 
-```text
-Project CT_27/
-├── ai/                         # Isolated AI & Model Computation Layer (Colab GPU execution)
-│   ├── config.py               # Path & VRAM configuration
-│   ├── memory_manager.py       # VRAM tracking, lazy loading & cache release
-│   ├── model_manager.py        # Base model loader
-│   ├── safety/                 # Phase 1 Safety Detection Core
-│   │   ├── model_manager.py    # Context-managed sequential loader
-│   │   ├── violence_detector.py# X3D-M video & image violence detector
-│   │   ├── nsfw_detector.py    # Falconsai NSFW classifier & frame aggregator
-│   │   ├── child_safety_detector.py # Child safety risk evaluator with limitations
-│   │   └── safety_pipeline.py  # End-to-end evidence aggregator
-│   ├── ocr/                    # OCR text extraction (PyTesseract + fallback)
-│   ├── vision/                 # Visual feature extractors
-│   ├── text/                   # Multilingual NLP
-│   └── pipeline.py             # Base inference pipeline
-├── configs/                    # System YAML configurations
-│   ├── colab_config.yaml       # Phase 1 Colab configuration
-│   └── config.yaml
-├── notebooks/                  # Dedicated Google Colab Notebooks
-│   ├── safead_phase1_colab.ipynb # Dedicated Phase 1 Colab Notebook
-│   ├── safead_colab_setup.ipynb
-│   └── safead_inference.ipynb
-├── tests/                      # Automated test suite
-│   └── test_safety_pipeline.py # Unit tests for safety detectors & schema
-├── requirements.txt            # Dependencies list
-└── README.md                   # System documentation
+1. **Visual Safety Analysis**: Evaluates image/frame content using pretrained multimodal visual safety models (**Llama Guard 3 Vision**).
+2. **Adult / NSFW Detection**: Frame-level classification using **Falconsai/nsfw_image_detection** ViT, aggregated into video-level adult scores.
+3. **Video Violence Detection**: Action sequence classification using pretrained **VideoMAE** (`MCG-NJU/videomae-base-finetuned-kinetics`).
+4. **Adaptive Keyframe Sampling**: Handles short (10s, 20s, 30s) and long video advertisements adaptively without frame padding.
+5. **Multilingual OCR Pipeline**: Extracts embedded text overlays across video keyframes using **PP-OCR / PaddleOCR**.
+6. **Audio Extraction & Speech Transcription**: Extracts audio streams and transcribes spoken speech using **OpenAI Whisper**.
+7. **Text Safety Guardrail**: Evaluates OCR text and Whisper transcripts using **Llama Guard 3-1B**.
+8. **Deterministic SafeAd Evidence Fusion Layer**: Fuses multi-modal risk scores (0–100), dominant risks, and model confidence without random or placeholder outputs.
+9. **Four-Level Policy Classification**:
+   - `SAFE_FOR_ALL` (*Safe for All*) $\rightarrow$ **APPROVED**
+   - `SAFE_14_PLUS` (*14+*) $\rightarrow$ **AGE RESTRICTED — 14+**
+   - `SAFE_18_PLUS` (*18+*) $\rightarrow$ **AGE RESTRICTED — 18+**
+   - `UNSAFE_FOR_ALL` (*Unsafe for All*) $\rightarrow$ **REJECT — UNSAFE FOR ALL**
+10. **Google Colab Free Compatibility**: Enforces sequential model loading, lazy initialization, and VRAM memory flushing between stages.
+
+---
+
+### Modality & Pretrained Model Summary
+
+| Modality | Pretrained Safety Model / Engine | Purpose | Output Evidence |
+| :--- | :--- | :--- | :--- |
+| **Visual Safety** | `meta-llama/Llama-Guard-3-11B-Vision` | Visual frame safety evidence generator | Visual risk flags & category confidence |
+| **Adult / NSFW** | `Falconsai/nsfw_image_detection` | ViT NSFW image/frame classifier | Frame probabilities & max adult score |
+| **Video Violence** | `MCG-NJU/videomae-base-finetuned-kinetics` | VideoMAE action sequence classifier | Video violence score & detected clips |
+| **OCR Text** | `PP-OCR / PaddleOCR` | Multilingual embedded text extractor | Aggregated overlay text & confidence |
+| **Audio Speech** | `openai/whisper-small` / `whisper-base` | Audio extraction & speech-to-text | Audio availability & transcript string |
+| **Text Safety** | `meta-llama/Llama-Guard-3-1B` | Text safety policy guardrail | Separate OCR & audio transcript risks |
+| **Fusion Layer** | `SafeAdFusion` (CPU) | Deterministic evidence fusion engine | Fused risk score (0-100) & policy decision |
+
+---
+
+### Project File Structure
+
+```
+Project CT_27 - Copy/
+├── app/ or frontend/
+│   └── streamlit_app.py           # Streamlit 8-Step Moderation Portal
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── moderation.py      # POST /api/moderate, GET /api/moderation/history
+│   │   │   ├── advertisements.py # POST /api/v1/advertisements/check, user_feed
+│   │   │   ├── auth.py            # Registration & Login endpoints
+│   │   │   └── age.py             # User age verification workflow
+│   │   ├── db/
+│   │   │   ├── models.py          # SQLAlchemy models (User, Advertisement, ModerationResult)
+│   │   │   └── database.py        # MySQL database session (SQLite fallback)
+│   │   ├── services/
+│   │   │   ├── ai_client_service.py # AI Client Dispatcher
+│   │   │   └── policy_service.py    # Policy Decision Service
+│   │   └── main.py                # FastAPI application entry point
+├── models/
+│   ├── model_manager.py           # Sequential model loader & VRAM memory manager
+│   ├── visual_safety.py           # Llama Guard 3 Vision visual safety detector
+│   ├── nsfw_detector.py           # Falconsai NSFW detector
+│   ├── violence_detector.py       # VideoMAE video violence detector
+│   ├── ocr_service.py             # PP-OCR / PaddleOCR service
+│   ├── audio_service.py           # Whisper audio transcription service
+│   ├── text_safety.py             # Llama Guard 3-1B text safety detector
+│   └── fusion/
+│       └── safead_fusion.py       # Deterministic SafeAd Fusion Layer
+├── processing/
+│   ├── video_sampling.py          # Adaptive keyframe extraction
+│   ├── audio_extraction.py        # Audio stream extraction to WAV
+│   └── preprocessing.py           # Media file validation
+├── tests/
+│   └── test_moderation_pipeline.py# Unit & Integration Test Suite (12 Scenarios)
+├── colab_setup.py                 # Google Colab automated setup script
+├── requirements.txt               # System Python dependencies
+└── README.md                      # Project Documentation
 ```
 
 ---
 
-## 🧪 Running Unit Tests
+### Quick Start & Execution
 
-Run the safety detection test suite locally:
+#### 1. Local Setup
 ```bash
-python -m unittest tests/test_safety_pipeline.py
+# Install dependencies
+pip install -r requirements.txt
+
+# Run Unit Test Suite
+python -m unittest tests/test_moderation_pipeline.py
+
+# Start FastAPI Backend Server
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Start Streamlit Moderation Portal
+streamlit run frontend/streamlit_app.py
 ```
+
+#### 2. Google Colab Setup
+1. Upload project files to Google Colab.
+2. Run automated setup script:
+   ```python
+   !python colab_setup.py
+   ```
+3. Run test suite or start moderation pipeline:
+   ```python
+   from ai.pipeline import run_safead_inference
+   result = run_safead_inference("violence_ad.mp4", "Sample Ad Title", "Sample Ad Copy")
+   print(result)
+   ```
+
+---
+
+### REST API Endpoints
+
+- `POST /api/moderate` — Submits image/video for full multimodal safety moderation.
+- `POST /api/moderate/image` — Submits image advertisement.
+- `POST /api/moderate/video` — Submits video advertisement.
+- `GET /api/moderation/{id}` — Retrieves moderation report by Ad ID.
+- `GET /api/moderation/history` — Retrieves history of moderation requests.
+- `GET /api/health` — Returns system health status and active database engine.
