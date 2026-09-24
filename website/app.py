@@ -196,14 +196,21 @@ with tabs[0]:
                 category = detailed["category"]
                 
                 # Render Clean Verdict Box
-                b_class = "badge-child" if category == "Child" else "badge-adult"
-                b_icon = "🚨" if category == "Child" else "✅"
+                if category == "Less than 14":
+                    b_class = "badge-child"
+                    b_icon = "🚨"
+                elif category == "14 to 17":
+                    b_class = "badge-teen"
+                    b_icon = "⚠️"
+                else:
+                    b_class = "badge-adult"
+                    b_icon = "✅"
                 
                 st.markdown(f"""
                 <div style="background-color:#f8fafc; padding:18px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:16px;">
                     <div style="display:flex; justify-between; align-items:center;">
                         <span style="font-size:18px; font-weight:700; color:#1e293b;">ViT Age Group: {age_range} years</span>
-                        <span class="badge {b_class}">{b_icon} {norm_group}</span>
+                        <span class="badge {b_class}">{b_icon} {category}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -446,18 +453,25 @@ with tabs[3]:
             
         st.markdown("---")
         st.markdown("#### Active Profile Status")
-        if user_category == "Child":
+        if user_category == "Less than 14":
             st.markdown("""
             <div style="background-color:#fef2f2; border:1px solid #fecaca; padding:14px; border-radius:10px;">
-                <span style="color:#dc2626; font-weight:700;">🚨 CHILD PROFILE (Age &lt; 18)</span><br>
-                <span style="font-size:12px; color:#991b1b;">Gambling & restricted ads are automatically omitted.</span>
+                <span style="color:#dc2626; font-weight:700;">🚨 LESS THAN 14 (Child Profile)</span><br>
+                <span style="font-size:12px; color:#991b1b;">Restricted & gambling ads blocked. Educational content prioritized.</span>
+            </div>
+            """, unsafe_allow_html=True)
+        elif user_category == "14 to 17":
+            st.markdown("""
+            <div style="background-color:#eff6ff; border:1px solid #bfdbfe; padding:14px; border-radius:10px;">
+                <span style="color:#2563eb; font-weight:700;">⚠️ 14 TO 17 (Teen Profile)</span><br>
+                <span style="font-size:12px; color:#1e40af;">Restricted & 18+ adult ads blocked. General interest feed active.</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div style="background-color:#ecfdf5; border:1px solid #a7f3d0; padding:14px; border-radius:10px;">
-                <span style="color:#059669; font-weight:700;">✅ ADULT PROFILE (18+)</span><br>
-                <span style="font-size:12px; color:#065f46;">Standard ad delivery enabled.</span>
+                <span style="color:#059669; font-weight:700;">✅ 18 AND ABOVE (Adult Profile)</span><br>
+                <span style="font-size:12px; color:#065f46;">Full ad delivery active.</span>
             </div>
             """, unsafe_allow_html=True)
 
@@ -474,14 +488,14 @@ with tabs[3]:
         ]
         
         feed_items = []
-        if user_category == "Child":
+        if user_category in ["Less than 14", "14 to 17"]:
             for ad in approved_ads:
                 ad_id, ad_title, ad_caption, ad_file_path, status = ad
                 cursor.execute("SELECT final_decision FROM AuditLogs WHERE ad_id = ? ORDER BY id DESC LIMIT 1", (ad_id,))
                 log = cursor.fetchone()
                 is_restricted = (log and log[0] == 'restricted_18') or any(kw in (ad_title + " " + ad_caption).lower() for kw in ['casino', 'betting', 'gambling', 'satta', 'alcohol', 'poker'])
                 if not is_restricted:
-                    feed_items.append({"title": f"📢 [Safe Ad] {ad_title}", "desc": ad_caption, "file": ad_file_path})
+                    feed_items.append({"title": f"📢 [Age-Safe Ad] {ad_title}", "desc": ad_caption, "file": ad_file_path})
             for gk in GK_REELS:
                 feed_items.append({"title": f"🎓 [Educational Reel] {gk['title']}", "desc": gk['desc'], "file": None})
         else:

@@ -138,9 +138,9 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     """
     Returns full detailed age estimation dictionary using MTCNN + ViT Age Pipeline:
     - age_range: e.g. "20-29", "10-19", "0-2", "30-39"
-    - normalized_group: "ADULT", "CHILD", "TEEN", "UNKNOWN"
+    - normalized_group: "LESS THAN 14", "14 TO 17", "18 AND ABOVE"
+    - category: "Less than 14", "14 to 17", or "18 and above"
     - confidence: float score (e.g. 0.7401)
-    - category: "Child" or "Not a Child"
     - pipeline_result: full dict from FaceAgePipeline
     """
     if HAS_PIPELINE and image_np is not None:
@@ -152,7 +152,18 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
                 age_range = face["age_estimation"].get("age_range", "Unknown")
                 norm_group = face.get("normalized_age_group", "UNKNOWN")
                 conf = face["age_estimation"].get("confidence", 0.0)
-                category = "Child" if norm_group == "CHILD" else "Not a Child"
+                
+                # Standardize category text according to user spec
+                if norm_group == "LESS THAN 14" or age_range in ["0-2", "3-9"]:
+                    category = "Less than 14"
+                    norm_group = "LESS THAN 14"
+                elif norm_group == "14 TO 17" or age_range == "10-19":
+                    category = "14 to 17"
+                    norm_group = "14 TO 17"
+                else:
+                    category = "18 and above"
+                    norm_group = "18 AND ABOVE"
+
                 return {
                     "age_range": age_range,
                     "normalized_group": norm_group,
@@ -164,7 +175,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
         except Exception:
             pass
 
-    # Direct fallback implementation to prevent infinite recursion
+    # Fallback model categorization
     cropped_face, bbox = detect_and_crop_face(image_np)
     if not HAS_SKLEARN or face_age_clf is None:
         if bbox is not None:
@@ -173,17 +184,19 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
         else:
             roundness = 1.0
         prob_child = float(np.clip((roundness - 0.7) / 0.3, 0.0, 1.0))
-        cat = "Child" if prob_child > 0.5 else "Not a Child"
+        cat = "Less than 14" if prob_child > 0.5 else "18 and above"
+        norm_group = "LESS THAN 14" if prob_child > 0.5 else "18 AND ABOVE"
     else:
         feats = extract_facial_features(cropped_face, bbox)
         probs = face_age_clf.predict_proba([feats])[0]
         prob_child = probs[0]
-        cat = "Child" if prob_child > 0.5 else "Not a Child"
+        cat = "Less than 14" if prob_child > 0.5 else "18 and above"
+        norm_group = "LESS THAN 14" if prob_child > 0.5 else "18 AND ABOVE"
 
     return {
-        "age_range": "0-12 (Child)" if cat == "Child" else "18+ (Adult)",
-        "normalized_group": "CHILD" if cat == "Child" else "ADULT",
-        "confidence": float(prob_child if cat == "Child" else max(0.0, 1.0 - prob_child)),
+        "age_range": "< 14" if cat == "Less than 14" else "18+",
+        "normalized_group": norm_group,
+        "confidence": float(prob_child if cat == "Less than 14" else max(0.0, 1.0 - prob_child)),
         "category": cat,
         "pipeline_result": None,
         "faces_detected": 1
@@ -191,8 +204,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
 
 def estimate_age_from_face(image_np: np.ndarray) -> tuple:
     """
-    Returns estimated age classification ('Child' or 'Not a Child') and child probability.
-    Uses MTCNN + ViT Age Classifier pipeline when available.
+    Returns estimated age classification ('Less than 14', '14 to 17', '18 and above') and confidence.
     """
     detailed = estimate_detailed_age_from_face(image_np)
     return detailed["category"], detailed["confidence"]

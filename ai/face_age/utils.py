@@ -1,14 +1,14 @@
 def normalize_age_prediction(age_range: str, confidence: float) -> str:
-    if confidence < 0.5:
+    if confidence < 0.3:
         return "UNKNOWN"
     
-    # Simple mapping based on expected ranges from the ViT model
-    child_ranges = ["0-2", "3-9"]
-    teen_ranges = ["10-19"]
-    
-    if age_range in child_ranges:
-        return "CHILD"
-    elif age_range in teen_ranges:
-        return "TEEN"
+    # Precise mapping to requested age categories:
+    # 1. Less than 14
+    # 2. 14 to 17
+    # 3. 18 and above
+    if age_range in ["0-2", "3-9"]:
+        return "LESS THAN 14"
+    elif age_range == "10-19":
+        return "14 TO 17"
     else:
-        return "ADULT"
+        return "18 AND ABOVE"
