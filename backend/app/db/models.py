@@ -5,9 +5,10 @@ import enum
 from backend.app.db.database import Base
 
 class UserRole(str, enum.Enum):
-    USER = "USER"
-    MODERATOR = "MODERATOR"
-    ADMIN = "ADMIN"
+    USER = "ROLE_BRAND_OWNER"
+    BRAND_OWNER = "ROLE_BRAND_OWNER"
+    MODERATOR = "ROLE_ADMIN"
+    ADMIN = "ROLE_ADMIN"
 
 class AgeGroup(str, enum.Enum):
     UNDER_14 = "UNDER_14"
@@ -43,7 +44,7 @@ class User(Base):
     age_difference = Column(Float, nullable=True)
     age_confidence = Column(Float, default=0.95)
     
-    role = Column(SQLEnum(UserRole), default=UserRole.USER)
+    role = Column(SQLEnum(UserRole), default=UserRole.BRAND_OWNER)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -58,13 +59,14 @@ class Advertisement(Base):
     caption = Column(Text, nullable=True)
     file_path = Column(String(255), nullable=False)
     media_type = Column(String(50), default="image")
-    status = Column(String(50), default="PENDING")
+    status = Column(String(50), default="UPLOADED")
     
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     owner = relationship("User", back_populates="advertisements")
     moderation_result = relationship("ModerationResult", back_populates="advertisement", uselist=False)
+    human_review = relationship("HumanReview", back_populates="advertisement", uselist=False)
 
 class ModerationResult(Base):
     __tablename__ = "moderation_results"
@@ -93,6 +95,22 @@ class ModerationResult(Base):
     completed_at = Column(DateTime(timezone=True), default=func.now())
     
     advertisement = relationship("Advertisement", back_populates="moderation_result")
+
+class HumanReview(Base):
+    __tablename__ = "human_reviews"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    advertisement_id = Column(Integer, ForeignKey("advertisements.id"), unique=True)
+    submitted_by = Column(Integer, ForeignKey("users.id"))
+    ai_classification = Column(String(50), nullable=True)
+    review_status = Column(String(50), default="PENDING_REVIEW")
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    human_decision = Column(String(50), nullable=True)
+    review_comment = Column(Text, nullable=True)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    advertisement = relationship("Advertisement", back_populates="human_review")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

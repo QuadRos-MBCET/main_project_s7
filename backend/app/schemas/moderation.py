@@ -34,3 +34,30 @@ class ModerationOverrideRequest(BaseModel):
     action: ModerationAction
     final_classification: Optional[SafetyClassification] = SafetyClassification.SAFE_FOR_ALL
     moderator_notes: Optional[str] = ""
+
+class AdUploadResponse(BaseModel):
+    id: int
+    title: str
+    caption: Optional[str] = ""
+    filename: str
+    file_path: str
+    media_type: str
+    file_size: int
+    uploaded_at: str
+    status: str = "UPLOADED"
+
+class HumanReviewSubmissionRequest(BaseModel):
+    user_id: Optional[int] = 1
+    reason: Optional[str] = ""
+
+class HumanReviewDecisionRequest(BaseModel):
+    admin_id: Optional[int] = 2
+    review_comment: Optional[str] = ""
+
+class AcceptAIResponse(BaseModel):
+    ad_id: int
+    status: str
+    accepted: bool
+    publishable: bool
+    classification: str
+    message: str

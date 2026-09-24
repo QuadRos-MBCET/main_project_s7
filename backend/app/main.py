@@ -22,6 +22,16 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
+@app.on_event("startup")
+def on_startup():
+    from backend.app.db.database import SessionLocal
+    from backend.app.api.v1.auth import seed_demo_users
+    db = SessionLocal()
+    try:
+        seed_demo_users(db)
+    finally:
+        db.close()
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     
     # Database Configuration
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./safead.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./safead_v2.db")
     
     # Colab Inference API URL
     COLAB_API_URL: str = os.getenv("COLAB_API_URL", "")

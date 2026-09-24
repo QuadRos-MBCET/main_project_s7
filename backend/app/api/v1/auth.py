@@ -9,6 +9,34 @@ from backend.app.services.age_service import AgeVerificationService
 
 router = APIRouter()
 
+def seed_demo_users(db: Session):
+    """Ensures demo accounts (brand_demo, admin_demo) are present in the DB."""
+    try:
+        brand = db.query(User).filter(User.username == "brand_demo").first()
+        if not brand:
+            brand = User(
+                username="brand_demo",
+                email="brand_demo@safead.ai",
+                password_hash=hash_password("brand123"),
+                date_of_birth=datetime(1990, 1, 1),
+                role=UserRole.BRAND_OWNER
+            )
+            db.add(brand)
+            
+        admin = db.query(User).filter(User.username == "admin_demo").first()
+        if not admin:
+            admin = User(
+                username="admin_demo",
+                email="admin_demo@safead.ai",
+                password_hash=hash_password("admin123"),
+                date_of_birth=datetime(1985, 1, 1),
+                role=UserRole.ADMIN
+            )
+            db.add(admin)
+        db.commit()
+    except Exception:
+        db.rollback()
+
 @router.post("/register", response_model=UserResponse)
 def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user_in.username).first()
@@ -32,7 +60,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         verified_age_group=age_res["verified_age_group"],
         chronological_age=age_res["chronological_age"],
         estimated_age=age_res["estimated_age"],
-        role=UserRole.USER
+        role=UserRole.BRAND_OWNER
     )
     db.add(user)
     db.commit()
@@ -41,17 +69,19 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
+    seed_demo_users(db)
     user = db.query(User).filter(User.username == credentials.username).first()
     if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
         
-    access_token = create_access_token(data={"sub": user.username, "role": user.role.value})
+    role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
+    access_token = create_access_token(data={"sub": user.username, "role": role_str})
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
         "username": user.username,
-        "role": user.role.value,
-        "verified_age_group": user.verified_age_group.value if user.verified_age_group else "AGE_18_PLUS"
+        "role": role_str,
+        "verified_age_group": user.verified_age_group.value if (hasattr(user, "verified_age_group") and user.verified_age_group and hasattr(user.verified_age_group, "value")) else "AGE_18_PLUS"
     }
