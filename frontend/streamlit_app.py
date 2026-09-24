@@ -239,6 +239,33 @@ with tabs[0]:
                     st.markdown(f"• **Explicit Content**: `{matrix.get('advertisement_risks', {}).get('explicit_content', 0.0):.2f}`")
                 st.markdown("</div>", unsafe_allow_html=True)
 
+            # Explicit Two-Stage Policy Decision Section
+            st.markdown("### ⚖️ SAFEAD POLICY DECISION")
+            prohibited_flag = rep.get("prohibited_content_detected", False)
+            
+            p_col1, p_col2 = st.columns(2)
+            with p_col1:
+                st.markdown("**Stage 1: Prohibited Content Check**")
+                if prohibited_flag:
+                    st.error("❌ Status: FAILED (Prohibited Threat Detected)")
+                elif requires_hitl:
+                    st.warning("⚠️ Status: UNCERTAIN (Low Model Confidence)")
+                else:
+                    st.success("✅ Status: PASSED (Permitted Content)")
+                
+                if rep.get("dominant_risks"):
+                    st.caption(f"Detected Risks: {', '.join(rep.get('dominant_risks'))}")
+
+            with p_col2:
+                st.markdown("**Stage 2: Age Policy Check**")
+                if prohibited_flag:
+                    st.info("🚫 Status: BYPASSED (Prohibited Rejection Has Priority)")
+                else:
+                    st.success(f"🎯 Rating: **{rep.get('display_label', classification)}**")
+                
+                if rep.get("age_restriction"):
+                    st.caption(f"Applied Restriction: {rep.get('age_restriction')}")
+
             # Explanation
             st.markdown("### Decision Explanation & Rationale")
             st.info(rep.get("explanation", "Completed safety evaluation."))

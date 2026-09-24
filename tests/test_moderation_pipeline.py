@@ -175,6 +175,56 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
         self.assertGreater(dob_res["chronological_age"], 20)
         self.assertGreaterEqual(dob_res["age_confidence"], 0.70)
 
+    def test_17_two_stage_policy_prohibited_priority(self):
+        """17. Verifies Stage 1 Prohibited Content Policy takes priority over Stage 2 Age Policy."""
+        from models.fusion.safead_fusion import SafeAdFusion
+        from models.fusion.safead_assessment import SafeAdAssessment
+
+        assessment = SafeAdAssessment(
+            video={"violence": 0.95},
+            advertisement_risks={"explicit_content": 0.50}
+        )
+        fusion = SafeAdFusion()
+        res = fusion.evaluate(assessment)
+
+        self.assertEqual(res["classification"], "UNSAFE_FOR_ALL")
+        self.assertEqual(res["publication_action"], "REJECT")
+        self.assertTrue(res["prohibited_content_detected"])
+        self.assertEqual(res["policy_stage"], "PROHIBITED_CONTENT_POLICY")
+
+    def test_18_permissible_adult_content_18_plus(self):
+        """18. Verifies permissible adult/NSFW content maps to 18+ rather than UNSAFE_FOR_ALL."""
+        from models.fusion.safead_fusion import SafeAdFusion
+        from models.fusion.safead_assessment import SafeAdAssessment
+
+        assessment = SafeAdAssessment(
+            visual={"adult": 0.60, "unsafe": False},
+            advertisement_risks={"explicit_content": 0.50}
+        )
+        fusion = SafeAdFusion()
+        res = fusion.evaluate(assessment)
+
+        self.assertEqual(res["classification"], "SAFE_18_PLUS")
+        self.assertEqual(res["publication_action"], "AGE_RESTRICT")
+        self.assertFalse(res["prohibited_content_detected"])
+        self.assertEqual(res["policy_stage"], "AGE_POLICY")
+
+    def test_19_spike_preservation_no_threat_dilution(self):
+        """19. Verifies single-modality high threat spikes (e.g. violence 0.95) are preserved and not diluted."""
+        from models.fusion.safead_fusion import SafeAdFusion
+        from models.fusion.safead_assessment import SafeAdAssessment
+
+        assessment = SafeAdAssessment(
+            video={"violence": 0.95},
+            ocr={"scam": 0.0},
+            audio={"transcript": ""}
+        )
+        fusion = SafeAdFusion()
+        res = fusion.evaluate(assessment)
+
+        self.assertGreaterEqual(res["risk_score"], 90.0)
+        self.assertEqual(res["classification"], "UNSAFE_FOR_ALL")
+        self.assertEqual(res["publication_action"], "REJECT")
 
 
 if __name__ == "__main__":

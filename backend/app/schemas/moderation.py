@@ -13,6 +13,11 @@ class StandardizedModerationResponse(BaseModel):
     action_badge: str
     publishable: bool
     requires_human_review: bool = False
+    human_review_required: bool = False
+    prohibited_content_detected: bool = False
+    age_restriction: Optional[str] = None
+    policy_stage: Optional[str] = "POLICY_ENGINE"
+    policy_reasons: List[str] = []
     detected_categories: List[str] = []
     violations: List[str] = []
     explanation: str
