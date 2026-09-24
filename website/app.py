@@ -14,7 +14,7 @@ import cv2
 from PIL import Image
 from website.database import get_connection, init_database
 from website.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
-from website.classifier import estimate_age_from_face, estimate_detailed_age_from_face, estimate_age_from_behavior, detect_and_crop_face
+from website.classifier import estimate_age_from_face, estimate_detailed_age_from_face, estimate_age_from_behavior, detect_and_crop_face, verify_id_card_and_live_face
 
 init_database()
 
