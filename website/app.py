@@ -227,13 +227,11 @@ with tabs[0]:
         if id_image_np is not None and live_image_np is not None:
             res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob)
             
-            # 1. Anti-Spoof Warning
+            # Status & Anti-Spoof Warning
             if res["is_spoof"]:
                 st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
                 st.warning(f"⚠️ Photo/Screen Spoof Detected! ({res['spoof_reason']})")
-
-            # 2. Status Banner
-            if res["status"] == "VERIFIED_SUCCESS":
+            elif res["status"] == "VERIFIED_SUCCESS":
                 st.success(f"### {res['message']}")
             elif res["status"] == "FAILED_FACE_MISMATCH":
                 st.error(f"### {res['message']}")
