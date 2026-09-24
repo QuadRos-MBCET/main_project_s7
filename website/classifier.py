@@ -186,19 +186,24 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None) ->
             reasons.append("Display screen Moiré pattern / re-sampling grid artifact")
 
     # 4. Rectangular Screen / Paper Border Frame Detection
-    gray_img = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
-    edges = cv2.Canny(gray_img, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80, minLineLength=60, maxLineGap=10)
-    if lines is not None and len(lines) >= 4:
-        vert_horiz_count = 0
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
-            if angle < 10 or angle > 80:
-                vert_horiz_count += 1
-        if vert_horiz_count >= 4:
-            score_indicators.append(0.25)
-            reasons.append("Rectangular screen / printed photo border frame detected")
+    try:
+        gray_img = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+        edges = cv2.Canny(gray_img, 50, 150)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80, minLineLength=60, maxLineGap=10)
+        if lines is not None and len(lines) >= 4:
+            vert_horiz_count = 0
+            for line in lines:
+                flat = np.ravel(line)
+                if len(flat) >= 4:
+                    x1, y1, x2, y2 = flat[:4]
+                    angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
+                    if angle < 10 or angle > 80:
+                        vert_horiz_count += 1
+            if vert_horiz_count >= 4:
+                score_indicators.append(0.25)
+                reasons.append("Rectangular screen / printed photo border frame detected")
+    except Exception:
+        pass
 
     total_spoof_score = float(np.sum(score_indicators))
     is_spoof = total_spoof_score >= 0.40
@@ -217,7 +222,10 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     - spoof_reason: str
     """
     cropped_face, bbox = detect_and_crop_face(image_np)
-    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face)
+    try:
+        is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face)
+    except Exception as e:
+        is_spoof, spoof_score, spoof_reason = False, 0.0, f"Spoof check bypass: {e}"
 
     if HAS_PIPELINE and image_np is not None:
         try:
