@@ -55,7 +55,6 @@ def run_safead_inference(
     step1_start = time.time()
     is_valid, media_type, status_msg = validate_advertisement_file(file_path)
     stage_timings["step1_validation"] = round(time.time() - step1_start, 4)
-
     if not is_valid:
         return {
             "classification": "UNSAFE_FOR_ALL",
@@ -72,7 +71,6 @@ def run_safead_inference(
         }
 
     print(f"\n[SafeAd AI] Moderate {media_type.upper()}: {filename_str}")
-
     # STEP 2: Extracting Content (Adaptive Keyframes & Audio)
     step2_start = time.time()
     frames = []
@@ -106,8 +104,7 @@ def run_safead_inference(
     ocr_text_combined = f"{title or ''} {caption or ''} {ocr_res.get('ocr_text', '')}".strip()
     ocr_text_safety = text_safety_detector.predict_text(ocr_text_combined)
 
-    # STEP 4: Visual Safety & Adult/NSFW Analysis (Llama Guard Vision & Falconsai ViT)
-    step4_start = time.time()
+    # STEP 4: Visual Safety & Adult/NSFW Analysis (Llama Guard Vision & Falconsai ViT)    step4_start = time.time()
     visual_res = visual_detector.analyze_video_frames(frames) if frames else {"unsafe": False, "confidence": 0.0, "detected_categories": []}
     nsfw_res = nsfw_detector.predict_video_frames(frames, ocr_text=ocr_text_combined) if frames else {"adult_score": 0.0, "adult_content_detected": False}
     model_manager.clear_gpu_memory()
@@ -200,7 +197,6 @@ def run_safead_inference(
 
     total_processing_time = round(time.time() - start_total_time, 4)
     stage_timings["step10_decision"] = 0.001
-
     fusion_output["stage_timings"] = stage_timings
     fusion_output["total_processing_time_seconds"] = total_processing_time
     fusion_output["media_type"] = media_type

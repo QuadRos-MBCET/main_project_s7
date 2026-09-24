@@ -26,8 +26,7 @@ async def moderate_advertisement(
 ):
     """
     Submits advertisement media for AI safety checking, SafeAdAssessment matrix synthesis,
-    and policy evaluation.
-    """
+    and policy evaluation.    """
     file_ext = os.path.splitext(file.filename)[1].lower()
     filename = f"mod_{int(time.time())}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -80,8 +79,7 @@ async def moderate_advertisement(
         age_restriction=18 if classification_enum == SafetyClassification.SAFE_18_PLUS else (14 if classification_enum == SafetyClassification.SAFE_14_PLUS else None),
         publishable=publication_action not in [ModerationAction.REJECT, ModerationAction.HUMAN_REVIEW],
         processing_time_seconds=ai_results.get("total_processing_time_seconds", 0.0),
-        is_human_reviewed=False
-    )
+        is_human_reviewed=False    )
     db.add(mod_result)
     
     log_entry = AuditLog(
@@ -95,33 +93,14 @@ async def moderate_advertisement(
     
     return {
         "ad_id": ad.id,
-        "status": "completed",
-        "classification": classification_enum,
+        "status": "completed",        "classification": classification_enum,
         "display_label": ai_results.get("display_label", classification_enum.value),
         "risk_score": mod_result.risk_score,
         "confidence": mod_result.confidence,
         "publication_action": publication_action,
         "action_badge": ai_results.get("action_badge", f"{publication_action.value} — {classification_enum.value}"),
         "publishable": mod_result.publishable,
-        "requires_human_review": requires_hitl,
-        "detected_categories": ai_results.get("detected_categories", []),
-        "violations": ai_results.get("detected_categories", []),
-        "explanation": mod_result.explanation,
-        "evidence": ai_results.get("evidence", {}),
-        "extracted_ocr": ai_results.get("extracted_ocr", ""),
-        "audio_transcript": ai_results.get("audio_transcript", ""),
-        "processing_time_seconds": mod_result.processing_time_seconds
-    }
-
-@router.post("/moderate/image", response_model=StandardizedModerationResponse)
-async def moderate_image_advertisement(
-    file: UploadFile = File(...),
-    title: str = Form(...),
-    caption: Optional[str] = Form(""),
-    user_id: int = Form(1),
-    db: Session = Depends(get_db)
-):
-    return await moderate_advertisement(file=file, title=title, caption=caption, user_id=user_id, db=db)
+        "requires_human_review": requires_hitl,    return await moderate_advertisement(file=file, title=title, caption=caption, user_id=user_id, db=db)
 
 @router.post("/moderate/video", response_model=StandardizedModerationResponse)
 async def moderate_video_advertisement(
@@ -131,11 +110,13 @@ async def moderate_video_advertisement(
     user_id: int = Form(1),
     db: Session = Depends(get_db)
 ):
+=======
+    """Endpoint specifically for video advertisements."""
+>>>>>>> origin/backend2jb
     return await moderate_advertisement(file=file, title=title, caption=caption, user_id=user_id, db=db)
 
 @router.get("/{id}", response_model=StandardizedModerationResponse)
 def get_moderation_by_id(id: int, db: Session = Depends(get_db)):
-    ad = db.query(Advertisement).filter(Advertisement.id == id).first()
     if not ad or not ad.moderation_result:
         raise HTTPException(status_code=404, detail=f"Moderation result for Ad ID #{id} not found.")
 
@@ -148,37 +129,14 @@ def get_moderation_by_id(id: int, db: Session = Depends(get_db)):
 
     return {
         "ad_id": ad.id,
-        "status": "completed",
-        "classification": res.classification,
+        "status": "completed",        "classification": res.classification,
         "display_label": res.risk_category,
         "risk_score": res.risk_score,
         "confidence": res.confidence,
         "publication_action": res.moderation_action,
         "action_badge": f"{res.moderation_action.value} — {res.classification.value}",
         "publishable": res.publishable,
-        "requires_human_review": res.moderation_action == ModerationAction.HUMAN_REVIEW,
-        "detected_categories": [],
-        "violations": [],
-        "explanation": res.explanation,
-        "evidence": evidence_dict,
-        "processing_time_seconds": res.processing_time_seconds
-    }
-
-@router.get("/history", response_model=List[StandardizedModerationResponse])
-def get_moderation_history(limit: int = 50, db: Session = Depends(get_db)):
-    results = db.query(ModerationResult).order_by(ModerationResult.id.desc()).limit(limit).all()
-    history = []
-    for r in results:
-        evidence_dict = {}
-        try:
-            evidence_dict = json.loads(r.evidence) if r.evidence else {}
-        except Exception:
-            pass
-
-        history.append({
-            "ad_id": r.advertisement_id,
-            "status": "completed",
-            "classification": r.classification,
+        "requires_human_review": res.moderation_action == ModerationAction.HUMAN_REVIEW,            "classification": r.classification,
             "display_label": r.risk_category,
             "risk_score": r.risk_score,
             "confidence": r.confidence,
@@ -196,6 +154,7 @@ def get_moderation_history(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.get("/logs")
 def get_audit_logs(limit: int = 50, db: Session = Depends(get_db)):
+    """Returns audit logs."""
     logs = db.query(AuditLog).order_by(AuditLog.id.desc()).limit(limit).all()
     return [{
         "id": l.id,

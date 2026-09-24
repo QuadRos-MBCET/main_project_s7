@@ -62,8 +62,7 @@ class SafeAdNSFWDetector:
     def _heuristic_skin_eval(self, pil_img: Image.Image) -> float:
         """
         Auxiliary skin-pixel chrominance filter using YCbCr & HSV color spaces.
-        Evaluates body skin ratio for suggestive attire / swimwear / sports apparel.
-        """
+        Evaluates body skin ratio for suggestive attire / swimwear / sports apparel.        """
         try:
             img_np = cv2.cvtColor(np.array(pil_img.convert("RGB")), cv2.COLOR_RGB2BGR)
             height, width = img_np.shape[:2]
@@ -88,15 +87,13 @@ class SafeAdNSFWDetector:
             return round(max(0.02, skin_ratio * 0.5), 4)
         except Exception:
             return 0.05
-
     def predict_image(
         self,
         image_input: Union[str, Image.Image, np.ndarray],
         ocr_text: str = ""
     ) -> Dict[str, Any]:
         """
-        Evaluates a single image / keyframe for adult/NSFW/suggestive content using pretrained Falconsai ViT & heuristics.
-        """
+        Evaluates a single image / keyframe for adult/NSFW/suggestive content using pretrained Falconsai ViT & heuristics.        """
         if not self._is_loaded:
             self.load_model()
 
@@ -146,7 +143,6 @@ class SafeAdNSFWDetector:
 
         final_score = max(nsfw_score, heur_score, text_indicator)
         detected = final_score >= self.threshold
-
 
         return {
             "nsfw_detected": detected,

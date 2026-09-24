@@ -93,8 +93,7 @@ st.markdown("""
         border-radius: 8px;
         padding: 14px;
         margin-bottom: 10px;
-    }
-    </style>
+    }    </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='main-header'>🛡️ SAFEAD AI (SAFE-VISION)</div>", unsafe_allow_html=True)
@@ -120,7 +119,6 @@ try:
         st.sidebar.error("🔴 Backend Error")
 except Exception:
     st.sidebar.warning("⚠️ Standalone Local Pipeline Active")
-
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"**Logged User**: `{st.session_state['username']}`")
 st.sidebar.markdown(f"**Verified Age**: `{st.session_state['verified_age_group']}`")
@@ -129,13 +127,11 @@ tabs = st.tabs([
     "📢 Advertiser Moderation Portal",
     "👤 User Age-Confidence Analytics",
     "📱 Age-Aware Feed Preview",
-    "🛡️ Human Moderator Review Dashboard",
-    "📊 Audit History & Logs"
+    "🛡️ Human Moderator Review Dashboard",    "📊 Audit History & Logs"
 ])
 
 # =====================================================================
-# TAB 1: ADVERTISER MODERATION PORTAL
-# =====================================================================
+# TAB 1: ADVERTISER MODERATION PORTAL# =====================================================================
 with tabs[0]:
     st.header("Upload Advertisement Creative for Safety Audit")
     
@@ -145,8 +141,7 @@ with tabs[0]:
         st.subheader("1. Submission Options")
         with st.form("ad_upload_form"):
             ad_title = st.text_input("Creative Title", placeholder="e.g. Organic Apple Juice / Casino Slot Promo / Get Rich Quick")
-            ad_caption = st.text_area("Ad Copy / Caption", placeholder="e.g. Double your money guaranteed / Pure natural ingredients")
-            uploaded_file = st.file_uploader("Upload Image or Video Advertisement", type=["jpg", "jpeg", "png", "webp", "mp4", "avi", "mov"])
+            ad_caption = st.text_area("Ad Copy / Caption", placeholder="e.g. Double your money guaranteed / Pure natural ingredients")            uploaded_file = st.file_uploader("Upload Image or Video Advertisement", type=["jpg", "jpeg", "png", "webp", "mp4", "avi", "mov"])
             submit_btn = st.form_submit_button("Analyze Advertisement")
             
         if submit_btn:
@@ -167,7 +162,6 @@ with tabs[0]:
 
                 progress_bar.progress(80)
                 status_text.info("[7 & 8] Synthesizing Central SafeAdAssessment Matrix & Ad Risk Analysis...")
-
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
                     data = {"title": ad_title, "caption": ad_caption, "user_id": st.session_state["user_id"]}
@@ -175,19 +169,16 @@ with tabs[0]:
                     resp = requests.post(f"{BACKEND_URL}/advertisements/analyze", files=files, data=data, timeout=120)
 
                     progress_bar.progress(100)
-                    status_text.success("Central SafeAdAssessment Matrix & Policy Decision Completed!")
-                    
+                    status_text.success("Central SafeAdAssessment Matrix & Policy Decision Completed!")                    
                     if resp.status_code == 200:
                         st.session_state["moderation_report"] = resp.json()
                     else:
-                        from ai.pipeline import run_safead_inference
-                        temp_path = os.path.join("uploads", uploaded_file.name)
+                        from ai.pipeline import run_safead_inference                        temp_path = os.path.join("uploads", uploaded_file.name)
                         os.makedirs("uploads", exist_ok=True)
                         with open(temp_path, "wb") as f:
                             f.write(uploaded_file.getvalue())
                         st.session_state["moderation_report"] = run_safead_inference(temp_path, ad_title, ad_caption)
-                except Exception:
-                    from ai.pipeline import run_safead_inference
+                except Exception:                    from ai.pipeline import run_safead_inference
                     temp_path = os.path.join("uploads", uploaded_file.name)
                     os.makedirs("uploads", exist_ok=True)
                     with open(temp_path, "wb") as f:
@@ -195,7 +186,6 @@ with tabs[0]:
                     st.session_state["moderation_report"] = run_safead_inference(temp_path, ad_title, ad_caption)
                     progress_bar.progress(100)
                     status_text.success("Central SafeAdAssessment Matrix & Policy Decision Completed!")
-
     with col2:
         st.subheader("2. SafeAd AI Moderation Result")
         if "moderation_report" in st.session_state:
@@ -210,8 +200,7 @@ with tabs[0]:
             # Action Badge Display
             if requires_hitl or classification == "REQUIRES_HUMAN_REVIEW":
                 st.markdown("<div class='badge-hitl'>REQUIRES HUMAN REVIEW — MODERATOR QUEUED</div>", unsafe_allow_html=True)
-            elif classification == "UNSAFE_FOR_ALL" or action == "REJECT":
-                st.markdown("<div class='badge-reject'>REJECT — UNSAFE FOR ALL</div>", unsafe_allow_html=True)
+            elif classification == "UNSAFE_FOR_ALL" or action == "REJECT":                st.markdown("<div class='badge-reject'>REJECT — UNSAFE FOR ALL</div>", unsafe_allow_html=True)
             elif classification == "SAFE_18_PLUS":
                 st.markdown("<div class='badge-18'>AGE RESTRICTED — 18+</div>", unsafe_allow_html=True)
             elif classification == "SAFE_14_PLUS":
@@ -317,7 +306,6 @@ with tabs[1]:
             st.info(f"Verified Age Group: `{ares['verified_age_group'].value}` (Status: {ares['verification_status']})")
         else:
             st.info("Run age verification on the left panel to display confidence analytics.")
-
 # =====================================================================
 # TAB 3: AGE-AWARE FEED PREVIEW
 # =====================================================================
@@ -382,11 +370,9 @@ with tabs[3]:
 # =====================================================================
 # TAB 5: AUDIT HISTORY & LOGS
 # =====================================================================
-with tabs[4]:
-    st.header("System Audit Logs & Moderation History")
+with tabs[4]:    st.header("System Audit Logs & Moderation History")
     try:
         resp = requests.get(f"{BACKEND_URL}/moderation/history", timeout=5)
         if resp.status_code == 200:
             st.dataframe(resp.json(), use_container_width=True)
-    except Exception:
-        st.info("Local database active. Moderation history will display upon running API backend.")
+    except Exception:        st.info("Local database active. Moderation history will display upon running API backend.")

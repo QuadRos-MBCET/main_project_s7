@@ -78,8 +78,7 @@ class ModerationResult(Base):
     risk_score = Column(Float, nullable=True)
     confidence = Column(Float, default=0.85)
     explanation = Column(Text, nullable=False)
-    evidence = Column(Text, nullable=True)  # Detailed JSON assessment matrix string
-    
+    evidence = Column(Text, nullable=True)  # Detailed JSON assessment matrix string    
     moderation_action = Column(SQLEnum(ModerationAction), nullable=False)
     age_restriction = Column(Integer, nullable=True)
     publishable = Column(Boolean, default=True)

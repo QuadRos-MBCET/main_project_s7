@@ -17,7 +17,6 @@ def validate_advertisement_file(file_path: str) -> Tuple[bool, str, str]:
     if not os.path.exists(file_path):
         return False, "unknown", "File does not exist on disk."
 
-
     ext = os.path.splitext(file_path)[1].lower()
 
     if ext in SUPPORTED_IMAGE_EXTS:

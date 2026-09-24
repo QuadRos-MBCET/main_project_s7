@@ -12,8 +12,7 @@ class StandardizedModerationResponse(BaseModel):
     publication_action: ModerationAction
     action_badge: str
     publishable: bool
-    requires_human_review: bool = False
-    detected_categories: List[str] = []
+    requires_human_review: bool = False    detected_categories: List[str] = []
     violations: List[str] = []
     explanation: str
     evidence: Dict[str, Any] = {}
