@@ -165,7 +165,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
                     norm_group = "18 AND ABOVE"
 
                 return {
-                    "age_range": age_range,
+                    "age_range": category,
                     "normalized_group": norm_group,
                     "confidence": float(conf),
                     "category": category,
@@ -194,7 +194,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
         norm_group = "LESS THAN 14" if prob_child > 0.5 else "18 AND ABOVE"
 
     return {
-        "age_range": "< 14" if cat == "Less than 14" else "18+",
+        "age_range": cat,
         "normalized_group": norm_group,
         "confidence": float(prob_child if cat == "Less than 14" else max(0.0, 1.0 - prob_child)),
         "category": cat,

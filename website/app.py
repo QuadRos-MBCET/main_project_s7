@@ -208,8 +208,8 @@ with tabs[0]:
                 
                 st.markdown(f"""
                 <div style="background-color:#f8fafc; padding:18px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:16px;">
-                    <div style="display:flex; justify-between; align-items:center;">
-                        <span style="font-size:18px; font-weight:700; color:#1e293b;">ViT Age Group: {age_range} years</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:18px; font-weight:700; color:#1e293b;">Age Category: {category}</span>
                         <span class="badge {b_class}">{b_icon} {category}</span>
                     </div>
                 </div>
