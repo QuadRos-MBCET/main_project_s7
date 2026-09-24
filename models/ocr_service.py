@@ -18,18 +18,38 @@ class SafeAdOCRService:
 
     def __init__(self, use_gpu: bool = False):
         self.use_gpu = use_gpu
+        self._easy_ocr_reader = None
         self._paddle_ocr = None
         self._engine_type = "none"
         self._is_initialized = False
 
     def initialize_ocr(self):
-        """Initializes PaddleOCR / PyTesseract OCR engine."""
+        """Initializes EasyOCR / PaddleOCR / PyTesseract OCR engine."""
         if self._is_initialized:
             return self
 
+        # 1. Primary Engine: EasyOCR (PyTorch-native)
+        try:
+            import easyocr
+            self._easy_ocr_reader = easyocr.Reader(['en'], gpu=self.use_gpu, verbose=False)
+            self._engine_type = "easyocr"
+            print("[SafeAdOCRService] EasyOCR initialized successfully.")
+            self._is_initialized = True
+            return self
+        except Exception as e:
+            print(f"[SafeAdOCRService WARNING] EasyOCR initialization fallback ({e}). Trying PaddleOCR...")
+            self._easy_ocr_reader = None
+
+        # 2. Secondary Engine: PP-OCR / PaddleOCR
         try:
             from paddleocr import PaddleOCR
-            self._paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+            try:
+                self._paddle_ocr = PaddleOCR(use_textline_orientation=True, lang="en")
+            except Exception:
+                try:
+                    self._paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en")
+                except Exception:
+                    self._paddle_ocr = PaddleOCR(lang="en")
             self._engine_type = "paddleocr"
             print("[SafeAdOCRService] PP-OCR / PaddleOCR initialized successfully.")
         except Exception as e:
@@ -74,25 +94,51 @@ class SafeAdOCRService:
         confidences = []
         bboxes = []
 
-        # 1. PaddleOCR Execution
-        if self._engine_type == "paddleocr" and self._paddle_ocr is not None:
+        # 1. EasyOCR Execution
+        if self._engine_type == "easyocr" and self._easy_ocr_reader is not None:
             try:
-                result = self._paddle_ocr.ocr(img_np, cls=True)
-                if result and result[0]:
-                    for line in result[0]:
-                        bbox = line[0]
-                        text_val = line[1][0]
-                        conf_val = float(line[1][1])
-                        
-                        clean_text = text_val.strip()
-                        if clean_text:
-                            extracted_lines.append(clean_text)
-                            confidences.append(conf_val)
-                            bboxes.append(bbox)
+                results = self._easy_ocr_reader.readtext(img_np)
+                if results:
+                    for res in results:
+                        if len(res) >= 2:
+                            bbox = res[0]
+                            text_val = res[1]
+                            conf_val = float(res[2]) if len(res) > 2 else 0.90
+                            
+                            clean_text = str(text_val).strip()
+                            if clean_text:
+                                extracted_lines.append(clean_text)
+                                confidences.append(conf_val)
+                                if hasattr(bbox, "tolist"):
+                                    bbox = bbox.tolist()
+                                elif isinstance(bbox, (list, tuple)):
+                                    bbox = [[float(pt[0]), float(pt[1])] for pt in bbox if len(pt) >= 2]
+                                bboxes.append(bbox)
+            except Exception as e:
+                print(f"[SafeAdOCRService ERROR] EasyOCR extraction error: {e}")
+
+        # 2. PaddleOCR Execution (Fallback if EasyOCR yielded no text or failed)
+        if not extracted_lines and self._paddle_ocr is not None:
+            try:
+                result = self._paddle_ocr.ocr(img_np)
+                if result:
+                    for res_block in result:
+                        if res_block:
+                            for line in res_block:
+                                if line and len(line) >= 2:
+                                    bbox = line[0]
+                                    text_val = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                    conf_val = float(line[1][1]) if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.90
+                                    
+                                    clean_text = str(text_val).strip()
+                                    if clean_text:
+                                        extracted_lines.append(clean_text)
+                                        confidences.append(conf_val)
+                                        bboxes.append(bbox)
             except Exception as e:
                 print(f"[SafeAdOCRService ERROR] PaddleOCR extraction error: {e}")
 
-        # 2. PyTesseract Fallback
+        # 3. PyTesseract Fallback
         if not extracted_lines:
             try:
                 import pytesseract
