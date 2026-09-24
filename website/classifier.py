@@ -134,15 +134,91 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
+def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None) -> tuple[bool, float, str]:
+    """
+    Detects whether the captured face image is a photograph/screen display (photo spoof)
+    or a real live face.
+    
+    Returns:
+        (is_spoof: bool, spoof_score: float, reason: str)
+    """
+    if image_np is None:
+        return False, 0.0, "No image"
+
+    if cropped_face is None:
+        cropped_face, _ = detect_and_crop_face(image_np)
+        
+    score_indicators = []
+    reasons = []
+    
+    # 1. Specular Glare & Reflection Analysis (Screen / Photo reflection)
+    hsv = cv2.cvtColor(image_np, cv2.COLOR_RGB2HSV)
+    v_chan = hsv[:, :, 2]
+    s_chan = hsv[:, :, 1]
+    
+    specular_mask = (v_chan > 245) & (s_chan < 30)
+    specular_ratio = np.mean(specular_mask)
+    if specular_ratio > 0.015:
+        score_indicators.append(0.35)
+        reasons.append("Screen / photo specular glare reflection detected")
+
+    # 2. Color Gamut & YCrCb Skin Tone Naturalness
+    if cropped_face is not None and cropped_face.size > 0:
+        ycrcb = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2YCrCb)
+        cr = ycrcb[:, :, 1]
+        cb = ycrcb[:, :, 2]
+        skin_mask = (cr >= 133) & (cr <= 173) & (cb >= 77) & (cb <= 127)
+        skin_ratio = np.mean(skin_mask)
+        if skin_ratio < 0.25:
+            score_indicators.append(0.30)
+            reasons.append("Unnatural skin tone color response (display/photo gamut)")
+
+        # 3. Frequency & FFT Moiré Pattern Analysis
+        gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
+        f = np.fft.fft2(gray_face)
+        fshift = np.fft.fftshift(f)
+        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1e-6)
+        h, w = gray_face.shape
+        cy, cx = h // 2, w // 2
+        high_freq_ratio = float(np.mean(magnitude_spectrum[:max(1, cy//2), :max(1, cx//2)]) / (np.mean(magnitude_spectrum) + 1e-6))
+        if high_freq_ratio > 1.25 or high_freq_ratio < 0.65:
+            score_indicators.append(0.25)
+            reasons.append("Display screen Moiré pattern / re-sampling grid artifact")
+
+    # 4. Rectangular Screen / Paper Border Frame Detection
+    gray_img = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+    edges = cv2.Canny(gray_img, 50, 150)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80, minLineLength=60, maxLineGap=10)
+    if lines is not None and len(lines) >= 4:
+        vert_horiz_count = 0
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
+            if angle < 10 or angle > 80:
+                vert_horiz_count += 1
+        if vert_horiz_count >= 4:
+            score_indicators.append(0.25)
+            reasons.append("Rectangular screen / printed photo border frame detected")
+
+    total_spoof_score = float(np.sum(score_indicators))
+    is_spoof = total_spoof_score >= 0.40
+    reason_str = "; ".join(reasons) if reasons else "Live face verified"
+    
+    return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
+
+
 def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     """
-    Returns full detailed age estimation dictionary using MTCNN + ViT Age Pipeline:
-    - age_range: e.g. "20-29", "10-19", "0-2", "30-39"
-    - normalized_group: "LESS THAN 14", "14 TO 17", "18 AND ABOVE"
+    Returns full detailed age estimation dictionary using MTCNN + ViT Age Pipeline with Anti-Spoof Detection:
+    - age_range: "Less than 14", "14 to 17", "18 and above"
     - category: "Less than 14", "14 to 17", or "18 and above"
-    - confidence: float score (e.g. 0.7401)
-    - pipeline_result: full dict from FaceAgePipeline
+    - is_spoof: bool
+    - spoof_score: float
+    - spoof_reason: str
     """
+    cropped_face, bbox = detect_and_crop_face(image_np)
+    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face)
+
     if HAS_PIPELINE and image_np is not None:
         try:
             pil_img = Image.fromarray(image_np)
@@ -169,6 +245,9 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
                     "normalized_group": norm_group,
                     "confidence": float(conf),
                     "category": category,
+                    "is_spoof": is_spoof,
+                    "spoof_score": spoof_score,
+                    "spoof_reason": spoof_reason,
                     "pipeline_result": res,
                     "faces_detected": res["faces_detected"]
                 }
@@ -176,7 +255,6 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
             pass
 
     # Fallback model categorization
-    cropped_face, bbox = detect_and_crop_face(image_np)
     if not HAS_SKLEARN or face_age_clf is None:
         if bbox is not None:
             x, y, w, h = bbox
@@ -198,6 +276,9 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
         "normalized_group": norm_group,
         "confidence": float(prob_child if cat == "Less than 14" else max(0.0, 1.0 - prob_child)),
         "category": cat,
+        "is_spoof": is_spoof,
+        "spoof_score": spoof_score,
+        "spoof_reason": spoof_reason,
         "pipeline_result": None,
         "faces_detected": 1
     }

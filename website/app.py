@@ -195,6 +195,11 @@ with tabs[0]:
                 confidence = detailed["confidence"]
                 category = detailed["category"]
                 
+                # Anti-Spoof Photo Liveness Check
+                if detailed.get("is_spoof"):
+                    st.error("🛑 **QUIT TRYING TO FOOL ME AND SHOW YOUR ORIGINAL FACE**")
+                    st.warning(f"⚠️ Photo/Screen Spoof Detected! ({detailed.get('spoof_reason', 'Re-photographed picture detected')})")
+
                 # Render Clean Verdict Box
                 if category == "Less than 14":
                     b_class = "badge-child"
