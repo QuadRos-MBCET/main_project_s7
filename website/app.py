@@ -138,42 +138,75 @@ with tabs[0]:
     with sub_tab1:
         c_left, c_right = st.columns([1, 1.1], gap="medium")
         
-        with c_left:
-            st.markdown("#### 1. Input Face Photo")
-            input_type = st.radio(
-                "Choose Input Source",
-                ["Webcam Snapshot", "Upload Image", "Preset Profile"],
-                horizontal=True,
-                key="t1_input_type"
-            )
+    with sub_tab1:
+        st.markdown("### 🆔 ID Card Verification & Live Face Cross-Matching")
+        c_id, c_live = st.columns([1, 1], gap="medium")
+        
+        with c_id:
+            st.markdown("#### 1. Upload Official ID Card")
+            id_source = st.radio("ID Source", ["Upload ID Document", "Sample Adult ID (DOB 1995)", "Sample Child ID (DOB 2012)"], horizontal=True, key="t1_id_src")
             
-            image_np = None
+            id_image_np = None
+            id_manual_dob = None
             
-            if input_type == "Webcam Snapshot":
-                cam_active = st.toggle("📸 Enable Front Camera Feed", value=False, key="t1_cam_toggle")
+            if id_source == "Upload ID Document":
+                up_id = st.file_uploader("Upload ID (Aadhaar / License / Passport)", type=["jpg", "jpeg", "png"], key="t1_id_file")
+                id_manual_dob = st.text_input("Optional DOB override if text blurry (DD/MM/YYYY)", "", key="t1_dob_override")
+                if up_id:
+                    id_image_np = np.array(Image.open(up_id).convert("RGB"))
+            elif id_source == "Sample Adult ID (DOB 1995)":
+                id_manual_dob = "15/05/1995"
+                dummy_id = np.ones((200, 320, 3), dtype=np.uint8) * 230
+                cv2.rectangle(dummy_id, (10, 10), (310, 190), (50, 50, 50), 2)
+                cv2.ellipse(dummy_id, (60, 80), (36, 54), 0, 0, 360, (245, 190, 160), -1)
+                cv2.circle(dummy_id, (45, 70), 4, (40, 40, 40), -1)
+                cv2.circle(dummy_id, (75, 70), 4, (40, 40, 40), -1)
+                cv2.putText(dummy_id, "GOVT IDENTITY CARD", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+                cv2.putText(dummy_id, "DOB: 15/05/1995", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
+                cv2.putText(dummy_id, "ID: ADULT-1995-XYZ", (100, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
+                id_image_np = dummy_id
+            else:
+                id_manual_dob = "10/08/2012"
+                dummy_id = np.ones((200, 320, 3), dtype=np.uint8) * 230
+                cv2.rectangle(dummy_id, (10, 10), (310, 190), (50, 50, 50), 2)
+                cv2.ellipse(dummy_id, (60, 80), (45, 45), 0, 0, 360, (255, 200, 180), -1)
+                cv2.circle(dummy_id, (45, 80), 7, (40, 40, 40), -1)
+                cv2.circle(dummy_id, (75, 80), 7, (40, 40, 40), -1)
+                cv2.putText(dummy_id, "STUDENT IDENTITY CARD", (95, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
+                cv2.putText(dummy_id, "DOB: 10/08/2012", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
+                id_image_np = dummy_id
                 
+            if id_image_np is not None:
+                st.image(id_image_np, caption="Scanned ID Card", use_container_width=True)
+
+        with c_live:
+            st.markdown("#### 2. Live Face Camera Scan")
+            live_type = st.radio("Live Input Source", ["Webcam Snapshot", "Upload Live Face Photo", "Preset Face"], horizontal=True, key="t1_live_type")
+            
+            live_image_np = None
+            if live_type == "Webcam Snapshot":
+                cam_active = st.toggle("📸 Enable Front Camera Feed", value=False, key="t1_cam_toggle")
                 if cam_active:
                     st.caption("🟢 Live Front Camera Feed Active — Tap 'Take Photo' below")
                     cam_img = st.camera_input("Live Camera Feed", key="t1_cam")
                     if cam_img:
-                        image_np = np.array(Image.open(cam_img).convert("RGB"))
+                        live_image_np = np.array(Image.open(cam_img).convert("RGB"))
                 else:
                     st.markdown("""
                     <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
                         <div style="font-size:32px; margin-bottom:6px;">📷</div>
-                        <div style="font-size:15px; font-weight:600; color:#334155; margin-bottom:4px;">Camera is Currently Off</div>
-                        <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to grant browser permission and view live feed.</div>
+                        <div style="font-size:15px; font-weight:600; color:#334155;">Camera is Currently Off</div>
+                        <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to view feed.</div>
                     </div>
                     """, unsafe_allow_html=True)
-                        
-            elif input_type == "Upload Image":
-                up_file = st.file_uploader("Upload face photo", type=["jpg", "jpeg", "png"], key="t1_file")
-                if up_file:
-                    image_np = np.array(Image.open(up_file).convert("RGB"))
+            elif live_type == "Upload Live Face Photo":
+                up_live = st.file_uploader("Upload Live Face Photo", type=["jpg", "jpeg", "png"], key="t1_live_file")
+                if up_live:
+                    live_image_np = np.array(Image.open(up_live).convert("RGB"))
             else:
-                preset = st.selectbox("Select Preset Face", ["Child Profile (Round)", "Adult Profile (Oval)"], key="t1_preset")
+                preset = st.selectbox("Select Preset Live Face", ["Adult Face (Oval)", "Child Face (Round)"], key="t1_preset")
                 dummy = np.ones((128, 128, 3), dtype=np.uint8) * 240
-                if preset == "Child Profile (Round)":
+                if preset == "Child Face (Round)":
                     cv2.ellipse(dummy, (64, 64), (45, 45), 0, 0, 360, (255, 200, 180), -1)
                     cv2.circle(dummy, (49, 69), 7, (40, 40, 40), -1)
                     cv2.circle(dummy, (79, 69), 7, (40, 40, 40), -1)
@@ -181,62 +214,61 @@ with tabs[0]:
                     cv2.ellipse(dummy, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
                     cv2.circle(dummy, (49, 54), 4, (40, 40, 40), -1)
                     cv2.circle(dummy, (79, 54), 4, (40, 40, 40), -1)
-                image_np = dummy
+                live_image_np = dummy
                 
-            if image_np is not None:
-                st.image(image_np, caption="Input Image", use_container_width=True)
-                
-        with c_right:
-            st.markdown("#### 2. AI Verdict & Face Detection")
-            if image_np is not None:
-                cropped_face, bbox = detect_and_crop_face(image_np)
-                detailed = estimate_detailed_age_from_face(image_np)
-                
-                age_range = detailed["age_range"]
-                norm_group = detailed["normalized_group"]
-                confidence = detailed["confidence"]
-                category = detailed["category"]
-                
-                # Anti-Spoof Photo Liveness Check
-                if detailed.get("is_spoof"):
-                    st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
-                    st.warning(f"⚠️ Photo/Screen Spoof Detected! ({detailed.get('spoof_reason', 'Re-photographed picture detected')})")
+            if live_image_np is not None:
+                st.image(live_image_np, caption="Live Captured Face", use_container_width=True)
 
-                # Render Clean Verdict Box
-                if category == "Less than 14":
-                    b_class = "badge-child"
-                    b_icon = "🚨"
-                elif category == "14 to 17":
-                    b_class = "badge-teen"
-                    b_icon = "⚠️"
-                else:
-                    b_class = "badge-adult"
-                    b_icon = "✅"
-                
-                st.markdown(f"""
-                <div style="background-color:#f8fafc; padding:18px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:18px; font-weight:700; color:#1e293b;">Age Category: {category}</span>
-                        <span class="badge {b_class}">{b_icon} {category}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Face Crop & Confidence Side-by-Side
-                fc1, fc2 = st.columns([1, 2])
-                with fc1:
-                    st.image(cropped_face, caption="Cropped Face (128x128)", width=130)
-                with fc2:
-                    st.markdown(f"**Model Confidence Score**: `{confidence:.1%}`")
-                    st.progress(float(confidence))
-                    if bbox is not None:
-                        st.caption(f"Bounding Box: `{bbox}`")
-                
-                if detailed.get("pipeline_result"):
-                    with st.expander("🔍 Detailed ViT Probabilities & Raw Data"):
-                        st.json(detailed["pipeline_result"])
+        # =====================================================================
+        # STEP 3: REAL-TIME VERIFICATION & CROSS-MATCH VERDICT
+        # =====================================================================
+        st.markdown("---")
+        st.markdown("### 📊 ID vs Live Face Cross-Matching Verdict")
+        if id_image_np is not None and live_image_np is not None:
+            res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob)
+            
+            # 1. Anti-Spoof Warning
+            if res["is_spoof"]:
+                st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+                st.warning(f"⚠️ Photo/Screen Spoof Detected! ({res['spoof_reason']})")
+
+            # 2. Status Banner
+            if res["status"] == "VERIFIED_SUCCESS":
+                st.success(f"### {res['message']}")
+            elif res["status"] == "FAILED_FACE_MISMATCH":
+                st.error(f"### {res['message']}")
             else:
-                st.info("👈 Snap or upload a photo to perform facial age estimation.")
+                st.warning(f"### {res['message']}")
+
+            # 3. Side-by-side face comparison & DOB metrics
+            vm1, vm2, vm3 = st.columns(3)
+            with vm1:
+                st.markdown("##### ID Card Face Photo")
+                st.image(res["id_face"], width=130)
+                st.caption(f"ID Card DOB: **{res['id_dob_str']}**")
+                st.caption(f"Extracted ID Age: **{res['id_age']} yrs** (`{res['id_age_category']}`)")
+                
+            with vm2:
+                st.markdown("##### Live Captured Face")
+                st.image(res["live_face"], width=130)
+                st.caption(f"Live ViT Predicted Age: **`{res['live_age_category']}`**")
+                
+            with vm3:
+                st.markdown("##### Face Similarity Score")
+                st.metric("Face Match Confidence", f"{res['face_similarity']:.1%}")
+                st.progress(float(res['face_similarity']))
+                
+                if res["face_match"]:
+                    st.success("✅ Facial Biometrics Match!")
+                else:
+                    st.error("❌ Facial Mismatch Detected!")
+                    
+                if res["dob_age_match"]:
+                    st.success("✅ ID DOB matches Live Face Age!")
+                else:
+                    st.warning("⚠️ ID DOB does not match Live Face Age!")
+        else:
+            st.info("👈 Upload/Select an ID Card AND capture/select a Live Face to execute real-time cross-matching verification.")
                 
         # Optional Desktop OpenCV Camera Launcher
         with st.expander("🎥 Open Real-Time Desktop Camera Window (OpenCV)"):

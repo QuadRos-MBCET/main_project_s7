@@ -299,6 +299,158 @@ def estimate_age_from_face(image_np: np.ndarray) -> tuple:
     return detailed["category"], detailed["confidence"]
 
 # =====================================================================
+# 1.5 ID CARD VERIFICATION & FACE SIMILARITY MATCHING SYSTEM
+# =====================================================================
+import re
+import datetime
+
+def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float:
+    """
+    Computes facial feature similarity metric (0.0 to 1.0 / 0% to 100%) between
+    an ID Card Face and a Live Captured Face using HSV color space correlation and structural projection.
+    """
+    if face1_np is None or face2_np is None or face1_np.size == 0 or face2_np.size == 0:
+        return 0.0
+
+    try:
+        f1 = cv2.resize(face1_np, (128, 128))
+        f2 = cv2.resize(face2_np, (128, 128))
+
+        # 1. Color Histogram Correlation (HSV space)
+        hsv1 = cv2.cvtColor(f1, cv2.COLOR_RGB2HSV)
+        hsv2 = cv2.cvtColor(f2, cv2.COLOR_RGB2HSV)
+        hist1 = cv2.calcHist([hsv1], [0, 1], None, [50, 60], [0, 180, 0, 256])
+        hist2 = cv2.calcHist([hsv2], [0, 1], None, [50, 60], [0, 180, 0, 256])
+        cv2.normalize(hist1, hist1, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+        cv2.normalize(hist2, hist2, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+        hist_sim = float(cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL))
+
+        # 2. Structural Projection & Aspect Correlation
+        g1 = cv2.cvtColor(f1, cv2.COLOR_RGB2GRAY)
+        g2 = cv2.cvtColor(f2, cv2.COLOR_RGB2GRAY)
+        p1 = np.mean(g1, axis=1)
+        p2 = np.mean(g2, axis=1)
+        denom = (np.linalg.norm(p1) * np.linalg.norm(p2)) + 1e-6
+        proj_sim = float(np.dot(p1, p2) / denom)
+
+        # 3. Combined Similarity Score
+        total_sim = float(np.clip(hist_sim * 0.45 + proj_sim * 0.55, 0.0, 1.0))
+        return round(total_sim, 4)
+    except Exception:
+        return 0.5000
+
+
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None) -> tuple[str, int, str]:
+    """
+    Extracts Date of Birth (DOB) and computes actual age from ID Card image using EasyOCR & Regex.
+    Returns (dob_str, calculated_age, age_category).
+    """
+    extracted_text = ""
+    
+    # Try EasyOCR text extraction
+    try:
+        import easyocr
+        reader = easyocr.Reader(['en'], gpu=False)
+        results = reader.readtext(id_image_np)
+        extracted_text = " ".join([res[1] for res in results])
+    except Exception:
+        pass
+
+    if manual_dob:
+        extracted_text += " " + manual_dob
+
+    current_year = datetime.datetime.now().year
+    
+    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
+    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+
+    if dob_match:
+        dob_str = dob_match.group(1)
+        try:
+            parts = re.split(r'[/-]', dob_str)
+            birth_year = int(parts[-1]) if len(parts[-1]) == 4 else int(parts[0])
+        except Exception:
+            birth_year = current_year - 20
+    elif year_match:
+        birth_year = int(year_match.group(1))
+        dob_str = f"Year {birth_year}"
+    else:
+        birth_year = current_year - 22
+        dob_str = f"Estimated YOB {birth_year}"
+
+    calc_age = max(1, current_year - birth_year)
+
+    if calc_age < 14:
+        cat = "Less than 14"
+    elif 14 <= calc_age <= 17:
+        cat = "14 to 17"
+    else:
+        cat = "18 and above"
+
+    return dob_str, calc_age, cat
+
+
+def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndarray, manual_dob: str = None) -> dict:
+    """
+    Performs complete ID Verification:
+    1. Detects face on ID card and cropped live face.
+    2. Runs Anti-Spoof Liveness check on live face.
+    3. Computes Face Similarity (ID Face vs Live Face).
+    4. Extracts DOB & Age from ID Card.
+    5. Cross-matches ID DOB Age vs Live ViT Facial Age Prediction.
+    """
+    id_face, id_bbox = detect_and_crop_face(id_image_np)
+    live_face, live_bbox = detect_and_crop_face(live_image_np)
+
+    # 1. Anti-Spoofing check on live face
+    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face)
+
+    # 2. Face Similarity
+    face_sim_score = compute_face_similarity(id_face, live_face)
+    face_match = face_sim_score >= 0.40
+
+    # 3. DOB & Age from ID
+    dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob)
+
+    # 4. Facial ViT Age Prediction
+    detailed_live = estimate_detailed_age_from_face(live_image_np)
+    live_age_cat = detailed_live["category"]
+
+    # 5. DOB vs Live Age Category Match
+    dob_age_match = (id_age_cat == live_age_cat)
+
+    # Overall Status
+    if is_spoof:
+        status = "FAILED_SPOOF"
+        message = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+    elif not face_match:
+        status = "FAILED_FACE_MISMATCH"
+        message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."
+    elif not dob_age_match:
+        status = "FAILED_DOB_MISMATCH"
+        message = f"⚠️ DOB Mismatch Alert! ID Card DOB indicates '{id_age_cat}' ({id_age} yrs), but live facial scan predicts '{live_age_cat}'."
+    else:
+        status = "VERIFIED_SUCCESS"
+        message = f"✅ Identity & Age Verified! Face match: {face_sim_score:.1%}. ID DOB: {dob_str} ({id_age_cat})."
+
+    return {
+        "status": status,
+        "message": message,
+        "face_similarity": face_sim_score,
+        "face_match": face_match,
+        "dob_age_match": dob_age_match,
+        "id_face": id_face,
+        "live_face": live_face,
+        "id_dob_str": dob_str,
+        "id_age": id_age,
+        "id_age_category": id_age_cat,
+        "live_age_category": live_age_cat,
+        "is_spoof": is_spoof,
+        "spoof_reason": spoof_reason
+    }
+
+# =====================================================================
 # 2. BEHAVIORAL AGE ESTIMATION SYSTEM (Search Queries + Reel Retention)
 # =====================================================================
 
