@@ -16,11 +16,13 @@ def get_admin_reviews(review_status: Optional[str] = None, db: Session = Depends
     Filters by review_status if provided (e.g., PENDING_REVIEW, HUMAN_ACCEPTED, HUMAN_REJECTED, ALL).
     """
     # Sync any pending advertisements into human_reviews if missing
-    pending_ads = db.query(Advertisement).filter(Advertisement.status == "PENDING_REVIEW").all()
+    pending_ads = db.query(Advertisement).filter(
+        Advertisement.status.in_(["PENDING_REVIEW", "HUMAN_REVIEW", "RESTRICT"])
+    ).all()
     for p_ad in pending_ads:
         existing_rev = db.query(HumanReview).filter(HumanReview.advertisement_id == p_ad.id).first()
         if not existing_rev:
-            ai_class = p_ad.moderation_result.classification.value if p_ad.moderation_result else "UNKNOWN"
+            ai_class = p_ad.moderation_result.classification.value if (p_ad.moderation_result and p_ad.moderation_result.classification) else "UNKNOWN"
             new_rev = HumanReview(
                 advertisement_id=p_ad.id,
                 submitted_by=p_ad.owner_id or 1,
@@ -28,6 +30,8 @@ def get_admin_reviews(review_status: Optional[str] = None, db: Session = Depends
                 review_status="PENDING_REVIEW"
             )
             db.add(new_rev)
+        elif existing_rev.review_status in ["HUMAN_ACCEPTED", "HUMAN_REJECTED"] and p_ad.status not in ["HUMAN_ACCEPTED", "HUMAN_REJECTED"]:
+            p_ad.status = existing_rev.review_status
     db.commit()
 
     query = db.query(HumanReview)
@@ -38,7 +42,7 @@ def get_admin_reviews(review_status: Optional[str] = None, db: Session = Depends
 
     out = []
     for rev in reviews:
-        ad = rev.advertisement
+        ad = rev.advertisement or db.query(Advertisement).filter(Advertisement.id == rev.advertisement_id).first()
         res = ad.moderation_result if ad else None
         evidence_dict = {}
         if res and res.evidence:
@@ -49,13 +53,13 @@ def get_admin_reviews(review_status: Optional[str] = None, db: Session = Depends
 
         out.append({
             "review_id": rev.id,
-            "ad_id": ad.id if ad else None,
+            "ad_id": ad.id if ad else rev.advertisement_id,
             "title": ad.title if ad else "N/A",
             "caption": ad.caption if ad else "",
             "file_path": ad.file_path if ad else "",
             "media_type": ad.media_type if ad else "image",
             "ad_status": ad.status if ad else "UNKNOWN",
-            "ai_classification": rev.ai_classification or (res.classification.value if res else "UNKNOWN"),
+            "ai_classification": rev.ai_classification or (res.classification.value if res and res.classification else "UNKNOWN"),
             "risk_score": res.risk_score if res else None,
             "confidence": res.confidence if res else 0.50,
             "explanation": res.explanation if res else "",
@@ -85,14 +89,14 @@ def get_admin_review_by_id(id: int, db: Session = Depends(get_db)):
         rev = HumanReview(
             advertisement_id=ad.id,
             submitted_by=ad.owner_id or 1,
-            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            ai_classification=ad.moderation_result.classification.value if (ad.moderation_result and ad.moderation_result.classification) else "UNKNOWN",
             review_status="PENDING_REVIEW"
         )
         db.add(rev)
         db.commit()
         db.refresh(rev)
 
-    ad = rev.advertisement
+    ad = rev.advertisement or db.query(Advertisement).filter(Advertisement.id == rev.advertisement_id).first()
     res = ad.moderation_result if ad else None
     evidence_dict = {}
     if res and res.evidence:
@@ -103,13 +107,13 @@ def get_admin_review_by_id(id: int, db: Session = Depends(get_db)):
 
     return {
         "review_id": rev.id,
-        "ad_id": ad.id if ad else None,
+        "ad_id": ad.id if ad else rev.advertisement_id,
         "title": ad.title if ad else "N/A",
         "caption": ad.caption if ad else "",
         "file_path": ad.file_path if ad else "",
         "media_type": ad.media_type if ad else "image",
         "ad_status": ad.status if ad else "UNKNOWN",
-        "ai_classification": rev.ai_classification or (res.classification.value if res else "UNKNOWN"),
+        "ai_classification": rev.ai_classification or (res.classification.value if res and res.classification else "UNKNOWN"),
         "risk_score": res.risk_score if res else None,
         "confidence": res.confidence if res else 0.50,
         "explanation": res.explanation if res else "",
@@ -135,35 +139,43 @@ def accept_human_review(
     Admin accepts the advertisement for publication.
     Updates status to HUMAN_ACCEPTED and marks publishable = True.
     """
-    rev = db.query(HumanReview).filter(
+    revs = db.query(HumanReview).filter(
         (HumanReview.id == id) | (HumanReview.advertisement_id == id)
-    ).first()
+    ).all()
 
-    if not rev:
+    if not revs:
         ad = db.query(Advertisement).filter(Advertisement.id == id).first()
         if not ad:
             raise HTTPException(status_code=404, detail=f"Human review case or Advertisement #{id} not found.")
         rev = HumanReview(
             advertisement_id=ad.id,
             submitted_by=ad.owner_id or 1,
-            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            ai_classification=ad.moderation_result.classification.value if (ad.moderation_result and ad.moderation_result.classification) else "UNKNOWN",
             review_status="PENDING_REVIEW"
         )
         db.add(rev)
         db.commit()
         db.refresh(rev)
+        revs = [rev]
 
     admin_id = req.admin_id if req else 2
     comment = req.review_comment if req else "Reviewed manually. Content is acceptable under project safety policy."
 
-    rev.review_status = "HUMAN_ACCEPTED"
-    rev.human_decision = "ACCEPT"
-    rev.admin_id = admin_id
-    rev.review_comment = comment
-    rev.reviewed_at = datetime.now()
+    target_ad_ids = set()
+    for rev in revs:
+        rev.review_status = "HUMAN_ACCEPTED"
+        rev.human_decision = "ACCEPT"
+        rev.admin_id = admin_id
+        rev.review_comment = comment
+        rev.reviewed_at = datetime.now()
+        if rev.advertisement_id:
+            target_ad_ids.add(rev.advertisement_id)
 
-    ad = rev.advertisement
-    if ad:
+    if id not in target_ad_ids:
+        target_ad_ids.add(id)
+
+    ads = db.query(Advertisement).filter(Advertisement.id.in_(list(target_ad_ids))).all()
+    for ad in ads:
         ad.status = "HUMAN_ACCEPTED"
         if ad.moderation_result:
             ad.moderation_result.moderation_action = ModerationAction.APPROVE
@@ -172,8 +184,17 @@ def accept_human_review(
             ad.moderation_result.moderator_id = admin_id
             ad.moderation_result.moderator_notes = comment
 
+        ad_revs = db.query(HumanReview).filter(HumanReview.advertisement_id == ad.id).all()
+        for r in ad_revs:
+            r.review_status = "HUMAN_ACCEPTED"
+            r.human_decision = "ACCEPT"
+            r.admin_id = admin_id
+            r.review_comment = comment
+            r.reviewed_at = datetime.now()
+
+    primary_rev = revs[0]
     audit = AuditLog(
-        ad_id=ad.id if ad else None,
+        ad_id=primary_rev.advertisement_id or id,
         user_id=admin_id,
         action="ADMIN_ACCEPTED_HUMAN_REVIEW",
         details=f"Admin ACCEPTED advertisement. Comment: {comment}"
@@ -182,8 +203,8 @@ def accept_human_review(
     db.commit()
 
     return {
-        "review_id": rev.id,
-        "ad_id": ad.id if ad else None,
+        "review_id": primary_rev.id,
+        "ad_id": primary_rev.advertisement_id or id,
         "review_status": "HUMAN_ACCEPTED",
         "human_decision": "ACCEPT",
         "publishable": True,
@@ -200,35 +221,43 @@ def reject_human_review(
     Admin rejects the advertisement.
     Updates status to HUMAN_REJECTED and marks publishable = False.
     """
-    rev = db.query(HumanReview).filter(
+    revs = db.query(HumanReview).filter(
         (HumanReview.id == id) | (HumanReview.advertisement_id == id)
-    ).first()
+    ).all()
 
-    if not rev:
+    if not revs:
         ad = db.query(Advertisement).filter(Advertisement.id == id).first()
         if not ad:
             raise HTTPException(status_code=404, detail=f"Human review case or Advertisement #{id} not found.")
         rev = HumanReview(
             advertisement_id=ad.id,
             submitted_by=ad.owner_id or 1,
-            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            ai_classification=ad.moderation_result.classification.value if (ad.moderation_result and ad.moderation_result.classification) else "UNKNOWN",
             review_status="PENDING_REVIEW"
         )
         db.add(rev)
         db.commit()
         db.refresh(rev)
+        revs = [rev]
 
     admin_id = req.admin_id if req else 2
     comment = req.review_comment if req else "Advertisement contains prohibited content and must not be published."
 
-    rev.review_status = "HUMAN_REJECTED"
-    rev.human_decision = "REJECT"
-    rev.admin_id = admin_id
-    rev.review_comment = comment
-    rev.reviewed_at = datetime.now()
+    target_ad_ids = set()
+    for rev in revs:
+        rev.review_status = "HUMAN_REJECTED"
+        rev.human_decision = "REJECT"
+        rev.admin_id = admin_id
+        rev.review_comment = comment
+        rev.reviewed_at = datetime.now()
+        if rev.advertisement_id:
+            target_ad_ids.add(rev.advertisement_id)
 
-    ad = rev.advertisement
-    if ad:
+    if id not in target_ad_ids:
+        target_ad_ids.add(id)
+
+    ads = db.query(Advertisement).filter(Advertisement.id.in_(list(target_ad_ids))).all()
+    for ad in ads:
         ad.status = "HUMAN_REJECTED"
         if ad.moderation_result:
             ad.moderation_result.moderation_action = ModerationAction.REJECT
@@ -237,8 +266,17 @@ def reject_human_review(
             ad.moderation_result.moderator_id = admin_id
             ad.moderation_result.moderator_notes = comment
 
+        ad_revs = db.query(HumanReview).filter(HumanReview.advertisement_id == ad.id).all()
+        for r in ad_revs:
+            r.review_status = "HUMAN_REJECTED"
+            r.human_decision = "REJECT"
+            r.admin_id = admin_id
+            r.review_comment = comment
+            r.reviewed_at = datetime.now()
+
+    primary_rev = revs[0]
     audit = AuditLog(
-        ad_id=ad.id if ad else None,
+        ad_id=primary_rev.advertisement_id or id,
         user_id=admin_id,
         action="ADMIN_REJECTED_HUMAN_REVIEW",
         details=f"Admin REJECTED advertisement. Comment: {comment}"
@@ -247,8 +285,8 @@ def reject_human_review(
     db.commit()
 
     return {
-        "review_id": rev.id,
-        "ad_id": ad.id if ad else None,
+        "review_id": primary_rev.id,
+        "ad_id": primary_rev.advertisement_id or id,
         "review_status": "HUMAN_REJECTED",
         "human_decision": "REJECT",
         "publishable": False,

@@ -264,7 +264,6 @@ if st.session_state["user_role"] == "ROLE_BRAND_OWNER":
                 st.write(f"- **Upload Timestamp**: `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`")
                 
                 # PRIVACY REQUIREMENT: Do NOT render media player or image on Brand Owner page
-                st.info("🔒 **Media Preview Hidden**: Visual media player is disabled on the Brand Owner Portal in compliance with project privacy guidelines.")
                 
                 st.markdown("---")
                 if st.button("🚀 ANALYZE ADVERTISEMENT", type="primary", use_container_width=True):
@@ -535,33 +534,42 @@ elif st.session_state["user_role"] == "ROLE_ADMIN":
                     st.subheader("3. Human Moderator Decision")
                     review_note = st.text_area("Reviewer Comment / Policy Notes", placeholder="e.g. Reviewed manually. Content is acceptable under project safety policy.")
                     
+                    target_id = c.get("review_id") or c.get("ad_id")
                     dec_col1, dec_col2 = st.columns(2)
                     with dec_col1:
                         if st.button("✅ ACCEPT (APPROVE PUBLICATION)", type="primary", use_container_width=True, key="btn_accept_case"):
                             success = False
-                            if backend_online:
+                            if backend_online and target_id:
                                 try:
-                                    resp = requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/accept", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
+                                    resp = requests.post(
+                                        f"{BACKEND_URL}/admin/reviews/{target_id}/accept",
+                                        json={"admin_id": st.session_state.get("user_id", 2), "review_comment": review_note},
+                                        timeout=5
+                                    )
                                     if resp.status_code == 200:
                                         success = True
-                                except Exception:
-                                    pass
-                            st.success(f"✔️ Case #{c['review_id']} ACCEPTED by Admin. Moved to Reviewed Cases as HUMAN_ACCEPTED.")
-                            time.sleep(1)
+                                except Exception as e:
+                                    st.error(f"Error updating backend: {e}")
+                            st.success(f"✔️ Case #{target_id} ACCEPTED by Admin. Moved to Reviewed Cases as HUMAN_ACCEPTED.")
+                            time.sleep(0.5)
                             st.rerun()
                             
                     with dec_col2:
                         if st.button("❌ REJECT (BLOCK PUBLICATION)", use_container_width=True, key="btn_reject_case"):
                             success = False
-                            if backend_online:
+                            if backend_online and target_id:
                                 try:
-                                    resp = requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/reject", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
+                                    resp = requests.post(
+                                        f"{BACKEND_URL}/admin/reviews/{target_id}/reject",
+                                        json={"admin_id": st.session_state.get("user_id", 2), "review_comment": review_note},
+                                        timeout=5
+                                    )
                                     if resp.status_code == 200:
                                         success = True
-                                except Exception:
-                                    pass
-                            st.error(f"❌ Case #{c['review_id']} REJECTED by Admin. Moved to Reviewed Cases as HUMAN_REJECTED.")
-                            time.sleep(1)
+                                except Exception as e:
+                                    st.error(f"Error updating backend: {e}")
+                            st.error(f"❌ Case #{target_id} REJECTED by Admin. Moved to Reviewed Cases as HUMAN_REJECTED.")
+                            time.sleep(0.5)
                             st.rerun()
 
     # -----------------------------------------------------------------
