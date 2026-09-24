@@ -1,11 +1,9 @@
 from typing import Dict, Any, List, Optional
 from models.fusion.safead_assessment import SafeAdAssessment
 
-class SafeAdFusion:
-    """
-    Deterministic SafeAd Multimodal Evidence Fusion Layer & Policy Decision Engine.
-    
-    Accepts standardized `SafeAdAssessment` Matrix and combines:
+"""
+SafeAd AI Multimodal Safety Policy & Evidence Fusion Engine
+Combines risk signals across all modalities:
     - Visual Safety (Llama Guard 3 Vision)
     - Video Violence (VideoMAE)
     - Adult / NSFW Content (Falconsai ViT)
@@ -25,8 +23,10 @@ class SafeAdFusion:
     - SAFE_18_PLUS
     - UNSAFE_FOR_ALL
     - REQUIRES_HUMAN_REVIEW (Uncertainty Triggered)
-    """
+"""
 
+
+class SafeAdFusion:
     CONFIDENCE_THRESHOLD = 0.50  # HITL trigger threshold: only when very uncertain (< 50%)
 
     def evaluate(self, assessment: SafeAdAssessment) -> Dict[str, Any]:
@@ -147,38 +147,6 @@ class SafeAdFusion:
             display_label = "Requires Human Review"
             publication_action = "HUMAN_REVIEW"
             action_badge = "REQUIRES HUMAN REVIEW — MODERATOR QUEUED"
-        else:
-            classification = "SAFE_FOR_ALL"
-            display_label = "Safe for All"
-            publication_action = "APPROVE"
-            action_badge = "APPROVED — SAFE FOR ALL"
-            requires_human_review = False
-
-
-
-
-        # Generate concise evidence-based explanation
-        reasons = []
-        if requires_human_review:
-            if visual_text_conflict:
-                reasons.append("Conflicting visual and textual modality evidence detected.")
-            if is_borderline_risk:
-                reasons.append(f"Borderline risk score ({risk_score:.1f}/100) requires human moderator review.")
-            if confidence < self.CONFIDENCE_THRESHOLD:
-                reasons.append(f"AI model confidence ({int(confidence*100)}%) is below the policy threshold ({int(self.CONFIDENCE_THRESHOLD*100)}%).")
-        else:
-            if child_safety_flag:
-                reasons.append("Child safety risk flags detected in advertisement content.")
-            if violence_score >= 0.35:
-                reasons.append(f"Violence detected across sampled video frames (score: {violence_score:.2f}).")
-            if nsfw_score >= 0.35 or explicit_score >= 0.50:
-                reasons.append(f"Adult visual content detected across keyframes (score: {nsfw_score:.2f}).")
-            if scam_score >= 0.50 or deceptive_score >= 0.50:
-                reasons.append("Deceptive marketing or scam copy indicators detected in text/OCR.")
-            if not reasons:
-                reasons.append("No policy infractions or safety risks detected across visual, text, or audio modalities.")
-
-        explanation = " ".join(reasons)
 
         return {
             "classification": classification,

@@ -14,8 +14,7 @@ VALID_CLASSES = {"SAFE_FOR_ALL", "SAFE_14_PLUS", "SAFE_18_PLUS", "UNSAFE_FOR_ALL
 
 class TestSafeAdModerationPipeline(unittest.TestCase):
     """
-    Comprehensive test suite verifying the 16 required SafeAd AI moderation scenarios.
-    """
+    Comprehensive test suite verifying the 16 required SafeAd AI moderation scenarios.    """
 
     @classmethod
     def setUpClass(cls):
@@ -45,8 +44,7 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
         self.assertLessEqual(res["confidence"], 1.0)
         
         self.assertIn("publication_action", res)
-        self.assertIn(res["publication_action"], {"APPROVE", "AGE_RESTRICT", "REJECT", "HUMAN_REVIEW"})
-        
+        self.assertIn(res["publication_action"], {"APPROVE", "AGE_RESTRICT", "REJECT", "HUMAN_REVIEW"})        
         self.assertIn("explanation", res)
         self.assertIsInstance(res["explanation"], str)
 
@@ -70,7 +68,6 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
             res = run_safead_inference(self.violence_vid, "Action Fight Scene", "Brutal combat scene")
             self._assert_valid_result_schema(res)
             self.assertIn(res["classification"], {"UNSAFE_FOR_ALL", "REQUIRES_HUMAN_REVIEW"})
-
     def test_4_safe_short_video(self):
         """4. Safe short video advertisement test."""
         if os.path.exists(self.coding_vid):
@@ -96,6 +93,7 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
         if os.path.exists(self.synth_no_audio_vid):
             res = run_safead_inference(self.synth_no_audio_vid, "No Audio Ad", "Silent video ad")
             self._assert_valid_result_schema(res)
+            self.assertFalse(res.get("audio_available", False))
 
     def test_8_video_with_ocr_text(self):
         """8. Video with OCR text overlay test."""
@@ -103,7 +101,6 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
             res = run_safead_inference(self.casino_vid, "Grand Casino", "Win cash jackpot")
             self._assert_valid_result_schema(res)
             self.assertIn(res["classification"], VALID_CLASSES)
-
     def test_9_video_without_ocr_text(self):
         """9. Video without OCR text test."""
         if os.path.exists(self.coding_vid):
@@ -182,4 +179,3 @@ class TestSafeAdModerationPipeline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

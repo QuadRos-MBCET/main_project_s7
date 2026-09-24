@@ -93,8 +93,7 @@ st.markdown("""
         border-radius: 8px;
         padding: 14px;
         margin-bottom: 10px;
-    }
-    </style>
+    }    </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='main-header'>🛡️ SAFEAD AI (SAFE-VISION)</div>", unsafe_allow_html=True)
@@ -120,7 +119,6 @@ try:
         st.sidebar.error("🔴 Backend Error")
 except Exception:
     st.sidebar.warning("⚠️ Standalone Local Pipeline Active")
-
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"**Logged User**: `{st.session_state['username']}`")
 st.sidebar.markdown(f"**Verified Age**: `{st.session_state['verified_age_group']}`")
@@ -129,13 +127,11 @@ tabs = st.tabs([
     "📢 Advertiser Moderation Portal",
     "👤 User Age-Confidence Analytics",
     "📱 Age-Aware Feed Preview",
-    "🛡️ Human Moderator Review Dashboard",
-    "📊 Audit History & Logs"
+    "🛡️ Human Moderator Review Dashboard",    "📊 Audit History & Logs"
 ])
 
 # =====================================================================
-# TAB 1: ADVERTISER MODERATION PORTAL
-# =====================================================================
+# TAB 1: ADVERTISER MODERATION PORTAL# =====================================================================
 with tabs[0]:
     st.header("Upload Advertisement Creative for Safety Audit")
     
@@ -167,7 +163,6 @@ with tabs[0]:
 
                 progress_bar.progress(80)
                 status_text.info("[7 & 8] Synthesizing Central SafeAdAssessment Matrix & Ad Risk Analysis...")
-
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
                     data = {"title": ad_title, "caption": ad_caption, "user_id": st.session_state["user_id"]}
@@ -176,7 +171,6 @@ with tabs[0]:
 
                     progress_bar.progress(100)
                     status_text.success("Central SafeAdAssessment Matrix & Policy Decision Completed!")
-                    
                     if resp.status_code == 200:
                         st.session_state["moderation_report"] = resp.json()
                     else:
@@ -195,7 +189,6 @@ with tabs[0]:
                     st.session_state["moderation_report"] = run_safead_inference(temp_path, ad_title, ad_caption)
                     progress_bar.progress(100)
                     status_text.success("Central SafeAdAssessment Matrix & Policy Decision Completed!")
-
     with col2:
         st.subheader("2. SafeAd AI Moderation Result")
         if "moderation_report" in st.session_state:
@@ -317,7 +310,6 @@ with tabs[1]:
             st.info(f"Verified Age Group: `{ares['verified_age_group'].value}` (Status: {ares['verification_status']})")
         else:
             st.info("Run age verification on the left panel to display confidence analytics.")
-
 # =====================================================================
 # TAB 3: AGE-AWARE FEED PREVIEW
 # =====================================================================
