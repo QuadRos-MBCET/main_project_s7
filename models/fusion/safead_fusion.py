@@ -147,6 +147,23 @@ class SafeAdFusion:
             display_label = "Requires Human Review"
             publication_action = "HUMAN_REVIEW"
             action_badge = "REQUIRES HUMAN REVIEW — MODERATOR QUEUED"
+        else:
+            classification = "SAFE_FOR_ALL"
+            display_label = "Safe for All"
+            publication_action = "APPROVE"
+            action_badge = "APPROVED — SAFE FOR ALL"
+            requires_human_review = False
+
+        if classification == "UNSAFE_FOR_ALL":
+            explanation = f"Advertisement rejected due to prohibited safety risks: {', '.join(dominant_risks) if dominant_risks else 'Prohibited Content'}."
+        elif classification == "SAFE_18_PLUS":
+            explanation = f"Ad contains adult/sexual themes or suggestive content ({', '.join(dominant_risks) if dominant_risks else 'Adult Content'}). Restricted to 18+ viewers."
+        elif classification == "SAFE_14_PLUS":
+            explanation = f"Ad contains mild adult/suggestive themes ({', '.join(dominant_risks) if dominant_risks else 'Mild Themes'}). Restricted to 14+ viewers."
+        elif classification == "REQUIRES_HUMAN_REVIEW":
+            explanation = f"Ad requires manual human review due to low confidence ({int(confidence*100)}%) or borderline risk scores."
+        else:
+            explanation = "Advertisement cleared all multimodal safety evaluations and is suitable for all audiences."
 
         return {
             "classification": classification,
