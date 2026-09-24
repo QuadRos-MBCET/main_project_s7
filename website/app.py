@@ -26,101 +26,90 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom Glassmorphic & Modern Modern CSS
-st.markdown("""
-    <style>
-    /* Global Styles & Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* Hero Header */
-    .hero-container {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
-        border-radius: 16px;
-        padding: 28px 36px;
-        color: white;
-        margin-bottom: 24px;
-        box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
-    }
-    .hero-title {
-        font-size: 32px;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: -0.5px;
-        color: #ffffff;
-    }
-    .hero-subtitle {
-        font-size: 15px;
-        color: #c7d2fe;
-        margin-top: 6px;
-        font-weight: 400;
-    }
+# Custom Glassmorphic & Modern CSS
+st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Cards & Containers */
-    .card {
-        background: #ffffff;
-        border: 1px solid #e0e7ff;
-        border-radius: 14px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        margin-bottom: 20px;
-    }
-    
-    /* Result Badges */
-    .badge {
-        display: inline-block;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 13px;
-        letter-spacing: 0.3px;
-    }
-    .badge-child {
-        background-color: #fef2f2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-    }
-    .badge-adult {
-        background-color: #ecfdf5;
-        color: #059669;
-        border: 1px solid #a7f3d0;
-    }
-    .badge-teen {
-        background-color: #eff6ff;
-        color: #2563eb;
-        border: 1px solid #bfdbfe;
-    }
-    
-    /* Metric Cards */
-    .metric-card {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 14px;
-        border: 1px solid #e2e8f0;
-        text-align: center;
-    }
-    .metric-val {
-        font-size: 24px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-    .metric-lbl {
-        font-size: 12px;
-        color: #64748b;
-        font-weight: 500;
-        margin-top: 2px;
-    }
-    
-    /* Hide empty padding */
-    .block-container {
-        padding-top: 1.8rem;
-        padding-bottom: 2rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.hero-container {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+    border-radius: 16px;
+    padding: 24px 30px;
+    color: white;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
+}
+.hero-title {
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+}
+.hero-subtitle {
+    font-size: 15px;
+    color: #c7d2fe;
+    margin-top: 6px;
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid #e0e7ff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    margin-bottom: 20px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+}
+.badge-child {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+.badge-adult {
+    background-color: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+.badge-teen {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.metric-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+.metric-val {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.metric-lbl {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.block-container {
+    padding-top: 1.8rem;
+    padding-bottom: 2rem;
+}
+</style>""", unsafe_allow_html=True)
 
 # Top Hero Section
 st.markdown("""
@@ -161,9 +150,29 @@ with tabs[0]:
             image_np = None
             
             if input_type == "Webcam Snapshot":
-                cam_img = st.camera_input("Take a photo", key="t1_cam")
-                if cam_img:
-                    image_np = np.array(Image.open(cam_img).convert("RGB"))
+                if "t1_cam_active" not in st.session_state:
+                    st.session_state["t1_cam_active"] = False
+                    
+                if not st.session_state["t1_cam_active"]:
+                    st.markdown("""
+                    <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
+                        <div style="font-size:32px; margin-bottom:6px;">📷</div>
+                        <div style="font-size:15px; font-weight:600; color:#334155; margin-bottom:4px;">Camera is Currently Off</div>
+                        <div style="font-size:12px; color:#64748b;">Click 'Open Front Camera' below to grant browser permission and view live feed.</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button("📸 Open Front Camera", use_container_width=True, key="t1_btn_open"):
+                        st.session_state["t1_cam_active"] = True
+                        st.rerun()
+                else:
+                    st.caption("🟢 Live Front Camera Feed — Grant permission if requested")
+                    cam_img = st.camera_input("Live Front Camera Visuals", key="t1_cam")
+                    if cam_img:
+                        image_np = np.array(Image.open(cam_img).convert("RGB"))
+                    if st.button("❌ Close Camera", use_container_width=True, key="t1_btn_close"):
+                        st.session_state["t1_cam_active"] = False
+                        st.rerun()
+                        
             elif input_type == "Upload Image":
                 up_file = st.file_uploader("Upload face photo", type=["jpg", "jpeg", "png"], key="t1_file")
                 if up_file:
