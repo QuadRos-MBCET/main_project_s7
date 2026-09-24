@@ -56,13 +56,13 @@ class NSFWDetector:
     def _heuristic_skin_nsfw_eval(self, pil_img: Image.Image) -> float:
         """
         Calculates human skin-pixel density using YCbCr & HSV chrominance constraints.
-        Strict YCbCr Cb/Cr filters and upper-frame sky filtering prevent false positives on sunsets, sand, soil, and autumn trees.
+        Filters out upper 50% sky regions to prevent false positives on sunsets, deserts, and nature media.
         """
         try:
             img_np = cv2.cvtColor(np.array(pil_img.convert("RGB")), cv2.COLOR_RGB2BGR)
             height, width = img_np.shape[:2]
 
-            # YCbCr Human Skin Filter (Cb: 77..127, Cr: 133..173) with Y brightness cap (Y <= 215 to ignore bright sky highlights)
+            # YCbCr Human Skin Filter (Cb: 77..127, Cr: 133..173) with Y brightness cap (Y <= 215)
             ycrcb = cv2.cvtColor(img_np, cv2.COLOR_BGR2YCrCb)
             mask_ycrcb = cv2.inRange(ycrcb, np.array([0, 133, 77], dtype=np.uint8), np.array([215, 173, 127], dtype=np.uint8))
             
@@ -70,7 +70,7 @@ class NSFWDetector:
             hsv = cv2.cvtColor(img_np, cv2.COLOR_BGR2HSV)
             mask_hsv = cv2.inRange(hsv, np.array([0, 30, 60], dtype=np.uint8), np.array([20, 150, 215], dtype=np.uint8))
             
-            # Combined Skin Mask
+            # Combined Skin Mask requiring BOTH YCbCr AND HSV
             skin_mask = cv2.bitwise_and(mask_ycrcb, mask_hsv)
             total_skin = np.count_nonzero(skin_mask)
 
@@ -80,12 +80,19 @@ class NSFWDetector:
             # Upper 50% sky region filter (sunsets, golden hour skies)
             upper_skin = np.count_nonzero(skin_mask[:height // 2, :])
             upper_ratio = upper_skin / total_skin
-            if upper_ratio > 0.65:
+            if upper_ratio > 0.60:
                 # Skin-like pixels are concentrated in the top half of the frame (sky/sun horizon)
                 return 0.01
 
+            # Horizontal span filter (ocean sunset reflections, desert dunes)
+            col_counts = np.count_nonzero(skin_mask, axis=0)
+            active_col_ratio = float(np.count_nonzero(col_counts > 0)) / float(width)
+            if active_col_ratio > 0.70:
+                # Skin-like color pixels span across the horizon (>70% of frame width)
+                return 0.01
+
             skin_ratio = float(total_skin) / float(skin_mask.size)
-            if skin_ratio > 0.40:
+            if skin_ratio > 0.35:
                 return round(min(0.85, skin_ratio * 1.5), 4)
             return round(max(0.01, skin_ratio * 0.2), 4)
         except Exception:
@@ -117,6 +124,9 @@ class NSFWDetector:
         Evaluates a single image (or video frame) for NSFW/adult content.
         ML ViT predictions take precedence over fallback color heuristics to prevent false positives on nature media.
         """
+        if not self._is_loaded:
+            self.load_model()
+
         pil_img = None
         if isinstance(image_input, str) and os.path.exists(image_input):
             try:
@@ -150,7 +160,7 @@ class NSFWDetector:
                     lbl = str(r.get("label", "")).lower().strip()
                     score = float(r.get("score", 0.0))
                     
-                    if any(k in lbl for k in ["nsfw", "porn", "porno", "sexy", "hentai", "explicit", "adult", "erotica", "label_1"]):
+                    if any(k in lbl for k in ["nsfw", "porn", "porno", "sexy", "hentai", "explicit", "adult", "erotica", "label_1", "18+"]):
                         nsfw_score = max(nsfw_score, score)
                     elif any(k in lbl for k in ["normal", "neutral", "safe", "label_0"]):
                         normal_score = max(normal_score, score)
@@ -162,17 +172,20 @@ class NSFWDetector:
         heur_score = self._heuristic_skin_nsfw_eval(pil_img)
 
         # ML model prediction priority logic
-        if self._pipe is not None and normal_score > 0.0:
-            if normal_score >= 0.70:
-                # ML model is confident the image is normal/safe: ignore skin heuristic
+        if self._pipe is not None:
+            if normal_score >= 0.50 or (normal_score > nsfw_score and nsfw_score < 0.35):
+                # ML model indicates frame is safe/normal: suppress skin heuristic false positives
                 final_nsfw_score = max(nsfw_score, ocr_score)
             else:
-                final_nsfw_score = max(nsfw_score, min(heur_score, 0.30), ocr_score)
+                final_nsfw_score = max(nsfw_score, min(heur_score, 0.35), ocr_score)
         else:
-            # Offline fallback mode: cap pure skin heuristic at 0.25 unless supported by ML/OCR
+            # Offline fallback mode: cap pure skin heuristic at 0.25 unless supported by OCR
             final_nsfw_score = max(nsfw_score, min(heur_score, 0.25), ocr_score)
 
         detected = final_nsfw_score >= self.threshold
+
+
+
 
         return {
             "detected": detected,

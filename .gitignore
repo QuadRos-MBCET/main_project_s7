@@ -35,3 +35,9 @@ website/uploads/
 
 # Pytest and coverage
 .pytest_cache/
+
+# Outputs and scratch files
+outputs/
+scratch/
+scratch_test_videos/
+

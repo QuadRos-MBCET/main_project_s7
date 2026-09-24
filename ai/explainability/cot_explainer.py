@@ -5,11 +5,12 @@ def generate_cot_explanation(
     violations: list,
     ocr_text: str,
     detected_objects: list,
-    similar_case: dict
+    similar_case: dict,
+    speech_transcript: str = ""
 ) -> str:
     """
     Generates evidence-grounded Chain-of-Thought (CoT) audit explanations.
-    Strictly uses actual evidence extracted during inference.
+    Strictly uses actual visual, OCR, audio speech transcript, and policy evidence extracted during inference.
     """
     cot_steps = []
     
@@ -19,12 +20,14 @@ def generate_cot_explanation(
     else:
         cot_steps.append("1. Multimodal risk assessment evaluated without a numerical probability score.")
         
-    # Step 2: Evidence Findings
+    # Step 2: Evidence Findings (Visual, OCR, Audio Transcript, Policy Violations)
     evidence_items = []
     if violations:
         evidence_items.append(f"Policy flags triggered: {', '.join(violations)}")
-    if ocr_text and ocr_text != "No text detected in creative overlay.":
+    if ocr_text and ocr_text not in ["No text detected in creative overlay.", "No text detected."]:
         evidence_items.append(f"OCR embedded text detected: '{ocr_text[:60]}...'")
+    if speech_transcript and speech_transcript not in ["No spoken speech detected.", "N/A", ""]:
+        evidence_items.append(f"Audio transcript detected: '{speech_transcript[:60]}...'")
     if detected_objects:
         evidence_items.append(f"Visual objects identified: {', '.join(detected_objects[:5])}")
         
@@ -34,8 +37,10 @@ def generate_cot_explanation(
         cot_steps.append("2. Extracted Evidence: No explicit policy flags or prohibited objects detected.")
 
     # Step 3: FAISS Vector Match
-    if similar_case:
-        cot_steps.append(f"3. FAISS Vector Case Match: Identified historical exemplar '{similar_case['title']}' (Distance: {similar_case['distance']:.3f}, Policy: {similar_case['policy']}).")
+    if similar_case and isinstance(similar_case, dict) and "title" in similar_case:
+        cot_steps.append(f"3. FAISS Vector Case Match: Identified historical exemplar '{similar_case['title']}' (Distance: {similar_case.get('distance', 0.0):.3f}, Policy: {similar_case.get('policy', 'N/A')}).")
+    elif similar_case and isinstance(similar_case, str) and "No similar" not in similar_case:
+        cot_steps.append(f"3. FAISS Vector Case Match: {similar_case}")
         
     # Step 4: Final Recommendation
     cls_upper = str(classification).upper()

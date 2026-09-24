@@ -118,5 +118,64 @@ class TestSafetyPipeline(unittest.TestCase):
         self.assertIn("breakdown", processing)
         self.assertIn("memory_mb", processing)
 
+    def test_multimodal_adapter_4_class_mapping(self):
+        """Tests SafeAdModelService adapter 4-class classification mapping logic."""
+        from ai.safead_adapter import SafeAdModelService
+
+        # 1. SAFE_FOR_ALL
+        safe_res = SafeAdModelService.adapt_prediction(
+            fused_score=5.0, visual_risk=0.0, text_risk=5.0, violations=[], explanation_str="Safe"
+        )
+        self.assertEqual(safe_res["classification"], "SAFE_FOR_ALL")
+        self.assertEqual(safe_res["action"], "APPROVE")
+        self.assertTrue(safe_res["publishable"])
+
+        # 2. AGE_14_PLUS
+        teen_res = SafeAdModelService.adapt_prediction(
+            fused_score=25.0, visual_risk=10.0, text_risk=25.0, violations=[], explanation_str="Teen restricted"
+        )
+        self.assertEqual(teen_res["classification"], "AGE_14_PLUS")
+        self.assertEqual(teen_res["age_restriction"], 14)
+        self.assertTrue(teen_res["publishable"])
+
+        # 3. AGE_18_PLUS (Gambling / Adult speech in transcript)
+        adult_res = SafeAdModelService.adapt_prediction(
+            fused_score=45.0, visual_risk=20.0, text_risk=45.0,
+            violations=["Gambling / Casino Content"],
+            explanation_str="Adult restricted",
+            speech_transcript="Win real cash at online casino"
+        )
+        self.assertEqual(adult_res["classification"], "AGE_18_PLUS")
+        self.assertEqual(adult_res["age_restriction"], 18)
+        self.assertTrue(adult_res["publishable"])
+
+        # 4. UNSAFE_FOR_ALL (Violence or Child Risk)
+        unsafe_res = SafeAdModelService.adapt_prediction(
+            fused_score=85.0, visual_risk=90.0, text_risk=80.0,
+            violations=["Violence"],
+            explanation_str="Prohibited content"
+        )
+        self.assertEqual(unsafe_res["classification"], "UNSAFE_FOR_ALL")
+        self.assertEqual(unsafe_res["action"], "REJECT")
+        self.assertFalse(unsafe_res["publishable"])
+
+    def test_cot_explainer_with_audio_evidence(self):
+        """Tests CoT explanation step generation with audio transcript evidence."""
+        from ai.explainability.cot_explainer import generate_cot_explanation
+
+        explanation = generate_cot_explanation(
+            classification="AGE_18_PLUS",
+            risk_score=45.0,
+            risk_score_available=True,
+            violations=["Gambling"],
+            ocr_text="Play Now",
+            detected_objects=["person"],
+            similar_case={"title": "Casino Ad", "distance": 0.12, "policy": "Gambling"},
+            speech_transcript="Join our casino and bet now"
+        )
+        self.assertIn("Audio transcript detected", explanation)
+        self.assertIn("Join our casino and bet now", explanation)
+        self.assertIn("RESTRICT (18+)", explanation)
+
 if __name__ == "__main__":
     unittest.main()

@@ -80,13 +80,16 @@ class ViolenceDetector:
         "fight", "blood", "gun", "weapon", "knife", "kill", "dead", "stab",
         "attack", "assault", "shoot", "murder", "combat", "brawl", "punch",
         "kick", "war", "hit", "injury", "violent", "violence", "sword", "shooting",
-        "blood", "khoon", "maar", "bandook", "vettu", "kolapathakam", "thokku"
+        "khoon", "maar", "bandook", "vettu", "kolapathakam", "thokku", "action", "threat"
     ]
 
     VIOLENT_ACTION_LABELS = [
         "fighting", "punching", "shooting gun", "stabbing", "wrestling",
         "kicking", "side kick", "drop kick", "slapping", "headbutting",
-        "sword fighting", "arm wrestling", "brawling", "hit", "assault"
+        "sword fighting", "arm wrestling", "brawling", "hit", "assault",
+        "boxing", "martial arts", "aiming gun", "holding gun", "shooting",
+        "combat", "war", "attack", "firing", "explosion", "knife", "gun",
+        "beating", "strangling", "kill", "injury", "violent", "violence"
     ]
 
     def _heuristic_violence_eval(
@@ -98,7 +101,7 @@ class ViolenceDetector:
         """
         Multi-indicator fallback evaluator:
         1. Action & Violence keywords in filename or OCR overlay.
-        2. Blood/gore red pixel density calculation (filtered for dark crimson blood, ignoring bright sky/sunsets).
+        2. Blood/gore red pixel density calculation.
         3. Motion delta (frame difference) evaluation across frame sequence.
         """
         text_lower = f"{filename} {ocr_text}".lower()
@@ -117,11 +120,10 @@ class ViolenceDetector:
                     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
                     height, width = frame.shape[:2]
 
-                    # Blood/gore HSV spectrum (dark/medium crimson, V <= 180, S >= 100)
                     lower_red1 = np.array([0, 100, 20], dtype=np.uint8)
-                    upper_red1 = np.array([8, 255, 180], dtype=np.uint8)
-                    lower_red2 = np.array([172, 100, 20], dtype=np.uint8)
-                    upper_red2 = np.array([180, 255, 180], dtype=np.uint8)
+                    upper_red1 = np.array([10, 255, 200], dtype=np.uint8)
+                    lower_red2 = np.array([170, 100, 20], dtype=np.uint8)
+                    upper_red2 = np.array([180, 255, 200], dtype=np.uint8)
 
                     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
                     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
@@ -129,16 +131,16 @@ class ViolenceDetector:
 
                     total_red = np.count_nonzero(mask)
                     if total_red > 0:
-                        # Upper 50% sky region check
-                        upper_red = np.count_nonzero(mask[:height // 2, :])
-                        upper_ratio = upper_red / total_red
-                        # If red pixels are mostly in the upper sky region, it's a sunset/nature sky
-                        if upper_ratio < 0.60:
-                            red_ratio = float(total_red) / float(mask.size)
-                            if red_ratio > 0.12 and keyword_score > 0:
-                                blood_score = max(blood_score, round(min(0.95, red_ratio * 3.5), 4))
-                            elif red_ratio > 0.25:
-                                blood_score = max(blood_score, 0.25)
+                        red_ratio = float(total_red) / float(mask.size)
+                        if red_ratio >= 0.08:
+                            # Filter out sunset sky / landscape red gradients
+                            col_counts = np.count_nonzero(mask, axis=0)
+                            active_col_ratio = float(np.count_nonzero(col_counts > 0)) / float(mask.shape[1])
+                            if active_col_ratio > 0.70 and keyword_score == 0.0:
+                                # Red spans horizontally across sky/sunset horizon - non-localized nature color
+                                pass
+                            else:
+                                blood_score = max(blood_score, round(min(0.95, red_ratio * 4.0), 4))
                 except Exception:
                     pass
 
@@ -154,18 +156,18 @@ class ViolenceDetector:
                     pass
             if diffs:
                 avg_diff = float(np.mean(diffs))
-                if keyword_score > 0 and avg_diff > 12.0:
-                    motion_score = round(min(0.85, avg_diff / 45.0), 4)
-                elif avg_diff > 25.0:
-                    motion_score = 0.20
+                if avg_diff >= 10.0:
+                    motion_score = round(min(0.85, avg_diff / 35.0), 4)
 
         return max(keyword_score, blood_score, motion_score)
+
 
     def predict_video_frames(
         self,
         frames: List[Union[Image.Image, np.ndarray]],
         ocr_text: str = "",
-        filename: str = ""
+        filename: str = "",
+        sampling_meta: dict = None
     ) -> Dict[str, Any]:
         """
         Processes sampled video frames using pretrained video classification and multi-indicator fallback.
@@ -202,12 +204,44 @@ class ViolenceDetector:
                         if any(v_kw in lbl for v_kw in self.VIOLENT_ACTION_LABELS):
                             ml_violence_score = max(ml_violence_score, score)
             except Exception as e:
-                print(f"[ViolenceDetector ERROR] ML pipeline inference error: {e}")
+                print(f"[ViolenceDetector ERROR] Primary model '{self.video_model_name}' inference error: {e}")
+                # Attempt TimeSformer fallback if VideoMAE failed at runtime
+                if self.video_model_name == "videomae_kinetics":
+                    try:
+                        print("[ViolenceDetector] Retrying inference with TimeSformer fallback...")
+                        from transformers import pipeline
+                        device_idx = 0 if (HAS_TORCH and torch.cuda.is_available() and self.device == "cuda") else -1
+                        fallback_pipe = pipeline("video-classification", model="facebook/timesformer-base-finetuned-k400", device=device_idx, top_k=None)
+                        results = fallback_pipe(pil_frames)
+                        self.video_model_name = "timesformer_k400"
+                        if isinstance(results, list):
+                            for r in results:
+                                lbl = str(r.get("label", "")).lower()
+                                score = float(r.get("score", 0.0))
+                                if any(v_kw in lbl for v_kw in self.VIOLENT_ACTION_LABELS):
+                                    ml_violence_score = max(ml_violence_score, score)
+                    except Exception as fb_err:
+                        print(f"[ViolenceDetector ERROR] Fallback model inference failed: {fb_err}")
 
         # Multi-indicator heuristic score
         heur_score = self._heuristic_violence_eval(rgb_frames, ocr_text=ocr_text, filename=filename)
 
-        final_violence_score = max(ml_violence_score, heur_score)
+        # ML model prediction priority over pure color/motion heuristics for nature/peaceful videos
+        text_has_violence = any(kw in f"{filename} {ocr_text}".lower() for kw in self.VIOLENCE_KEYWORDS)
+        if self._pipe is not None:
+            if ml_violence_score < 0.20 and not text_has_violence:
+                # VideoMAE is confident video has no violent action: cap heuristic false positives
+                final_violence_score = max(ml_violence_score, min(heur_score, 0.20))
+            else:
+                final_violence_score = max(ml_violence_score, heur_score)
+        else:
+            # Offline fallback mode (no ML video model loaded):
+            # Cap pure color/motion heuristics at 0.30 unless supported by explicit text keywords
+            if not text_has_violence:
+                final_violence_score = min(heur_score, 0.30)
+            else:
+                final_violence_score = heur_score
+
         detected = final_violence_score >= self.threshold
 
         return {
@@ -219,6 +253,7 @@ class ViolenceDetector:
             "source": "video",
             "status": "success"
         }
+
 
     def predict_image(
         self,

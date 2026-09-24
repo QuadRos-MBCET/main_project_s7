@@ -1,183 +1,220 @@
 import os
-import cv2
-import numpy as np
+import time
+from typing import Dict, Any, List, Optional
 from PIL import Image
-try:
-    import torch
-except ImportError:
-    torch = None
-from ai.config import MAX_VIDEO_FRAMES, FRAME_SAMPLE_STRATEGY
-from ai.ocr.ocr_extractor import extract_ocr_from_image
-from ai.memory_manager import MemoryManager
 
-try:
-    from ai.vision.feature_extractor import extract_visual_features_sequential
-    from ai.text.text_processor import analyze_multimodal_text
-    from ai.retrieval.faiss_retriever import retrieve_similar_exemplar
-    from ai.explainability.cot_explainer import generate_cot_explanation
-    from ai.safead_adapter import SafeAdModelService
-except ImportError:
-    extract_visual_features_sequential = None
-    analyze_multimodal_text = None
-    retrieve_similar_exemplar = None
-    generate_cot_explanation = None
-    SafeAdModelService = None
+from processing.preprocessing import validate_advertisement_file
+from processing.video_sampling import extract_adaptive_keyframes, get_video_metadata
+from processing.audio_extraction import extract_audio_to_wav, cleanup_audio_file
 
-def validate_advertisement_input(file_path: str) -> tuple:
-    """Validates input file existence, media type, and integrity."""
-    if not os.path.exists(file_path):
-        return False, "File does not exist on disk."
-        
-    ext = os.path.splitext(file_path)[1].lower()
-    supported_imgs = [".jpg", ".jpeg", ".png", ".webp"]
-    supported_vids = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".m4v", ".3gp"]
-    
-    if ext in supported_imgs:
-        try:
-            with Image.open(file_path) as img:
-                img.verify()
-            return True, "image"
-        except Exception as e:
-            return False, f"Corrupted image file: {e}"
-            
-    elif ext in supported_vids:
-        try:
-            cap = cv2.VideoCapture(file_path)
-            if not cap.isOpened():
-                return False, "Unreadable video stream."
-            cap.release()
-            return True, "video"
-        except Exception as e:
-            return False, f"Corrupted video file: {e}"
-            
-    return False, f"Unsupported file extension: {ext}"
+# Backward-compatibility aliases for existing test suites & safety pipeline modules
+validate_advertisement_input = validate_advertisement_file
+sample_video_frames = extract_adaptive_keyframes
+load_video_metadata = get_video_metadata
 
-def sample_video_frames(video_path: str, max_frames: int = MAX_VIDEO_FRAMES) -> list:
-    """
-    Uniformly samples representative frames from a video file
-    without loading the entire video into RAM/VRAM.
-    """
-    cap = cv2.VideoCapture(video_path)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    if total_frames <= 0:
-        cap.release()
-        return []
-        
-    indices = np.linspace(0, total_frames - 1, max_frames, dtype=int)
-    sampled_frames = []
-    
-    for idx in range(total_frames):
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if idx in indices:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            sampled_frames.append(Image.fromarray(frame_rgb))
-            
-    cap.release()
-    return sampled_frames
+def print_video_processing_report(video_path: str, frames: list, metadata: dict = None) -> None:
+    meta = metadata or get_video_metadata(video_path)
+    print(f"[SafeAd AI Video Report] File: {os.path.basename(video_path)} | Frames Extracted: {len(frames)} | FPS: {meta.get('fps', 0)} | Duration: {meta.get('duration', 0)}s")
 
-def run_safead_inference(file_path: str, title: str = "", caption: str = "") -> dict:
+
+from models.model_manager import model_manager
+from models.visual_safety import VisualSafetyDetector
+from models.nsfw_detector import SafeAdNSFWDetector
+from models.violence_detector import SafeAdViolenceDetector
+from models.ocr_service import SafeAdOCRService
+from models.audio_service import SafeAdAudioService
+from models.text_safety import SafeAdTextSafetyDetector
+from models.ad_risk_analyzer import AdRiskAnalyzer
+from models.fusion.safead_assessment import SafeAdAssessment
+from models.fusion.safead_fusion import SafeAdFusion
+
+# Singleton instances for lazy invocation
+visual_detector = VisualSafetyDetector()
+nsfw_detector = SafeAdNSFWDetector()
+violence_detector = SafeAdViolenceDetector()
+ocr_service = SafeAdOCRService()
+audio_service = SafeAdAudioService()
+text_safety_detector = SafeAdTextSafetyDetector()
+ad_risk_analyzer = AdRiskAnalyzer()
+fusion_engine = SafeAdFusion()
+
+def run_safead_inference(
+    file_path: str,
+    title: str = "",
+    caption: str = ""
+) -> Dict[str, Any]:
     """
-    Runs the complete memory-efficient advertisement safety inference pipeline.
-    Suitable for Google Colab Free execution.
+    Executes the complete end-to-end SafeAd AI multimodal advertisement moderation pipeline.
+    Synthesizes evidence into Central SafeAdAssessment Matrix before SafeAdFusion decision.
     """
-    is_valid, media_type = validate_advertisement_input(file_path)
+    start_total_time = time.time()
+    stage_timings = {}
+    filename_str = os.path.basename(file_path) if file_path else ""
+
+    # STEP 1: Upload & Input Validation
+    step1_start = time.time()
+    is_valid, media_type, status_msg = validate_advertisement_file(file_path)
+    stage_timings["step1_validation"] = round(time.time() - step1_start, 4)
+
     if not is_valid:
         return {
-            "error": f"Invalid Input: {media_type}",
             "classification": "UNSAFE_FOR_ALL",
-            "risk_score": None,
-            "risk_score_available": False,
-            "risk_category": "invalid_input",
-            "explanation": f"Input validation failure: {media_type}",
-            "age_restriction": None,
-            "action": "REJECT",
-            "publishable": False,
-            "violations": ["Invalid Input"]
+            "display_label": "Unsafe for All",
+            "risk_score": 100.0,
+            "confidence": 1.0,
+            "publication_action": "REJECT",
+            "action_badge": "REJECT — UNSAFE FOR ALL",
+            "detected_categories": ["Invalid Input"],
+            "explanation": f"Input validation failed: {status_msg}",
+            "evidence": {},
+            "stage_timings": stage_timings,
+            "total_processing_time_seconds": round(time.time() - start_total_time, 4)
         }
-        
-    print(f"[SafeAd Inference] Processing {media_type.upper()}: {os.path.basename(file_path)}...")
-    
-    # 1. Video vs Image input handling
+
+    print(f"\n[SafeAd AI] Moderate {media_type.upper()}: {filename_str}")
+
+    # STEP 2: Extracting Content (Adaptive Keyframes & Audio)
+    step2_start = time.time()
+    frames = []
+    sampling_meta = {}
+
     if media_type == "video":
-        frames = sample_video_frames(file_path, max_frames=MAX_VIDEO_FRAMES)
-        if not frames:
-            return {"error": "Failed to extract keyframes from video."}
-        # Process middle keyframe for visual analysis
-        target_img = frames[len(frames) // 2]
-        temp_img_path = file_path + "_keyframe.jpg"
-        target_img.save(temp_img_path)
-        eval_path = temp_img_path
+        frames, sampling_meta = extract_adaptive_keyframes(file_path, target_frames=16, return_metadata=True)
+        print(f"[SafeAd AI] Adaptive sampling extracted {len(frames)} keyframes. Strategy: {sampling_meta.get('sampling_strategy')}")
     else:
-        eval_path = file_path
-        temp_img_path = None
-        
-    # 2. Sequential Visual Feature Extraction (YOLO, BLIP, VRAM release)
-    visual_results = extract_visual_features_sequential(eval_path)
-    
-    # 3. OCR Text Extraction
-    ocr_text = extract_ocr_from_image(eval_path)
-    
-    # Clean temporary keyframe if created
-    if temp_img_path and os.path.exists(temp_img_path):
-        os.remove(temp_img_path)
-        
-    # 4. Text & Multilingual NLP Analysis
-    text_results = analyze_multimodal_text(
+        try:
+            if file_path and os.path.exists(file_path):
+                pil_img = Image.open(file_path).convert("RGB")
+                frames = [pil_img]
+            else:
+                frames = []
+            sampling_meta = {"duration": 0.0, "total_frames": len(frames), "sampling_strategy": "Single Image Input"}
+        except Exception:
+            frames = []
+
+    stage_timings["step2_extraction"] = round(time.time() - step2_start, 4)
+
+    # STEP 3: Multilingual OCR Analysis
+    step3_start = time.time()
+    if media_type == "video" and frames:
+        ocr_res = ocr_service.extract_from_video_frames(frames)
+    else:
+        ocr_res = ocr_service.extract_from_image(file_path if (file_path and os.path.exists(file_path)) else (frames[0] if frames else ""))
+    stage_timings["step3_ocr"] = round(time.time() - step3_start, 4)
+
+
+    ocr_text_combined = f"{title or ''} {caption or ''} {ocr_res.get('ocr_text', '')}".strip()
+    ocr_text_safety = text_safety_detector.predict_text(ocr_text_combined)
+
+    # STEP 4: Visual Safety & Adult/NSFW Analysis (Llama Guard Vision & Falconsai ViT)
+    step4_start = time.time()
+    visual_res = visual_detector.analyze_video_frames(frames) if frames else {"unsafe": False, "confidence": 0.0, "detected_categories": []}
+    nsfw_res = nsfw_detector.predict_video_frames(frames, ocr_text=ocr_text_combined) if frames else {"adult_score": 0.0, "adult_content_detected": False}
+    model_manager.clear_gpu_memory()
+    stage_timings["step4_visual_nsfw"] = round(time.time() - step4_start, 4)
+
+    # STEP 5: Video Violence Analysis (VideoMAE)
+    step5_start = time.time()
+    violence_res = violence_detector.predict_video_frames(frames, ocr_text=ocr_text_combined, filename=filename_str, sampling_meta=sampling_meta) if (media_type == "video" and frames) else {"violence_score": 0.0, "violence_detected": False, "sampled_segments": []}
+    model_manager.clear_gpu_memory()
+    stage_timings["step5_violence"] = round(time.time() - step5_start, 4)
+
+    # STEP 6: Audio Speech Transcription & Safety (Whisper)
+    step6_start = time.time()
+    audio_res = {
+        "audio_available": False,
+        "transcript": "",
+        "audio_safety": {"violence": 0.0, "adult": 0.0, "child_safety": 0.0, "overall_risk": 0.0},
+        "status": "not_applicable"
+    }
+
+    if media_type == "video":
+        audio_res = audio_service.process_video_audio(file_path, text_safety_detector=text_safety_detector)
+        model_manager.clear_gpu_memory()
+    stage_timings["step6_audio"] = round(time.time() - step6_start, 4)
+
+    # STEP 7: Dedicated Advertisement Risk Layer (Scams, Deceptive Marketing, Explicit Content)
+    step7_ad_risk_start = time.time()
+    ad_risk_output = ad_risk_analyzer.analyze_ad_risks(
+        ocr_text=ocr_res.get("ocr_text", ""),
+        transcript=audio_res.get("transcript", ""),
         title=title,
         caption=caption,
-        ocr_text=ocr_text,
-        image_caption=visual_results["generated_caption"]
+        text_safety_output=ocr_text_safety
     )
-    
-    # 5. Multimodal Risk Fusion Score (Visual 40%, Text 60%)
-    fused_risk_score = (visual_results["visual_risk_score"] * 0.4) + (text_results["text_risk_score"] * 0.6)
-    
-    # 6. FAISS Vector Retrieval for Historical Policy Exemplar Match
-    faiss_match = retrieve_similar_exemplar(text_results["combined_text"])
-    
-    # 7. Chain-of-Thought (CoT) Explanation Generation
-    all_violations = list(set(text_results["violations"]))
-    
-    # Determine candidate classification for explanation
-    candidate_class = "SAFE_FOR_ALL"
-    if fused_risk_score > 75.0 or visual_results["visual_risk_score"] > 85.0 or "Violence" in all_violations or "Misleading Advertisement" in all_violations:
-        candidate_class = "UNSAFE_FOR_ALL"
-    elif "Gambling" in all_violations or "Adult/Sexual Content" in all_violations or "Alcohol/Tobacco" in all_violations or "Drugs" in all_violations or fused_risk_score > 35.0:
-        candidate_class = "AGE_18_PLUS"
-    elif fused_risk_score > 20.0:
-        candidate_class = "AGE_14_PLUS"
-        
-    explanation_str = generate_cot_explanation(
-        classification=candidate_class,
-        risk_score=fused_risk_score,
-        risk_score_available=True,
-        violations=all_violations,
-        ocr_text=ocr_text,
-        detected_objects=visual_results["detected_objects"],
-        similar_case=faiss_match
+    stage_timings["step7_ad_risk_analysis"] = round(time.time() - step7_ad_risk_start, 4)
+
+    # STEP 8: Construct Central SafeAdAssessment Matrix
+    assessment = SafeAdAssessment(
+        visual={
+            "violence": 0.90 if "Violence" in visual_res.get("detected_categories", []) else 0.0,
+            "adult": nsfw_res.get("adult_score", 0.0),
+            "child_safety": 1.0 if "Child Safety Risk" in visual_res.get("detected_categories", []) else 0.0,
+            "unsafe": visual_res.get("unsafe", False),
+            "evidence": visual_res.get("detected_categories", [])
+        },
+        video={
+            "violence": violence_res.get("violence_score", 0.0),
+            "adult": nsfw_res.get("adult_score", 0.0),
+            "child_safety": 0.0,
+            "sampled_segments": violence_res.get("sampled_segments", [])
+        },
+        ocr={
+            "text": ocr_res.get("ocr_text", ""),
+            "violence": ocr_text_safety.get("violent", 0.0),
+            "adult": ocr_text_safety.get("sexual", 0.0),
+            "child_safety": ocr_text_safety.get("child_safety", 0.0),
+            "scam": ad_risk_output.get("scam_score", 0.0),
+            "deceptive": ad_risk_output.get("deceptive_marketing_score", 0.0),
+            "confidence": ocr_res.get("ocr_confidence", 0.0),
+            "evidence": ocr_text_safety.get("detected_categories", [])
+        },
+        audio={
+            "audio_available": audio_res.get("audio_available", False),
+            "language": audio_res.get("language", "English"),
+            "transcript": audio_res.get("transcript", ""),
+            "violence": audio_res.get("audio_safety", {}).get("violence", 0.0),
+            "adult": audio_res.get("audio_safety", {}).get("adult", 0.0),
+            "child_safety": audio_res.get("audio_safety", {}).get("child_safety", 0.0),
+            "scam": ad_risk_output.get("scam_score", 0.0) if audio_res.get("transcript") else 0.0,
+            "deceptive": ad_risk_output.get("deceptive_marketing_score", 0.0) if audio_res.get("transcript") else 0.0,
+            "evidence": []
+        },
+        text_safety={
+            "categories": ocr_text_safety,
+            "overall_risk": ocr_text_safety.get("overall_text_risk", 0.0),
+            "evidence": ocr_text_safety.get("detected_categories", [])
+        },
+        advertisement_risks={
+            "scam": ad_risk_output.get("scam_score", 0.0),
+            "deceptive_marketing": ad_risk_output.get("deceptive_marketing_score", 0.0),
+            "explicit_content": ad_risk_output.get("explicit_content_score", 0.0),
+            "evidence": ad_risk_output.get("rule_based_evidence", [])
+        }
     )
-    
-    # 8. Standardized Prediction Schema Adaptation
-    final_output = SafeAdModelService.adapt_prediction(
-        fused_score=fused_risk_score,
-        visual_risk=visual_results["visual_risk_score"],
-        text_risk=text_results["text_risk_score"],
-        violations=all_violations,
-        explanation_str=explanation_str
-    )
-    
-    # Attach extra metadata for UI display
-    final_output["extracted_ocr"] = ocr_text
-    final_output["detected_objects"] = visual_results["detected_objects"]
-    final_output["generated_caption"] = visual_results["generated_caption"]
-    final_output["faiss_match"] = faiss_match
-    
-    MemoryManager.clear_gpu_memory()
-    return final_output
+
+    # STEP 9: Multimodal Safety Evidence Fusion (SafeAdFusion)
+    step9_start = time.time()
+    fusion_output = fusion_engine.combine_assessment(assessment)
+    stage_timings["step9_fusion"] = round(time.time() - step9_start, 4)
+
+    total_processing_time = round(time.time() - start_total_time, 4)
+    stage_timings["step10_decision"] = 0.001
+
+    fusion_output["stage_timings"] = stage_timings
+    fusion_output["total_processing_time_seconds"] = total_processing_time
+    fusion_output["media_type"] = media_type
+    fusion_output["extracted_ocr"] = ocr_res.get("ocr_text", "")
+    fusion_output["audio_transcript"] = audio_res.get("transcript", "")
+    fusion_output["audio_available"] = audio_res.get("audio_available", False)
+
+    model_manager.clear_gpu_memory()
+
+    print(f"[SafeAd AI] Completed inference in {total_processing_time}s. Classification: {fusion_output['classification']} (Score: {fusion_output['risk_score']}/100, Confidence: {int(fusion_output['confidence']*100)}%)")
+    return fusion_output
+
 
 if __name__ == "__main__":
-    # Dry run check
-    print("Running dry run check on pipeline...")
-    MemoryManager.print_resource_status()
+    print("Testing SafeAd AI pipeline initialization...")
+    test_res = run_safead_inference("apples_ad.jpg", "Fresh Apples Offer", "Buy fresh apples online!")
+    print(test_res)

@@ -6,23 +6,22 @@ class AIClientService:
     @staticmethod
     def process_advertisement(file_path: str, title: str = "", caption: str = "") -> dict:
         """
-        Executes AI inference either via local `ai.pipeline` or remote Colab endpoint.
+        Executes AI inference either via local AI pipeline or remote Colab API server.
         """
         colab_url = settings.COLAB_API_URL
         
-        # 1. Remote Colab API call if configured
+        # 1. Remote Colab API server execution if configured
         if colab_url and colab_url.strip():
             target_url = colab_url.strip().rstrip('/')
             print(f"[AIClientService] Checking Remote Colab Server health at: {target_url}...")
             
-            # Fast 1.5s pre-flight health check to ensure Colab server is reachable
             is_colab_online = False
             try:
                 h_res = requests.get(f"{target_url}/health", timeout=1.5)
                 if h_res.status_code == 200:
                     is_colab_online = True
             except Exception as h_err:
-                print(f"[AIClientService WARNING] Remote Colab ping failed ({h_err}). Falling back instantly to local AI pipeline...")
+                print(f"[AIClientService WARNING] Remote Colab ping failed: {h_err}. Using local AI pipeline...")
 
             if is_colab_online:
                 try:
@@ -39,30 +38,28 @@ class AIClientService:
                             headers=headers,
                             files=files,
                             data=data,
-                            timeout=60
+                            timeout=90
                         )
                         if response.status_code == 200:
                             print(f"[AIClientService] Remote Colab GPU Inference complete!")
                             return response.json()
-                        else:
-                            print(f"[AIClientService WARNING] Remote Colab responded with status {response.status_code}: {response.text}")
                 except Exception as e:
-                    print(f"[AI Client] Remote Colab request failed: {e}. Falling back to local pipeline...")
-                
+                    print(f"[AIClientService WARNING] Remote Colab request failed: {e}. Falling back to local pipeline...")
+
         # 2. Local AI Pipeline Execution
         try:
             from ai.pipeline import run_safead_inference
             return run_safead_inference(file_path, title, caption)
         except Exception as e:
-            print(f"[AI Client ERROR] Local AI Pipeline execution error: {e}")
+            print(f"[AIClientService ERROR] Local AI Pipeline execution error: {e}")
             return {
                 "classification": "UNSAFE_FOR_ALL",
-                "risk_score": None,
-                "risk_score_available": False,
-                "risk_category": "error_fallback",
+                "display_label": "Unsafe for All",
+                "risk_score": 100.0,
+                "confidence": 1.0,
+                "publication_action": "REJECT",
+                "action_badge": "REJECT — UNSAFE FOR ALL",
+                "detected_categories": ["Processing Error"],
                 "explanation": f"AI Processing failure: {e}",
-                "age_restriction": None,
-                "action": "REJECT",
-                "publishable": False,
-                "violations": ["Processing Error"]
+                "evidence": {}
             }
