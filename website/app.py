@@ -199,7 +199,7 @@ with tabs[0]:
                 
                 # Anti-Spoof Photo Liveness Check
                 if detailed.get("is_spoof"):
-                    st.error("🛑 **QUIT TRYING TO FOOL ME AND SHOW YOUR ORIGINAL FACE**")
+                    st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
                     st.warning(f"⚠️ Photo/Screen Spoof Detected! ({detailed.get('spoof_reason', 'Re-photographed picture detected')})")
 
                 # Render Clean Verdict Box
