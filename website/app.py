@@ -150,28 +150,21 @@ with tabs[0]:
             image_np = None
             
             if input_type == "Webcam Snapshot":
-                if "t1_cam_active" not in st.session_state:
-                    st.session_state["t1_cam_active"] = False
-                    
-                if not st.session_state["t1_cam_active"]:
+                cam_active = st.toggle("📸 Enable Front Camera Feed", value=False, key="t1_cam_toggle")
+                
+                if cam_active:
+                    st.caption("🟢 Live Front Camera Feed Active — Tap 'Take Photo' below")
+                    cam_img = st.camera_input("Live Camera Feed", key="t1_cam")
+                    if cam_img:
+                        image_np = np.array(Image.open(cam_img).convert("RGB"))
+                else:
                     st.markdown("""
                     <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
                         <div style="font-size:32px; margin-bottom:6px;">📷</div>
                         <div style="font-size:15px; font-weight:600; color:#334155; margin-bottom:4px;">Camera is Currently Off</div>
-                        <div style="font-size:12px; color:#64748b;">Click 'Open Front Camera' below to grant browser permission and view live feed.</div>
+                        <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to grant browser permission and view live feed.</div>
                     </div>
                     """, unsafe_allow_html=True)
-                    if st.button("📸 Open Front Camera", use_container_width=True, key="t1_btn_open"):
-                        st.session_state["t1_cam_active"] = True
-                        st.rerun()
-                else:
-                    st.caption("🟢 Live Front Camera Feed — Grant permission if requested")
-                    cam_img = st.camera_input("Live Front Camera Visuals", key="t1_cam")
-                    if cam_img:
-                        image_np = np.array(Image.open(cam_img).convert("RGB"))
-                    if st.button("❌ Close Camera", use_container_width=True, key="t1_btn_close"):
-                        st.session_state["t1_cam_active"] = False
-                        st.rerun()
                         
             elif input_type == "Upload Image":
                 up_file = st.file_uploader("Upload face photo", type=["jpg", "jpeg", "png"], key="t1_file")
