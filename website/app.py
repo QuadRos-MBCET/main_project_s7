@@ -430,10 +430,11 @@ with tabs[3]:
     with col_u1:
         st.markdown("#### User Verification Mode")
         username = st.text_input("Handle", "guest_user", key="t4_user")
-        auth_mode = st.radio("Verification Engine", ["Facial Camera Scan", "Behavior Tracking"], key="t4_auth")
+        auth_mode = st.radio("Verification Engine", ["Facial Camera Scan", "Behavior Tracking", "🛡️ Hybrid Fusion (Face + Continuous Behavior)"], key="t4_auth")
         
-        user_category = "Not a Child"
+        user_category = "18 and above"
         user_confidence = 1.0
+        mismatch_detected = False
         
         if auth_mode == "Facial Camera Scan":
             f_mode = st.radio("Source", ["Webcam", "Preset Face"], horizontal=True, key="t4_fmode")
@@ -453,14 +454,38 @@ with tabs[3]:
                 
             if img_np is not None:
                 user_category, user_confidence = estimate_age_from_face(img_np)
-        else:
+        elif auth_mode == "Behavior Tracking":
             search_input = st.text_input("Search history", "minecraft speedrun, cartoon videos", key="t4_srch")
             queries_list = [q.strip() for q in search_input.split(",")]
             user_category, user_confidence = estimate_age_from_behavior(queries_list, [{"duration_watched": 45, "total_duration": 60}], [])
+        else:
+            # HYBRID FUSION MODE: Face = Adult (Daddy), Behavior = Child (Son searches)
+            st.info("🛡️ Hybrid Guard Active: Scans face AND continuously monitors search/watch patterns to prevent identity sharing.")
+            face_sim = st.selectbox("1. Biometric Scan Result", ["Adult Face (Daddy)"], key="t4_hyb_face")
+            search_sim = st.text_input("2. Active User Search Activity", "minecraft speedrun, roblox games, cartoon videos", key="t4_hyb_srch")
             
+            # Face predicts Adult, but behavior detects Child!
+            queries_list = [q.strip() for q in search_sim.split(",")]
+            beh_cat, beh_conf = estimate_age_from_behavior(queries_list, [{"duration_watched": 50, "total_duration": 60}], [])
+            
+            if beh_cat == "Child":
+                mismatch_detected = True
+                user_category = "Less than 14"
+                user_confidence = beh_conf
+            else:
+                user_category = "18 and above"
+                user_confidence = 0.95
+
         st.markdown("---")
         st.markdown("#### Active Profile Status")
-        if user_category == "Less than 14":
+        if mismatch_detected:
+            st.markdown("""
+            <div style="background-color:#fff7ed; border:1px solid #ffedd5; padding:14px; border-radius:10px;">
+                <span style="color:#c2410c; font-weight:700;">🛡️ HYBRID SECURITY ALERT: BIOMETRIC-BEHAVIOR MISMATCH DETECTED</span><br>
+                <span style="font-size:12px; color:#9a3412;">Adult face detected, but active search history indicates Child user. 18+ ads automatically blocked!</span>
+            </div>
+            """, unsafe_allow_html=True)
+        elif user_category == "Less than 14":
             st.markdown("""
             <div style="background-color:#fef2f2; border:1px solid #fecaca; padding:14px; border-radius:10px;">
                 <span style="color:#dc2626; font-weight:700;">🚨 LESS THAN 14 (Child Profile)</span><br>
