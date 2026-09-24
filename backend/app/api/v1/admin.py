@@ -15,6 +15,21 @@ def get_admin_reviews(review_status: Optional[str] = None, db: Session = Depends
     Returns list of human review cases for the Admin Dashboard.
     Filters by review_status if provided (e.g., PENDING_REVIEW, HUMAN_ACCEPTED, HUMAN_REJECTED, ALL).
     """
+    # Sync any pending advertisements into human_reviews if missing
+    pending_ads = db.query(Advertisement).filter(Advertisement.status == "PENDING_REVIEW").all()
+    for p_ad in pending_ads:
+        existing_rev = db.query(HumanReview).filter(HumanReview.advertisement_id == p_ad.id).first()
+        if not existing_rev:
+            ai_class = p_ad.moderation_result.classification.value if p_ad.moderation_result else "UNKNOWN"
+            new_rev = HumanReview(
+                advertisement_id=p_ad.id,
+                submitted_by=p_ad.owner_id or 1,
+                ai_classification=ai_class,
+                review_status="PENDING_REVIEW"
+            )
+            db.add(new_rev)
+    db.commit()
+
     query = db.query(HumanReview)
     if review_status and review_status.upper() != "ALL":
         query = query.filter(HumanReview.review_status == review_status.upper())
@@ -64,7 +79,18 @@ def get_admin_review_by_id(id: int, db: Session = Depends(get_db)):
     ).first()
 
     if not rev:
-        raise HTTPException(status_code=404, detail=f"Human review case #{id} not found.")
+        ad = db.query(Advertisement).filter(Advertisement.id == id).first()
+        if not ad:
+            raise HTTPException(status_code=404, detail=f"Human review case or Advertisement #{id} not found.")
+        rev = HumanReview(
+            advertisement_id=ad.id,
+            submitted_by=ad.owner_id or 1,
+            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            review_status="PENDING_REVIEW"
+        )
+        db.add(rev)
+        db.commit()
+        db.refresh(rev)
 
     ad = rev.advertisement
     res = ad.moderation_result if ad else None
@@ -114,7 +140,18 @@ def accept_human_review(
     ).first()
 
     if not rev:
-        raise HTTPException(status_code=404, detail=f"Human review case #{id} not found.")
+        ad = db.query(Advertisement).filter(Advertisement.id == id).first()
+        if not ad:
+            raise HTTPException(status_code=404, detail=f"Human review case or Advertisement #{id} not found.")
+        rev = HumanReview(
+            advertisement_id=ad.id,
+            submitted_by=ad.owner_id or 1,
+            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            review_status="PENDING_REVIEW"
+        )
+        db.add(rev)
+        db.commit()
+        db.refresh(rev)
 
     admin_id = req.admin_id if req else 2
     comment = req.review_comment if req else "Reviewed manually. Content is acceptable under project safety policy."
@@ -168,7 +205,18 @@ def reject_human_review(
     ).first()
 
     if not rev:
-        raise HTTPException(status_code=404, detail=f"Human review case #{id} not found.")
+        ad = db.query(Advertisement).filter(Advertisement.id == id).first()
+        if not ad:
+            raise HTTPException(status_code=404, detail=f"Human review case or Advertisement #{id} not found.")
+        rev = HumanReview(
+            advertisement_id=ad.id,
+            submitted_by=ad.owner_id or 1,
+            ai_classification=ad.moderation_result.classification.value if ad.moderation_result else "UNKNOWN",
+            review_status="PENDING_REVIEW"
+        )
+        db.add(rev)
+        db.commit()
+        db.refresh(rev)
 
     admin_id = req.admin_id if req else 2
     comment = req.review_comment if req else "Advertisement contains prohibited content and must not be published."

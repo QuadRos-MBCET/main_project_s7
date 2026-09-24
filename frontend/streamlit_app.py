@@ -11,7 +11,6 @@ import requests
 import json
 import time
 from datetime import datetime
-from PIL import Image
 
 # FastAPI Backend Base URL
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000/api/v1")
@@ -95,13 +94,6 @@ st.markdown("""
         padding: 14px;
         margin-bottom: 10px;
     }
-    .action-card {
-        background-color: #ffffff;
-        border: 2px solid #cbd5e1;
-        border-radius: 10px;
-        padding: 18px;
-        margin-top: 15px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -109,17 +101,13 @@ st.markdown("""
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "user_role" not in st.session_state:
-    st.session_state["user_role"] = None  # "ROLE_BRAND_OWNER" or "ROLE_ADMIN"
+    st.session_state["user_role"] = None
 if "user_id" not in st.session_state:
     st.session_state["user_id"] = 1
 if "username" not in st.session_state:
     st.session_state["username"] = None
 if "current_ad_id" not in st.session_state:
     st.session_state["current_ad_id"] = None
-if "uploaded_file_path" not in st.session_state:
-    st.session_state["uploaded_file_path"] = None
-if "uploaded_file_meta" not in st.session_state:
-    st.session_state["uploaded_file_meta"] = None
 if "moderation_report" not in st.session_state:
     st.session_state["moderation_report"] = None
 if "confirm_delete" not in st.session_state:
@@ -233,7 +221,7 @@ if st.sidebar.button("🚪 Logout"):
     st.session_state["username"] = None
     st.session_state["moderation_report"] = None
     st.session_state["current_ad_id"] = None
-    st.session_state["uploaded_file_meta"] = None
+    st.session_state["confirm_delete"] = False
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -271,14 +259,12 @@ if st.session_state["user_role"] == "ROLE_BRAND_OWNER":
                 
                 st.markdown("#### Media File Details")
                 st.write(f"- **Filename**: `{uploaded_file.name}`")
-                st.write(f"- **Type**: `{media_type.upper()} ({file_ext})`")
-                st.write(f"- **Size**: `{file_size_kb} KB` ({len(file_bytes)} bytes)")
-                st.write(f"- **Timestamp**: `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`")
+                st.write(f"- **Media Type**: `{media_type.upper()} ({file_ext})`")
+                st.write(f"- **File Size**: `{file_size_kb} KB` ({len(file_bytes)} bytes)")
+                st.write(f"- **Upload Timestamp**: `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`")
                 
-                if media_type == "image":
-                    st.image(file_bytes, caption="Uploaded Image Preview", use_container_width=True)
-                else:
-                    st.video(file_bytes)
+                # PRIVACY REQUIREMENT: Do NOT render media player or image on Brand Owner page
+                st.info("🔒 **Media Preview Hidden**: Visual media player is disabled on the Brand Owner Portal in compliance with project privacy guidelines.")
                 
                 st.markdown("---")
                 if st.button("🚀 ANALYZE ADVERTISEMENT", type="primary", use_container_width=True):
@@ -318,7 +304,7 @@ if st.session_state["user_role"] == "ROLE_BRAND_OWNER":
                                     analyze_resp = requests.post(f"{BACKEND_URL}/advertisements/{ad_data['id']}/analyze", timeout=120)
                                     if analyze_resp.status_code == 200:
                                         report = analyze_resp.json()
-                            except Exception as e:
+                            except Exception:
                                 pass
                                 
                         if not report:
@@ -456,7 +442,7 @@ if st.session_state["user_role"] == "ROLE_BRAND_OWNER":
                     reviews = resp.json()
                     if reviews:
                         for rev in reviews:
-                            st.markdown(f"• **Ad ID #{rev['ad_id']}** | Title: `{rev['title']}` | AI Rating: `{rev['ai_classification']}` | Status: `{rev['review_status']}`")
+                            st.markdown(f"• **Ad ID #{rev['ad_id']}** | Title: `{rev['title']}` | AI Rating: `{rev['ai_classification']}` | Review Status: `{rev['review_status']}`")
                     else:
                         st.info("No active advertisement submissions found.")
             except Exception:
@@ -485,119 +471,135 @@ elif st.session_state["user_role"] == "ROLE_ADMIN":
         ["📋 Pending Human Reviews", "✅ Reviewed Cases", "📈 Review Statistics"]
     )
     
+    # Fetch all reviews from backend API if online
+    all_reviews = []
+    if backend_online:
+        try:
+            resp = requests.get(f"{BACKEND_URL}/admin/reviews?status=ALL", timeout=5)
+            if resp.status_code == 200:
+                all_reviews = resp.json()
+        except Exception:
+            pass
+            
+    pending_cases = [c for c in all_reviews if c.get("review_status") == "PENDING_REVIEW"]
+    reviewed_cases = [c for c in all_reviews if c.get("review_status") in ["HUMAN_ACCEPTED", "HUMAN_REJECTED"]]
+    
+    # -----------------------------------------------------------------
+    # ADMIN PAGE 1: PENDING HUMAN REVIEWS
+    # -----------------------------------------------------------------
     if admin_page == "📋 Pending Human Reviews":
         st.header("🛡️ SAFEAD AI — HUMAN REVIEW DASHBOARD")
         st.caption("Review advertisements awaiting human moderator decision")
         
-        pending_cases = []
-        if backend_online:
-            try:
-                resp = requests.get(f"{BACKEND_URL}/admin/reviews?status=PENDING_REVIEW", timeout=5)
-                if resp.status_code == 200:
-                    pending_cases = resp.json()
-            except Exception:
-                pass
-                
         if not pending_cases:
-            # Fallback mock case for demonstration if DB is empty
-            pending_cases = [{
-                "review_id": 1,
-                "ad_id": 101,
-                "title": "Adult Dating & Party Promo",
-                "caption": "Meet singles tonight 18+",
-                "file_path": "adult_dating.jpg",
-                "media_type": "image",
-                "ai_classification": "SAFE_18_PLUS",
-                "risk_score": 59.5,
-                "confidence": 0.94,
-                "explanation": "Stage 1 Prohibited Check PASSED. Stage 2 Age Policy: Ad contains permissible adult/sexual themes. Risk score: 59.5/100. Age restricted to 18+.",
-                "ocr_text": "Meet singles online 18+ Night party promo",
-                "audio_transcript": "",
-                "review_status": "PENDING_REVIEW"
-            }]
+            st.success("🎉 **No Pending Reviews**: All submitted cases have been reviewed! There are no advertisements in the pending review queue.")
+        else:
+            st.markdown(f"### Pending Review Queue ({len(pending_cases)} case(s))")
             
-        st.markdown(f"### Pending Review Queue ({len(pending_cases)} case(s))")
-        
-        case_options = {f"Case #{c['review_id']} — Ad #{c['ad_id']} ({c['title']})": c for c in pending_cases}
-        selected_case_key = st.selectbox("Select Human Review Case to Process:", list(case_options.keys()))
-        
-        if selected_case_key:
-            c = case_options[selected_case_key]
+            case_options = {f"Case #{c['review_id']} — Ad #{c['ad_id']} ({c['title']})": c for c in pending_cases}
+            selected_case_key = st.selectbox("Select Human Review Case to Process:", list(case_options.keys()))
             
-            st.markdown("---")
-            col_media, col_evidence = st.columns([1, 1.2])
-            
-            with col_media:
-                st.subheader("1. Advertisement Media View")
-                st.write(f"- **Ad ID**: #{c['ad_id']}")
-                st.write(f"- **Title**: `{c['title']}`")
-                st.write(f"- **Caption**: *\"{c.get('caption', '')}\"*")
-                st.write(f"- **Media Type**: `{c['media_type'].upper()}`")
-                
-                if c.get("file_path") and os.path.exists(c["file_path"]):
-                    if c["media_type"] == "image":
-                        st.image(c["file_path"], caption=c["title"], use_container_width=True)
-                    else:
-                        st.video(c["file_path"])
-                elif os.path.exists("adult_dating.jpg"):
-                    st.image("adult_dating.jpg", caption=c["title"], use_container_width=True)
-                else:
-                    st.info("📷 Media file loaded for reviewer inspection.")
-                    
-            with col_evidence:
-                st.subheader("2. AI Safety Evidence & Reasoning")
-                
-                st.markdown(f"• **AI Classification**: `{c['ai_classification']}`")
-                st.markdown(f"• **Risk Score**: `{c['risk_score']} / 100`")
-                st.markdown(f"• **Model Confidence**: `{int(c['confidence']*100)}%`")
-                st.markdown(f"• **AI Explanation**: *\"{c['explanation']}\"*")
-                st.markdown(f"• **OCR Text**: *\"{c.get('ocr_text', 'None')}\"*")
-                st.markdown(f"• **Audio Speech Transcript**: *\"{c.get('audio_transcript', 'None')}\"*")
+            if selected_case_key:
+                c = case_options[selected_case_key]
                 
                 st.markdown("---")
-                st.subheader("3. Human Moderator Decision")
-                review_note = st.text_area("Reviewer Comment / Policy Reason", placeholder="e.g. Reviewed manually. Content is acceptable under the project safety policy.")
+                col_media, col_evidence = st.columns([1, 1.2])
                 
-                dec_col1, dec_col2 = st.columns(2)
-                with dec_col1:
-                    if st.button("✅ ACCEPT (APPROVE PUBLICATION)", type="primary", use_container_width=True):
-                        if backend_online:
-                            try:
-                                requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/accept", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
-                            except Exception:
-                                pass
-                        st.success(f"✔️ Case #{c['review_id']} ACCEPTED by Admin. Status updated to HUMAN_ACCEPTED.")
-                        st.rerun()
-                        
-                with dec_col2:
-                    if st.button("❌ REJECT (BLOCK PUBLICATION)", use_container_width=True):
-                        if backend_online:
-                            try:
-                                requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/reject", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
-                            except Exception:
-                                pass
-                        st.error(f"❌ Case #{c['review_id']} REJECTED by Admin. Status updated to HUMAN_REJECTED.")
-                        st.rerun()
-
-    elif admin_page == "✅ Reviewed Cases":
-        st.header("✅ Reviewed Cases History")
-        if backend_online:
-            try:
-                resp = requests.get(f"{BACKEND_URL}/admin/reviews?status=ALL", timeout=5)
-                if resp.status_code == 200:
-                    cases = [c for c in resp.json() if c["review_status"] != "PENDING_REVIEW"]
-                    if cases:
-                        st.dataframe(cases, use_container_width=True)
+                with col_media:
+                    st.subheader("1. Advertisement Media Inspection")
+                    st.write(f"- **Ad ID**: #{c['ad_id']}")
+                    st.write(f"- **Title**: `{c['title']}`")
+                    st.write(f"- **Caption**: *\"{c.get('caption', '')}\"*")
+                    st.write(f"- **Media Type**: `{c['media_type'].upper()}`")
+                    st.write(f"- **Submission Date**: `{c.get('submitted_at', '')}`")
+                    
+                    if c.get("file_path") and os.path.exists(c["file_path"]):
+                        if c["media_type"] == "image":
+                            st.image(c["file_path"], caption=c["title"], use_container_width=True)
+                        else:
+                            st.video(c["file_path"])
                     else:
-                        st.info("No human reviewed decisions logged yet.")
-            except Exception:
-                st.info("No human reviewed decisions logged yet.")
-        else:
-            st.info("Offline standalone mode.")
+                        st.info("📷 Media file loaded for reviewer inspection.")
+                        
+                with col_evidence:
+                    st.subheader("2. AI Safety Evidence & Reasoning")
+                    
+                    st.markdown(f"• **AI Classification**: `{c['ai_classification']}`")
+                    st.markdown(f"• **Risk Score**: `{c['risk_score']} / 100`")
+                    st.markdown(f"• **Model Confidence**: `{int((c.get('confidence') or 0.85)*100)}%`")
+                    st.markdown(f"• **AI Explanation**: *\"{c.get('explanation', '')}\"*")
+                    st.markdown(f"• **Extracted OCR Text**: *\"{c.get('ocr_text', 'None detected')}\"*")
+                    st.markdown(f"• **Audio Speech Transcript**: *\"{c.get('audio_transcript', 'No speech')}\"*")
+                    
+                    st.markdown("---")
+                    st.subheader("3. Human Moderator Decision")
+                    review_note = st.text_area("Reviewer Comment / Policy Notes", placeholder="e.g. Reviewed manually. Content is acceptable under project safety policy.")
+                    
+                    dec_col1, dec_col2 = st.columns(2)
+                    with dec_col1:
+                        if st.button("✅ ACCEPT (APPROVE PUBLICATION)", type="primary", use_container_width=True, key="btn_accept_case"):
+                            success = False
+                            if backend_online:
+                                try:
+                                    resp = requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/accept", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
+                                    if resp.status_code == 200:
+                                        success = True
+                                except Exception:
+                                    pass
+                            st.success(f"✔️ Case #{c['review_id']} ACCEPTED by Admin. Moved to Reviewed Cases as HUMAN_ACCEPTED.")
+                            time.sleep(1)
+                            st.rerun()
+                            
+                    with dec_col2:
+                        if st.button("❌ REJECT (BLOCK PUBLICATION)", use_container_width=True, key="btn_reject_case"):
+                            success = False
+                            if backend_online:
+                                try:
+                                    resp = requests.post(f"{BACKEND_URL}/admin/reviews/{c['review_id']}/reject", json={"admin_id": st.session_state["user_id"], "review_comment": review_note}, timeout=5)
+                                    if resp.status_code == 200:
+                                        success = True
+                                except Exception:
+                                    pass
+                            st.error(f"❌ Case #{c['review_id']} REJECTED by Admin. Moved to Reviewed Cases as HUMAN_REJECTED.")
+                            time.sleep(1)
+                            st.rerun()
 
+    # -----------------------------------------------------------------
+    # ADMIN PAGE 2: REVIEWED CASES HISTORY
+    # -----------------------------------------------------------------
+    elif admin_page == "✅ Reviewed Cases":
+        st.header("✅ Human Reviewed Cases History")
+        st.caption("Advertisements that have completed human review")
+        
+        if not reviewed_cases:
+            st.info("No cases have completed human review yet.")
+        else:
+            formatted_cases = []
+            for r in reviewed_cases:
+                formatted_cases.append({
+                    "Review ID": r.get("review_id"),
+                    "Ad ID": r.get("ad_id"),
+                    "Title": r.get("title"),
+                    "Media Type": r.get("media_type", "").upper(),
+                    "AI Rating": r.get("ai_classification"),
+                    "Human Decision": r.get("human_decision"),
+                    "Status": r.get("review_status"),
+                    "Review Comment": r.get("review_comment"),
+                    "Reviewed At": r.get("reviewed_at")
+                })
+            st.dataframe(formatted_cases, use_container_width=True)
+
+    # -----------------------------------------------------------------
+    # ADMIN PAGE 3: REVIEW STATISTICS
+    # -----------------------------------------------------------------
     elif admin_page == "📈 Review Statistics":
         st.header("📈 Human Review Analytics & System Performance")
+        
+        accepted_count = len([c for c in reviewed_cases if c.get("human_decision") == "ACCEPT"])
+        rejected_count = len([c for c in reviewed_cases if c.get("human_decision") == "REJECT"])
+        pending_count = len(pending_cases)
+        
         scol1, scol2, scol3 = st.columns(3)
-        scol1.metric("Pending Queue", "1 case")
-        scol2.metric("Human Approvals", "12 cases")
-        scol3.metric("Human Rejections", "4 cases")
+        scol1.metric("Pending Queue", f"{pending_count} case(s)")
+        scol2.metric("Human Approvals", f"{accepted_count} case(s)")
+        scol3.metric("Human Rejections", f"{rejected_count} case(s)")
