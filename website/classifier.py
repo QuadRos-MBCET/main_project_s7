@@ -304,40 +304,63 @@ def estimate_age_from_face(image_np: np.ndarray) -> tuple:
 import re
 import datetime
 
+try:
+    from facenet_pytorch import InceptionResnetV1
+    import torch
+    _FACENET_EMBEDDER = InceptionResnetV1(pretrained='vggface2').eval()
+    HAS_FACENET = True
+except Exception:
+    _FACENET_EMBEDDER = None
+    HAS_FACENET = False
+
 def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float:
     """
-    Computes facial feature similarity metric (0.0 to 1.0 / 0% to 100%) between
-    an ID Card Face and a Live Captured Face using HSV color space correlation and structural projection.
+    Computes deep facial feature similarity metric (0.0 to 1.0 / 0% to 100%) between
+    an ID Card Face and a Live Captured Face using FaceNet (InceptionResnetV1 VGGFace2 Embeddings).
+    Accurately distinguishes different individuals from the same person.
     """
     if face1_np is None or face2_np is None or face1_np.size == 0 or face2_np.size == 0:
         return 0.0
 
+    if HAS_FACENET and _FACENET_EMBEDDER is not None:
+        try:
+            # Resize to 160x160 for FaceNet and normalize to [-1, 1]
+            f1 = cv2.resize(face1_np, (160, 160)).astype(np.float32) / 255.0
+            f2 = cv2.resize(face2_np, (160, 160)).astype(np.float32) / 255.0
+
+            f1 = (f1 - 0.5) / 0.5
+            f2 = (f2 - 0.5) / 0.5
+
+            t1 = torch.tensor(f1).permute(2, 0, 1).unsqueeze(0).float()
+            t2 = torch.tensor(f2).permute(2, 0, 1).unsqueeze(0).float()
+
+            with torch.no_grad():
+                e1 = _FACENET_EMBEDDER(t1).numpy()[0]
+                e2 = _FACENET_EMBEDDER(t2).numpy()[0]
+
+            # Calculate 512-D Cosine Similarity
+            cosine_sim = float(np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2) + 1e-6))
+            
+            # Map FaceNet cosine range (-0.2 to 0.8) into calibrated 0% to 100% confidence score:
+            # - Same person: cosine >= 0.50 -> match_score >= 70%
+            # - Different person: cosine <= 0.30 -> match_score <= 50%
+            calibrated_score = float(np.clip((cosine_sim + 0.20) / 1.0, 0.0, 1.0))
+            return round(calibrated_score, 4)
+        except Exception:
+            pass
+
+    # Secondary structural fallback metric
     try:
         f1 = cv2.resize(face1_np, (128, 128))
         f2 = cv2.resize(face2_np, (128, 128))
-
-        # 1. Color Histogram Correlation (HSV space)
-        hsv1 = cv2.cvtColor(f1, cv2.COLOR_RGB2HSV)
-        hsv2 = cv2.cvtColor(f2, cv2.COLOR_RGB2HSV)
-        hist1 = cv2.calcHist([hsv1], [0, 1], None, [50, 60], [0, 180, 0, 256])
-        hist2 = cv2.calcHist([hsv2], [0, 1], None, [50, 60], [0, 180, 0, 256])
-        cv2.normalize(hist1, hist1, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-        cv2.normalize(hist2, hist2, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-        hist_sim = float(cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL))
-
-        # 2. Structural Projection & Aspect Correlation
         g1 = cv2.cvtColor(f1, cv2.COLOR_RGB2GRAY)
         g2 = cv2.cvtColor(f2, cv2.COLOR_RGB2GRAY)
         p1 = np.mean(g1, axis=1)
         p2 = np.mean(g2, axis=1)
-        denom = (np.linalg.norm(p1) * np.linalg.norm(p2)) + 1e-6
-        proj_sim = float(np.dot(p1, p2) / denom)
-
-        # 3. Combined Similarity Score
-        total_sim = float(np.clip(hist_sim * 0.45 + proj_sim * 0.55, 0.0, 1.0))
-        return round(total_sim, 4)
+        proj_sim = float(np.dot(p1, p2) / (np.linalg.norm(p1) * np.linalg.norm(p2) + 1e-6))
+        return round(float(np.clip(proj_sim * 0.7, 0.0, 1.0)), 4)
     except Exception:
-        return 0.5000
+        return 0.3500
 
 
 def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None) -> tuple[str, int, str]:
@@ -406,9 +429,9 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     # 1. Anti-Spoofing check on live face
     is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face)
 
-    # 2. Face Similarity
+    # 2. Deep FaceNet Similarity
     face_sim_score = compute_face_similarity(id_face, live_face)
-    face_match = face_sim_score >= 0.40
+    face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
     # 3. DOB & Age from ID
     dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob)
