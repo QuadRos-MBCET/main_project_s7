@@ -14,7 +14,7 @@ import cv2
 from PIL import Image
 from website.database import get_connection, init_database
 from website.pipeline import run_multimodal_moderation, MULTILINGUAL_KEYWORDS
-from website.classifier import estimate_age_from_face, estimate_detailed_age_from_face, estimate_age_from_behavior, detect_and_crop_face, verify_id_card_and_live_face
+from website.classifier import estimate_age_from_face, estimate_detailed_age_from_face, estimate_age_from_behavior, detect_and_crop_face, verify_id_card_and_live_face, process_pdf_id_document
 
 init_database()
 
@@ -148,12 +148,21 @@ with tabs[0]:
             
             id_image_np = None
             id_manual_dob = None
+            id_pdf_text = None
             
             if id_source == "Upload ID Document":
-                up_id = st.file_uploader("Upload ID (Aadhaar / License / Passport)", type=["jpg", "jpeg", "png"], key="t1_id_file")
+                up_id = st.file_uploader("Upload ID (Image or PDF Document)", type=["jpg", "jpeg", "png", "pdf"], key="t1_id_file")
                 id_manual_dob = st.text_input("Optional DOB override if text blurry (DD/MM/YYYY)", "", key="t1_dob_override")
                 if up_id:
-                    id_image_np = np.array(Image.open(up_id).convert("RGB"))
+                    if up_id.name.lower().endswith('.pdf'):
+                        with st.spinner("Rendering PDF page and extracting document text..."):
+                            id_image_np, id_pdf_text = process_pdf_id_document(up_id.getvalue())
+                        if id_image_np is not None:
+                            st.success(f"📄 PDF Loaded: '{up_id.name}' (First page rendered)")
+                        else:
+                            st.error(f"Failed to process PDF: {id_pdf_text}")
+                    else:
+                        id_image_np = np.array(Image.open(up_id).convert("RGB"))
             elif id_source == "Sample Adult ID (DOB 1995)":
                 id_manual_dob = "15/05/1995"
                 dummy_id = np.ones((200, 320, 3), dtype=np.uint8) * 230
@@ -177,7 +186,7 @@ with tabs[0]:
                 id_image_np = dummy_id
                 
             if id_image_np is not None:
-                st.image(id_image_np, caption="Scanned ID Card", use_container_width=True)
+                st.image(id_image_np, caption="Scanned ID Card / PDF Page", use_container_width=True)
 
         with c_live:
             st.markdown("#### 2. Live Face Camera Scan")
@@ -225,7 +234,7 @@ with tabs[0]:
         st.markdown("---")
         st.markdown("### 📊 ID vs Live Face Cross-Matching Verdict")
         if id_image_np is not None and live_image_np is not None:
-            res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob)
+            res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob, id_pdf_text)
             
             # Status & Anti-Spoof Warning
             if res["is_spoof"]:

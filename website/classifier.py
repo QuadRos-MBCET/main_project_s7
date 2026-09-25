@@ -363,21 +363,56 @@ def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float
         return 0.3500
 
 
-def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None) -> tuple[str, int, str]:
+def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
     """
-    Extracts Date of Birth (DOB) and computes actual age from ID Card image using EasyOCR & Regex.
+    Renders PDF document first page to high-res RGB image array and extracts all text streams.
+    Returns (id_image_np, extracted_pdf_text).
+    """
+    if not pdf_bytes:
+        return None, ""
+        
+    try:
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(pdf_bytes)
+        if len(pdf) == 0:
+            return None, ""
+            
+        page = pdf[0]
+        # Render at 2x scale for crisp OCR text and face detection
+        pil_img = page.render(scale=2.0).to_pil()
+        id_image_np = np.array(pil_img.convert("RGB"))
+
+        text = ""
+        try:
+            from pypdf import PdfReader
+            import io
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            for p in reader.pages:
+                text += (p.extract_text() or "") + " "
+        except Exception:
+            pass
+
+        return id_image_np, text.strip()
+    except Exception as e:
+        return None, f"PDF Extraction Error: {e}"
+
+
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple[str, int, str]:
+    """
+    Extracts Date of Birth (DOB) and computes actual age from ID Card image or PDF document using EasyOCR & Regex.
     Returns (dob_str, calculated_age, age_category).
     """
-    extracted_text = ""
+    extracted_text = pdf_text or ""
     
-    # Try EasyOCR text extraction
-    try:
-        import easyocr
-        reader = easyocr.Reader(['en'], gpu=False)
-        results = reader.readtext(id_image_np)
-        extracted_text = " ".join([res[1] for res in results])
-    except Exception:
-        pass
+    # Try EasyOCR text extraction on rendered ID image if text is sparse
+    if id_image_np is not None:
+        try:
+            import easyocr
+            reader = easyocr.Reader(['en'], gpu=False)
+            results = reader.readtext(id_image_np)
+            extracted_text += " " + " ".join([res[1] for res in results])
+        except Exception:
+            pass
 
     if manual_dob:
         extracted_text += " " + manual_dob
@@ -414,13 +449,13 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None)
     return dob_str, calc_age, cat
 
 
-def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndarray, manual_dob: str = None) -> dict:
+def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> dict:
     """
     Performs complete ID Verification:
-    1. Detects face on ID card and cropped live face.
+    1. Detects face on ID card (image or rendered PDF) and cropped live face.
     2. Runs Anti-Spoof Liveness check on live face.
-    3. Computes Face Similarity (ID Face vs Live Face).
-    4. Extracts DOB & Age from ID Card.
+    3. Computes Face Similarity (ID Face vs Live Face using FaceNet).
+    4. Extracts DOB & Age from ID Card (Image or PDF text).
     5. Cross-matches ID DOB Age vs Live ViT Facial Age Prediction.
     """
     id_face, id_bbox = detect_and_crop_face(id_image_np)
@@ -433,8 +468,8 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     face_sim_score = compute_face_similarity(id_face, live_face)
     face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
-    # 3. DOB & Age from ID
-    dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob)
+    # 3. DOB & Age from ID (Image + PDF text)
+    dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)
