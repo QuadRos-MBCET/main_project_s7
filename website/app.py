@@ -122,28 +122,14 @@ with c_id:
 
 with c_live:
     st.markdown("#### 2. Live Face Camera Scan")
-    live_type = st.radio("Live Input Source", ["Webcam Snapshot", "Upload Live Face Photo"], horizontal=True, key="t1_live_type")
+    cam_img = st.camera_input("Take Live Face Photo", key="t1_cam")
+    up_live = st.file_uploader("Or Upload Live Face Photo", type=["jpg", "jpeg", "png"], key="t1_live_file")
     
     live_image_np = None
-    if live_type == "Webcam Snapshot":
-        cam_active = st.toggle("📸 Enable Front Camera Feed", value=False, key="t1_cam_toggle")
-        if cam_active:
-            st.caption("🟢 Live Front Camera Feed Active — Tap 'Take Photo' below")
-            cam_img = st.camera_input("Live Camera Feed", key="t1_cam")
-            if cam_img:
-                live_image_np = np.array(Image.open(cam_img).convert("RGB"))
-        else:
-            st.markdown("""
-            <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
-                <div style="font-size:32px; margin-bottom:6px;">📷</div>
-                <div style="font-size:15px; font-weight:600; color:#334155;">Camera is Currently Off</div>
-                <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to view feed.</div>
-            </div>
-            """, unsafe_allow_html=True)
-    elif live_type == "Upload Live Face Photo":
-        up_live = st.file_uploader("Upload Live Face Photo", type=["jpg", "jpeg", "png"], key="t1_live_file")
-        if up_live:
-            live_image_np = np.array(Image.open(up_live).convert("RGB"))
+    if cam_img:
+        live_image_np = np.array(Image.open(cam_img).convert("RGB"))
+    elif up_live:
+        live_image_np = np.array(Image.open(up_live).convert("RGB"))
             
     if live_image_np is not None:
         st.image(live_image_np, caption="Live Captured Face", use_container_width=True)
