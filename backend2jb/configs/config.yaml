@@ -1,0 +1,26 @@
+system:
+  project_name: "SafeAd AI (SAFE-VISION)"
+  version: "2.0.0"
+  colab_mode: true
+
+colab_hardware:
+  device: "cuda"
+  vram_safety_limit_mb: 12000
+  batch_size: 1
+  mixed_precision: true
+
+video_processing:
+  max_frames: 8
+  frame_sample_strategy: "uniform"
+
+policy_thresholds:
+  reject_threshold: 75.0
+  age_18_threshold: 40.0
+  age_14_threshold: 25.0
+
+paths:
+  checkpoints: "checkpoints"
+  embeddings: "embeddings"
+  datasets: "datasets"
+  outputs: "outputs"
+  logs: "logs"

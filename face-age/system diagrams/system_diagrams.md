@@ -1,0 +1,152 @@
+# SafeAd AI: System Design Diagrams
+
+This document compiles the architectural flow, class structures, UML use cases, and Data Flow Diagrams (DFDs) for the **SafeAd AI** content safety engine.
+
+---
+
+## 🏛️ UML Class Diagram
+
+Below is the UML Class Diagram showing implementation details, attributes, methods, and relationships:
+
+![SafeAd AI UML Class Diagram](./class_diagram.jpg)
+
+### Interactive Mermaid Class representation:
+
+```mermaid
+classDiagram
+    direction TB
+    
+    class AdItemInput {
+        +String adID
+        +List~Image~ keyframes
+        +String textOCR
+        +String audioTranscript
+        +preprocess() void
+    }
+
+    class AgeEstimationEngine {
+        +CNNModel faceNet
+        +BERTModel textNLP
+        +estimateUserAge() AgeBracket
+        +verifyAccess() boolean
+    }
+
+    class FAISSVectorIndex {
+        +IndexFlatIP index
+        +searchExemplars() List~Case~
+    }
+
+    class AdModerationEngine {
+        +MLLM vlmModel
+        +List~Rule~ policyRules
+        +analyzeAd() Result
+        +generateCoTRationale() String
+    }
+
+    AdItemInput --> AdModerationEngine : feeds preprocessed inputs
+    AdItemInput --> AgeEstimationEngine : sends face & text features
+    AgeEstimationEngine --> AdModerationEngine : provides verified age brackets
+    FAISSVectorIndex --> AdModerationEngine : retrieves contextual exemplars
+```
+
+---
+
+## 🖼️ System Architecture & Module Flow
+
+Below is the module flow diagram representing inputs and inference engines:
+
+![Ad Moderation System Architecture](./architecture_diagram.jpg)
+
+---
+
+## 👥 SafeAd AI UML Use Case Diagram
+
+![SafeAd AI Use Case Diagram](./use_case_diagram.jpg)
+
+### Interactive Mermaid Use Case representation:
+
+```mermaid
+usecaseDiagram
+    actor Advertiser as "Advertiser"
+    actor SocialUser as "Social User"
+    actor Admin as "Platform Admin"
+    
+    rectangle "SafeAd AI System Boundary" {
+        usecase UC1 as "Submit Ad Campaign"
+        usecase UC2 as "Pre-Pub Risk Scan"
+        usecase UC3 as "Perform Age Estimation"
+        usecase UC4 as "Filter Age-Restricted Ads"
+        usecase UC5 as "Review CoT Audit Logs"
+    }
+    
+    Advertiser --> UC1
+    
+    SocialUser --> UC4
+    
+    Admin --> UC2
+    Admin --> UC4
+    Admin --> UC5
+    
+    %% Relationships between internal use cases
+    UC2 ..> UC3 : <<include>>
+    UC3 ..> UC4 : <<triggers>>
+```
+
+---
+
+## 🔄 Data Flow Diagram (DFD Level 0 - Context Diagram)
+
+DFD Level 0 represents the system boundary as a single process block (`SafeAd AI System`) interacting with external actors.
+
+![SafeAd AI DFD Level 0 Context Diagram](./dfd_level_0.jpg)
+
+### 🎙️ How to Explain DFD Level 0 Easily:
+You can explain this Context Diagram to a non-technical audience in three simple steps:
+1.  **The Advertiser Input & Output**: The advertiser submits the raw ad content (videos, memes, or text) to the system, and gets back a clear moderation decision (approved or flagged with safety reasons).
+2.  **The Social User Filtering**: When a user requests to view an ad, the system checks their estimated age and automatically delivers only age-appropriate ads.
+3.  **The Admin Governance**: The platform administrator provides safety policy guidelines to feed the AI, and in return, receives detailed Chain-of-Thought logs to audit the system's decisions.
+
+---
+
+## 🔄 Data Flow Diagram (DFD Level 1 - Detailed Process Flow)
+
+DFD Level 1 breaks down the SafeAd AI System process block into sub-processes, data stores, and internal data routes:
+
+![SafeAd AI DFD Level 1 Process Diagram](./dfd_level_1.jpg)
+
+### Interactive Mermaid DFD Level 1 Flow:
+
+```mermaid
+graph TD
+    Advertiser["Advertiser"]
+    SocialUser["Social User"]
+    Admin["Platform Admin"]
+    
+    P1["(1.1) Preprocess Ad Input"]
+    P2["(1.2) Estimate Target Age"]
+    P3["(1.3) Query FAISS Index"]
+    P4["(1.4) VLM Moderation Engine"]
+    
+    D1[("D1: Ads & Metadata Database")]
+    D2[("D2: Policy Rules Index")]
+    D3[("D3: CoT Audit Logs Store")]
+    
+    Advertiser -- "Ad Campaign Data" --> P1
+    P1 -- "Keyframes, OCR & Transcripts" --> D1
+    P1 -- "Face & OCR Text Features" --> P2
+    P1 -- "Preprocessed Multimodal Vectors" --> P4
+    
+    SocialUser -- "Request Ad View" --> P2
+    P2 -- "Verified User Age Group" --> P4
+    
+    Admin -- "Policy Rule Entries" --> D2
+    D2 -- "Similar Policy Exemplars" --> P3
+    P3 -- "Retrieved Policy Context" --> P4
+    
+    P4 -- "Moderation Flag & Decision" --> D1
+    P4 -- "Chain-of-Thought Rationale Logs" --> D3
+    
+    D1 -- "Ad Review Status" --> Advertiser
+    D1 -- "Approved Age-Appropriate Ads" --> SocialUser
+    D3 -- "Review Audit Logs" --> Admin
+```

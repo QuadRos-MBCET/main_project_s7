@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Aura Social — Trust & Safety Media (SafeAd AI)</title>
+    <title>Aura Social â€” Trust & Safety Media (SafeAd AI)</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.css" />
     <style>
       #loading-overlay {
@@ -62,9 +62,18 @@
           requirements: ["numpy", "pillow"],
           entrypoint: "instagram_app.py",
           files: {
-            "instagram_app.py": `import streamlit as st
-import sqlite3
+            "instagram_app.py": `import sys
 import os
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(FILE_DIR, ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+if FILE_DIR not in sys.path:
+    sys.path.insert(0, FILE_DIR)
+
+import streamlit as st
+import sqlite3
 import time
 import base64
 import json
@@ -91,6 +100,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Auto-configured API Routes (No UI)
+backend_a_url = 'http://localhost:8000'
+backend_b_url = 'http://localhost:8001'
+backend_mode = ['backend2jb', 'face-age']
+
 
 # Helper to find media files across various working directory permutations
 def resolve_media_path(file_path: str):
@@ -584,7 +599,24 @@ if not st.session_state["logged_in"]:
                 try:
                     img = Image.open(cam_image)
                     img_np = np.array(img)
-                    category, conf = estimate_age_from_face(img_np)
+                    import requests, io
+                    from PIL import Image
+                    st.info("Sending request to Face-Age Backend (Port 8001)...")
+                    try:
+                        buf = io.BytesIO()
+                        img = Image.fromarray(img_np)
+                        img.save(buf, format="JPEG")
+                        res = requests.post(f"{backend_b_url}/api/verify_face", files={"file": ("face.jpg", buf.getvalue(), "image/jpeg")}, timeout=60)
+                        if res.status_code == 200:
+                            data = res.json()
+                            category, conf = data["category"], data["confidence"]
+                        else:
+                            error_msg = res.json().get("detail", "Unknown Error") if res.headers.get("Content-Type") == "application/json" else res.text
+                            st.error(f"Face-Age API Error: {error_msg}")
+                            category, conf = "Error", 0.0
+                    except Exception as e:
+                        category, conf = "Error", 0.0
+                        st.error(f"Face-Age backend unreachable: {e}")
                 except Exception as e:
                     st.error(f"Face scanner error: {e}")
             elif face_sim != "Choose simulation...":
@@ -597,7 +629,24 @@ if not st.session_state["logged_in"]:
                     cv2.ellipse(dummy_face, (64, 64), (36, 54), 0, 0, 360, (245, 190, 160), -1)
                     cv2.circle(dummy_face, (49, 54), 4, (40, 40, 40), -1)
                     cv2.circle(dummy_face, (79, 54), 4, (40, 40, 40), -1)
-                category, conf = estimate_age_from_face(dummy_face)
+                import requests, io
+                from PIL import Image
+                st.info("Sending request to Face-Age Backend (Port 8001)...")
+                try:
+                    buf = io.BytesIO()
+                    img = Image.fromarray(dummy_face)
+                    img.save(buf, format="JPEG")
+                    res = requests.post(f"{backend_b_url}/api/verify_face", files={"file": ("face.jpg", buf.getvalue(), "image/jpeg")}, timeout=60)
+                    if res.status_code == 200:
+                        data = res.json()
+                        category, conf = data["category"], data["confidence"]
+                    else:
+                        error_msg = res.json().get("detail", "Unknown Error") if res.headers.get("Content-Type") == "application/json" else res.text
+                        st.error(f"Face-Age API Error: {error_msg}")
+                        category, conf = "Error", 0.0
+                except Exception as e:
+                    category, conf = "Error", 0.0
+                    st.error(f"Face-Age backend unreachable: {e}")
                 
         else:
             st.info("Analyzes simulated session query intent and watch retention metrics.")
@@ -624,7 +673,7 @@ if not st.session_state["logged_in"]:
                         <div style="font-size: 12px; font-weight: 700; color: {status_color}; text-transform: uppercase;">Estimated Age Category</div>
                         <div style="font-size: 16px; font-weight: 800; color: #fff;">{category} <span style="font-size:13px; font-weight:600; color:#94a3b8;">({conf:.1%} confidence)</span></div>
                     </div>
-                    <div style="font-size: 24px;">{'🛡️' if is_child else '🔓'}</div>
+                    <div style="font-size: 24px;">{'🔒' if is_child else '🔓'}</div>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -647,10 +696,18 @@ if not st.session_state["logged_in"]:
                     else:
                         uid = usr[0]
                         
-                    cursor.execute("""
-                        INSERT INTO AgeProfiles (user_id, method, prediction_class, confidence)
-                        VALUES (?, ?, ?, ?)
-                    """, (uid, "facial" if "Biometric" in auth_mode else "behavioral", category, conf))
+                        category_map = {
+                            "Less than 14": "Child (<14)",
+                            "14 to 17": "Teen (14-17)",
+                            "18 and above": "Adult (18+)"
+                        }
+                        db_category = category_map.get(category, category)
+
+                        if db_category != "Error" and db_category != "Unknown":
+                            cursor.execute("""
+                                INSERT INTO AgeProfiles (user_id, method, prediction_class, confidence)
+                                VALUES (?, ?, ?, ?)
+                            """, (uid, "facial" if "Biometric" in auth_mode else "behavioral", db_category, conf))
                     conn.commit()
                     conn.close()
                     st.rerun()
@@ -1378,7 +1435,17 @@ else:
                     conn.close()
                     
                     with st.spinner("Analyzing Multimodal Trust & Safety signals (Visual + Text + Speech)..."):
-                        mod_result = run_multimodal_moderation(new_ad_id)
+                        import requests
+                        st.info("Sending request to Backend2JB (Port 8000)...")
+                        try:
+                            res = requests.post(f"{backend_a_url}/api/moderation/run", json={"ad_id": new_ad_id}, timeout=60)
+                            if res.status_code == 200:
+                                mod_result = res.json()
+                            else:
+                                mod_result = {"status": "error", "message": "Backend2JB error"}
+                        except Exception as e:
+                            mod_result = {"status": "error", "message": f"API Unreachable: {e}"}
+                            st.warning("Backend2JB unreachable!")
                         time.sleep(0.4)
                         
                     st.session_state["latest_studio_mod"] = mod_result
@@ -1432,7 +1499,7 @@ else:
         for n in st.session_state["notifications"]:
             st.markdown(f"""
                 <div style="background: #131d33; border: 1px solid #1e293b; border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                    <div style="font-size: 24px;">{n['icon']}</div>
+                    <div style="font-size: 24px;">{'🔒' if is_child else '🔓'}</div>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="font-weight: 700; font-size: 14px; color: #fff;">{n['title']}</div>

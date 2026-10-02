@@ -2,7 +2,7 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "safead.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "safead_v2.db")
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
@@ -29,7 +29,7 @@ def init_database():
         advertiser_id INTEGER,
         caption TEXT,
         file_path TEXT NOT NULL,
-        status TEXT DEFAULT 'under_review' CHECK(status IN ('approved', 'rejected', 'under_review')),
+        status TEXT DEFAULT 'under_review' CHECK(status IN ('approved', 'rejected', 'restricted', 'under_review')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(advertiser_id) REFERENCES Users(id)
     )
@@ -74,7 +74,7 @@ def init_database():
     CREATE TABLE IF NOT EXISTS ModelPredictions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ad_id INTEGER,
-        modality TEXT CHECK(modality IN ('visual', 'ocr', 'speech', 'nlp')),
+        modality TEXT CHECK(modality IN ('visual', 'ocr', 'speech', 'nlp', 'fusion')),
         prediction_label TEXT,
         score REAL,
         FOREIGN KEY(ad_id) REFERENCES Advertisements(id)
@@ -100,7 +100,7 @@ def init_database():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         method TEXT CHECK(method IN ('facial', 'behavioral')),
-        prediction_class TEXT CHECK(prediction_class IN ('Child', 'Not a Child')),
+        prediction_class TEXT CHECK(prediction_class IN ('Child', 'Not a Child', 'Child (<14)', 'Teen (14-17)', 'Adult (18+)')),
         confidence REAL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES Users(id)

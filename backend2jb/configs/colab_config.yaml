@@ -1,0 +1,55 @@
+# SafeAd AI - Colab Phase 1 Configuration
+# Environment-agnostic settings for Google Colab Free & Local fallback
+
+execution:
+  device: "auto"              # "auto", "cuda", "cpu"
+  use_fp16: true              # Mixed precision for GPU inference
+  batch_size: 1               # Colab Free optimal batch size
+  vram_safety_limit_mb: 12000 # Memory threshold before auto-eviction
+
+video_processing:
+  max_frames: 16
+  sampling_method: "uniform" # "uniform", "keyframe"
+  supported_formats:
+    - ".mp4"
+    - ".mov"
+    - ".avi"
+    - ".mkv"
+
+image_processing:
+  supported_formats:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".webp"
+
+models:
+  violence:
+    video_model_id: "visionlab-ai/school-violence-detection-models"
+    fallback_video_model: "facebook/x3d-m"
+    image_model_id: "Falconsai/nsfw_image_detection"
+    threshold: 0.35
+    enabled: true
+
+  nsfw:
+    model_id: "Falconsai/nsfw_image_detection"
+    aggregation_method: "max" # "max", "mean"
+    threshold: 0.20           # Sensitive threshold for ad safety moderation
+    enabled: true
+
+  child_safety:
+    model_id: "meta-llama/Llama-Guard-3-8B-INT8"
+    fallback_model: "open_safety_guard"
+    threshold: 0.35
+    enabled: true
+
+ocr:
+  enabled: true
+  engine: "pytesseract"
+
+storage:
+  drive_mount_path: "/content/drive/MyDrive/SafeAdAI"
+  colab_local_path: "/content/SafeAdAI"
+  checkpoint_dir: "checkpoints"
+  output_dir: "outputs"
+  cache_dir: "cache"

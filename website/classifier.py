@@ -126,13 +126,18 @@ def estimate_age_from_face(image_np: np.ndarray) -> tuple:
         else:
             roundness = 1.0
         prob_child = float(np.clip((roundness - 0.7) / 0.3, 0.0, 1.0))
-        prediction = "Child" if prob_child > 0.5 else "Not a Child"
-        return prediction, prob_child
-
-    feats = extract_facial_features(cropped_face, bbox)
-    probs = face_age_clf.predict_proba([feats])[0]
-    prob_child = probs[0]
-    prediction = "Child" if prob_child > 0.5 else "Not a Child"
+    else:
+        feats = extract_facial_features(cropped_face, bbox)
+        probs = face_age_clf.predict_proba([feats])[0]
+        prob_child = probs[0]
+        
+    if prob_child > 0.6:
+        prediction = "Child (<14)"
+    elif prob_child > 0.3:
+        prediction = "Teen (14-17)"
+    else:
+        prediction = "Adult (18+)"
+        
     return prediction, prob_child
 
 # =====================================================================
@@ -184,7 +189,13 @@ def estimate_age_from_behavior(session_queries: list, gk_watches: list, adult_wa
     # Combine signals (40% searches, 60% watch retention bias)
     fused_child_score = child_text_prob * 0.4 + (avg_gk_ret - avg_adult_ret + 1.0) / 2.0 * 0.6
 
-    prediction = "Child" if fused_child_score > 0.5 else "Not a Child"
+    if fused_child_score > 0.6:
+        prediction = "Child (<14)"
+    elif fused_child_score > 0.35:
+        prediction = "Teen (14-17)"
+    else:
+        prediction = "Adult (18+)"
+        
     return prediction, fused_child_score
 
 if __name__ == "__main__":
