@@ -212,6 +212,23 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None) ->
     return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
 
 
+def detect_facial_hair(cropped_face: np.ndarray) -> bool:
+    """
+    Detects facial hair (mustache/stubble/beard) in lower face area as a key adult (18+) facial feature.
+    """
+    if cropped_face is None or cropped_face.size == 0:
+        return False
+    try:
+        gray = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
+        h, w = gray.shape
+        mustache_region = gray[int(h*0.55):int(h*0.75), int(w*0.25):int(w*0.75)]
+        edges = cv2.Canny(mustache_region, 30, 100)
+        edge_density = float(np.mean(edges > 0))
+        return edge_density >= 0.14
+    except Exception:
+        return False
+
+
 def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     """
     Returns full detailed age estimation dictionary using MTCNN + ViT Age Pipeline with Anti-Spoof Detection:
@@ -222,6 +239,8 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     - spoof_reason: str
     """
     cropped_face, bbox = detect_and_crop_face(image_np)
+    has_facial_hair = detect_facial_hair(cropped_face)
+
     try:
         is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face)
     except Exception as e:
@@ -238,7 +257,10 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
                 conf = face["age_estimation"].get("confidence", 0.0)
                 
                 # Standardize category text according to user spec
-                if norm_group == "LESS THAN 14" or age_range in ["0-2", "3-9"]:
+                if has_facial_hair or age_range in ["20-29", "30-39", "40-49", "50-59", "60-69", "70+"]:
+                    category = "18 and above"
+                    norm_group = "18 AND ABOVE"
+                elif norm_group == "LESS THAN 14" or age_range in ["0-2", "3-9"]:
                     category = "Less than 14"
                     norm_group = "LESS THAN 14"
                 elif norm_group == "14 TO 17" or age_range == "10-19":
@@ -263,7 +285,11 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
             pass
 
     # Fallback model categorization
-    if not HAS_SKLEARN or face_age_clf is None:
+    if has_facial_hair:
+        cat = "18 and above"
+        norm_group = "18 AND ABOVE"
+        prob_child = 0.05
+    elif not HAS_SKLEARN or face_age_clf is None:
         if bbox is not None:
             x, y, w, h = bbox
             roundness = min(w, h) / max(w, h)
