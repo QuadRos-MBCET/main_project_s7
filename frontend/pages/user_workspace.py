@@ -42,7 +42,8 @@ def user_dashboard():
         
     if "user_db" not in st.session_state:
         st.session_state["user_db"] = {
-            "demo": {"password": "demo", "category": "18 to 24", "norm": "AGE_18_PLUS"}
+            "demo": {"password": "demo", "category": "18 to 24", "norm": "AGE_18_PLUS"},
+            "souravrd": {"password": "loyola", "category": "18 to 24", "norm": "AGE_18_PLUS"}
         }
 
     if st.session_state["verified_age_category"] is None:
