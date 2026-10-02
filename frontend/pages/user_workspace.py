@@ -83,41 +83,41 @@ def user_dashboard():
             st.markdown("---")
             st.markdown("### 🆔 ID Card Verification & Live Face Cross-Matching")
         
-        c_id, c_live = st.columns([1, 1], gap="medium")
+            c_id, c_live = st.columns([1, 1], gap="medium")
         
-        id_image_np = None
-        manual_dob = None
-        pdf_text = None
+            id_image_np = None
+            manual_dob = None
+            pdf_text = None
         
-        with c_id:
-            st.markdown("#### 1. Upload Official ID Card")
-            st.caption("Upload ID (Image or PDF Document)")
-            up_id = st.file_uploader("", type=["jpg", "jpeg", "png", "pdf"], label_visibility="collapsed")
-            manual_dob = st.text_input("Optional DOB override if text blurry (DD/MM/YYYY)")
+            with c_id:
+                st.markdown("#### 1. Upload Official ID Card")
+                st.caption("Upload ID (Image or PDF Document)")
+                up_id = st.file_uploader("", type=["jpg", "jpeg", "png", "pdf"], label_visibility="collapsed")
+                manual_dob = st.text_input("Optional DOB override if text blurry (DD/MM/YYYY)")
             
-            if up_id:
-                if up_id.name.lower().endswith(".pdf"):
-                    with st.spinner("Rendering PDF page and extracting document text..."):
-                        id_image_np, pdf_text = process_pdf_id_document(up_id.getvalue())
-                    if id_image_np is not None:
-                        st.success(f"📄 PDF Loaded: '{up_id.name}' (First page rendered)")
+                if up_id:
+                    if up_id.name.lower().endswith(".pdf"):
+                        with st.spinner("Rendering PDF page and extracting document text..."):
+                            id_image_np, pdf_text = process_pdf_id_document(up_id.getvalue())
+                        if id_image_np is not None:
+                            st.success(f"📄 PDF Loaded: '{up_id.name}' (First page rendered)")
+                        else:
+                            st.error("Failed to process PDF.")
                     else:
-                        st.error("Failed to process PDF.")
-                else:
-                    id_image_np = np.array(Image.open(up_id).convert("RGB"))
+                        id_image_np = np.array(Image.open(up_id).convert("RGB"))
                     
-                if id_image_np is not None:
-                    st.image(id_image_np, caption="Scanned ID Card / PDF Page", use_container_width=True)
+                    if id_image_np is not None:
+                        st.image(id_image_np, caption="Scanned ID Card / PDF Page", use_container_width=True)
                     
-        live_image_np = None
-        with c_live:
-            st.markdown("#### 2. Live Face Camera Scan")
-            cam_active = st.toggle("📷 Enable Front Camera Feed", value=True)
-            if cam_active:
-                st.caption("🟢 Live Front Camera Feed Active — Tap 'Take Photo' below")
-                cam_img = st.camera_input("Live Camera Feed", label_visibility="collapsed")
-                if cam_img:
-                    live_image_np = np.array(Image.open(cam_img).convert("RGB"))
+            live_image_np = None
+            with c_live:
+                st.markdown("#### 2. Live Face Camera Scan")
+                cam_active = st.toggle("📷 Enable Front Camera Feed", value=True)
+                if cam_active:
+                    st.caption("🟢 Live Front Camera Feed Active — Tap 'Take Photo' below")
+                    cam_img = st.camera_input("Live Camera Feed", label_visibility="collapsed")
+                    if cam_img:
+                        live_image_np = np.array(Image.open(cam_img).convert("RGB"))
             else:
                 st.markdown("""
                 <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
