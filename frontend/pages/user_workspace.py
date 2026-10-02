@@ -118,14 +118,14 @@ def user_dashboard():
                     cam_img = st.camera_input("Live Camera Feed", label_visibility="collapsed")
                     if cam_img:
                         live_image_np = np.array(Image.open(cam_img).convert("RGB"))
-            else:
-                st.markdown("""
-                <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
-                    <div style="font-size:32px; margin-bottom:6px;">📷</div>
-                    <div style="font-size:15px; font-weight:600; color:#334155;">Camera is Currently Off</div>
-                    <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to view feed.</div>
-                </div>
-                """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; background:#f8fafc; margin-bottom:12px;">
+                        <div style="font-size:32px; margin-bottom:6px;">📷</div>
+                        <div style="font-size:15px; font-weight:600; color:#334155;">Camera is Currently Off</div>
+                        <div style="font-size:12px; color:#64748b;">Toggle 'Enable Front Camera Feed' above to view feed.</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
             if live_image_np is not None:
                 st.image(live_image_np, caption="Live Captured Face", use_container_width=True)
