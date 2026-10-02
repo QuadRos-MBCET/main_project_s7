@@ -1,0 +1,34 @@
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+from backend.app.db.models import SafetyClassification, ModerationAction
+
+class StandardizedModerationResponse(BaseModel):
+    ad_id: int
+    status: str = "completed"
+    classification: SafetyClassification
+    ai_classification: Optional[SafetyClassification] = None
+    human_classification: Optional[SafetyClassification] = None
+    final_classification: Optional[SafetyClassification] = None
+    display_label: str
+    risk_score: Optional[float] = None
+    confidence: Optional[float] = 0.85
+    publication_action: ModerationAction
+    action_badge: str
+    publishable: bool
+    requires_human_review: bool = False
+    detected_categories: List[str] = []
+    violations: List[str] = []
+    explanation: str
+    evidence: Dict[str, Any] = {}
+    extracted_ocr: Optional[str] = ""
+    audio_transcript: Optional[str] = ""
+    processing_time_seconds: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+class ModerationOverrideRequest(BaseModel):
+    ad_id: int
+    action: ModerationAction
+    final_classification: Optional[SafetyClassification] = SafetyClassification.SAFE_FOR_ALL
+    moderator_notes: Optional[str] = ""

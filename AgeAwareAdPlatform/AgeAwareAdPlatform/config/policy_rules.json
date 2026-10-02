@@ -1,0 +1,47 @@
+{
+  "system_version": "2.0.0",
+  "policy_framework": "SafeAd Multimodal Age-Aware Safety Rules",
+  "ad_categories": {
+    "SAFE FOR ALL": {
+      "description": "General audience safe advertisement. Contains no adult, violent, gambling, or age-restricted content.",
+      "allowed_user_categories": ["SAFE FOR ALL", "14+", "18+"],
+      "action": "APPROVE",
+      "publishable": true
+    },
+    "14+": {
+      "description": "Moderate content suitable for teenagers and adults. May contain mild animated action or teen themes.",
+      "allowed_user_categories": ["14+", "18+"],
+      "action": "AGE_RESTRICT",
+      "publishable": true
+    },
+    "18+": {
+      "description": "Mature audience content. May contain alcohol, regulated gaming, or mature themes. Strictly forbidden for users under 18.",
+      "allowed_user_categories": ["18+"],
+      "action": "AGE_RESTRICT",
+      "publishable": true
+    },
+    "UNSAFE FOR ALL": {
+      "description": "Explicit, illegal, deceptive scam, hate speech, or dangerous content. Strictly forbidden and rejected for all users.",
+      "allowed_user_categories": [],
+      "action": "REJECT",
+      "publishable": false
+    }
+  },
+  "user_age_brackets": {
+    "SAFE FOR ALL": {
+      "min_age": 0,
+      "max_age": 13,
+      "database_enum": "UNDER_14"
+    },
+    "14+": {
+      "min_age": 14,
+      "max_age": 17,
+      "database_enum": "AGE_14_TO_17"
+    },
+    "18+": {
+      "min_age": 18,
+      "max_age": 120,
+      "database_enum": "AGE_18_PLUS"
+    }
+  }
+}
