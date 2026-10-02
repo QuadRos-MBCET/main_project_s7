@@ -86,6 +86,16 @@ def owner_dashboard():
     # Header from Joseph's code
     st.header("📢 Brand Owner Advertisement Safety Portal")
     
+    if "owner_action_msg" in st.session_state and st.session_state["owner_action_msg"]:
+        msg = st.session_state["owner_action_msg"]
+        if "Pending" in msg:
+            st.info(msg)
+        elif "Unsafe" in msg:
+            st.error(msg)
+        else:
+            st.success(msg)
+        st.session_state["owner_action_msg"] = None
+        
     col_up, col_res = st.columns([1, 1.2])
     
     with col_up:
@@ -238,13 +248,6 @@ def owner_dashboard():
                     ad_exists = any(a.get("ad_id") == ad_id for a in st.session_state["global_ads"])
                     
                     if not ad_exists and classification != "UNSAFE_FOR_ALL":
-                        # We need to preserve the file path which might not be in rep
-                        file_path = rep.get("file_path", "")
-                        # Try to find the file from session state if not in rep
-                        if not file_path and "uploaded_file" in locals():
-                             # We can't access temp_path directly here easily, but we know it's in rep or we can find it
-                             pass
-                        
                         feed_ad = {
                             "ad_id": ad_id,
                             "classification": classification,
@@ -255,13 +258,13 @@ def owner_dashboard():
                         st.session_state["global_ads"].append(feed_ad)
 
                     if classification == "UNSAFE_FOR_ALL":
-                        st.error("🚨 Advertisement is classified as Unsafe for All and should not be published.")
-                    elif classification == "SAFE_18_PLUS":
-                        st.warning("⚠️ Advertisement accepted with 18+ age restriction.")
-                    elif classification == "SAFE_14_PLUS":
-                        st.info("ℹ️ Advertisement accepted with 14+ age restriction.")
+                        st.session_state["owner_action_msg"] = "🚨 Advertisement was classified as Unsafe for All and rejected."
                     else:
-                        st.success("✅ Advertisement approved for all age groups.")
+                        st.session_state["owner_action_msg"] = f"✅ Advertisement accepted and moved to the {classification} feed."
+                        
+                    st.session_state["moderation_report"] = None
+                    st.session_state["current_ad_id"] = None
+                    st.rerun()
                         
             with b_act2:
                 if st.button("🗑️ DELETE ADVERTISEMENT", use_container_width=True):
@@ -281,7 +284,32 @@ def owner_dashboard():
                             requests.post(f"{BACKEND_URL}/advertisements/{ad_id}/human-review", json={"user_id": 1, "reason": "Brand owner requested review"}, timeout=5)
                         except Exception:
                             pass
-                    st.success("📥 Your advertisement has been submitted for human review.")
+                            
+                    if "pending_human_reviews" not in st.session_state:
+                        st.session_state["pending_human_reviews"] = []
+                        
+                    review_case = {
+                        "review_id": int(time.time()),
+                        "ad_id": ad_id,
+                        "title": rep.get("title", st.session_state.get("last_ad_title", "")),
+                        "caption": rep.get("caption", st.session_state.get("last_ad_caption", "")),
+                        "file_path": rep.get("file_path", st.session_state.get("last_temp_path", "")),
+                        "media_type": "video" if str(st.session_state.get("last_temp_path", "")).lower().endswith(('.mp4', '.avi', '.mov')) else "image",
+                        "submitted_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "ai_classification": classification,
+                        "risk_score": risk_score,
+                        "confidence": confidence,
+                        "explanation": rep.get("explanation", ""),
+                        "ocr_text": rep.get("extracted_ocr", ""),
+                        "audio_transcript": rep.get("audio_transcript", "")
+                    }
+                    if not any(c["ad_id"] == ad_id for c in st.session_state["pending_human_reviews"]):
+                        st.session_state["pending_human_reviews"].append(review_case)
+                        
+                    st.session_state["owner_action_msg"] = "⏳ Advertisement is Pending for Human Review in the Admin Dashboard."
+                    st.session_state["moderation_report"] = None
+                    st.session_state["current_ad_id"] = None
+                    st.rerun()
                     
             # Confirmation modal for delete action
             if st.session_state.get("confirm_delete", False):
