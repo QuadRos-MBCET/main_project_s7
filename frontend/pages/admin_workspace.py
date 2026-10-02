@@ -180,34 +180,54 @@ def admin_dashboard():
 
     with tab2:
         st.subheader("✅ Human Reviewed Cases History")
-        st.caption("Advertisements that have completed human review")
+        st.caption("Advertisements that have completed human review. You may override previous decisions here.")
         
         if not reviewed_cases:
             st.info("No cases have completed human review yet.")
         else:
-            formatted_cases = []
-            for r in reviewed_cases:
-                formatted_cases.append({
-                    "Review ID": r.get("review_id"),
-                    "Ad ID": r.get("ad_id"),
-                    "Title": r.get("title"),
-                    "Media Type": r.get("media_type", "").upper(),
-                    "AI Rating": r.get("ai_classification"),
-                    "Human Decision": r.get("human_decision"),
-                    "Status": r.get("review_status"),
-                    "Review Comment": r.get("review_comment"),
-                    "Reviewed At": r.get("reviewed_at")
-                })
-            st.dataframe(formatted_cases, use_container_width=True)
+            for i, r in enumerate(reversed(reviewed_cases)):
+                with st.expander(f"Review #{r.get('review_id')} — Ad #{r.get('ad_id')}: {r.get('title')} (Current: {r.get('human_decision')})"):
+                    st.write(f"**Original AI Rating:** `{r.get('ai_classification')}`")
+                    st.write(f"**Review Comment:** *{r.get('review_comment', 'None')}*")
+                    st.write(f"**Reviewed At:** {r.get('reviewed_at')}")
+                    
+                    st.markdown("#### Modify Decision")
+                    
+                    opts = ["SAFE_FOR_ALL", "SAFE_14_PLUS", "SAFE_18_PLUS", "UNSAFE_FOR_ALL"]
+                    current_idx = opts.index(r.get("human_decision")) if r.get("human_decision") in opts else 0
+                    
+                    new_dec = st.selectbox("Update Age Restriction:", opts, index=current_idx, key=f"edit_dec_{r.get('review_id')}")
+                    
+                    if st.button("Update Decision", key=f"btn_upd_{r.get('review_id')}"):
+                        # Update the reviewed case
+                        old_dec = r.get("human_decision")
+                        r["human_decision"] = new_dec
+                        r["review_status"] = "HUMAN_REVIEWED_EDITED"
+                        
+                        # Update global_ads feed logic
+                        if "global_ads" not in st.session_state:
+                            st.session_state["global_ads"] = []
+                            
+                        # Remove existing ad from global_ads if it exists
+                        st.session_state["global_ads"] = [a for a in st.session_state["global_ads"] if a.get("ad_id") != r.get("ad_id")]
+                        
+                        # Re-add if it's not unsafe
+                        if new_dec != "UNSAFE_FOR_ALL":
+                            feed_ad = r.copy()
+                            feed_ad["classification"] = new_dec
+                            st.session_state["global_ads"].append(feed_ad)
+                            
+                        st.session_state["admin_action_msg"] = f"✏️ Decision for Case #{r.get('review_id')} updated from {old_dec} to {new_dec}."
+                        st.rerun()
             
     with tab3:
         st.subheader("📈 Human Review Analytics & System Performance")
         
-        accepted_count = len([c for c in reviewed_cases if c.get("human_decision") == "ACCEPT"])
-        rejected_count = len([c for c in reviewed_cases if c.get("human_decision") == "REJECT"])
+        accepted_count = len([c for c in reviewed_cases if c.get("human_decision") != "UNSAFE_FOR_ALL"])
+        rejected_count = len([c for c in reviewed_cases if c.get("human_decision") == "UNSAFE_FOR_ALL"])
         pending_count = len(pending_cases)
         
         scol1, scol2, scol3 = st.columns(3)
         scol1.metric("Pending Queue", f"{pending_count} case(s)")
-        scol2.metric("Human Approvals", f"{accepted_count} case(s)")
-        scol3.metric("Human Rejections", f"{rejected_count} case(s)")
+        scol2.metric("Human Approvals (Safe)", f"{accepted_count} case(s)")
+        scol3.metric("Human Rejections (Unsafe)", f"{rejected_count} case(s)")

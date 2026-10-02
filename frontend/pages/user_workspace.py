@@ -161,35 +161,54 @@ def user_dashboard():
                     if st.button("Continue to Age-Aware Feed", use_container_width=True):
                         st.rerun()
     else:
-        # Age-Aware Feed
-        st.header("User Feed (Age-Aware)")
-        st.success(f"Verified Profile: **{st.session_state['verified_age_category']}**")
+        st.markdown("""
+        <style>
+        .ig-header {
+            font-size: 26px; font-weight: bold; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; color: #e1306c;
+        }
+        .ig-post {
+            border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;
+            background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .ig-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #1e293b;}
+        .ig-caption { font-size: 14px; color: #334155; margin-bottom: 10px; }
+        .ig-footer { font-size: 12px; color: #94a3b8; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px;}
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("<div class='ig-header'>📸 Instakill</div>", unsafe_allow_html=True)
+        
+        # Tabs for Instagram style
+        tab_home, tab_reels, tab_msg, tab_profile = st.tabs(["🏠 Home", "🎥 Reels", "✉️ Messages", "👤 Profile"])
         
         user_norm = st.session_state["verified_age_norm"]
         global_ads = st.session_state.get("global_ads", [])
         
+        # Filter ads logic based on actual norm strings
         ads = []
         for ad in global_ads:
-            # Policy enforcement logic
             c = ad.get("classification", "")
             allowed = False
-            if c == "SAFE_FOR_ALL":
+            if c == "SAFE_FOR_ALL": 
                 allowed = True
-            elif c == "SAFE_14_PLUS" and user_norm in ["AGE_14_PLUS", "AGE_18_PLUS"]:
+            elif c == "SAFE_14_PLUS" and user_norm in ["AGE_14_TO_17", "AGE_18_PLUS"]: 
                 allowed = True
-            elif c == "SAFE_18_PLUS" and user_norm == "AGE_18_PLUS":
+            elif c == "SAFE_18_PLUS" and user_norm == "AGE_18_PLUS": 
                 allowed = True
                 
             if allowed:
                 ads.append(ad)
 
-        if not ads:
-            st.info("No advertisements currently available for your age category.")
-        else:
-            for ad in ads:
-                with st.container():
-                    st.markdown(f"### {ad.get('title')}")
-                    st.write(f"**Caption:** {ad.get('caption')}")
+        with tab_reels:
+            st.subheader("Explore Reels")
+            if not ads:
+                st.info("No reels currently available for your age category.")
+            else:
+                for ad in ads:
+                    st.markdown("<div class='ig-post'>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='ig-title'>@{ad.get('title').replace(' ', '_').lower()}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='ig-caption'>{ad.get('caption')}</div>", unsafe_allow_html=True)
                     
                     filepath = ad.get("file_path")
                     if filepath and os.path.exists(filepath):
@@ -200,5 +219,23 @@ def user_dashboard():
                     else:
                         st.warning("Media missing.")
                         
-                    st.caption(f"SafeAd Policy: {ad.get('classification')}")
-                    st.markdown("---")
+                    st.markdown(f"<div class='ig-footer'>❤️ 1.2M &nbsp; 💬 4.5k &nbsp; 🔁 Share &nbsp; | &nbsp; 🛡️ SafeAd Policy: {ad.get('classification')}</div>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+        with tab_home:
+            st.subheader("Your Feed")
+            st.write("Welcome to your personalized social feed! Check out the **Reels** tab to see age-curated content.")
+            # A generic static image for Home
+            st.image("https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", use_container_width=True, caption="Welcome to Instakill!")
+            
+        with tab_msg:
+            st.subheader("Direct Messages")
+            st.info("You have no new messages.")
+            
+        with tab_profile:
+            st.subheader("Your Profile")
+            st.success(f"Verified Age Profile: **{st.session_state['verified_age_category']}**")
+            st.write(f"Account Policy Group: `{user_norm}`")
+            if st.button("Log Out"):
+                st.session_state["verified_age_category"] = None
+                st.rerun()
