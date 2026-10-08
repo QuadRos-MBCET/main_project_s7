@@ -6,9 +6,9 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from frontend.auth.auth_manager import login_page
-from frontend.pages.owner_workspace import owner_dashboard
-from frontend.pages.user_workspace import user_dashboard
-from frontend.pages.admin_workspace import admin_dashboard
+from frontend.views.owner_workspace import owner_dashboard
+from frontend.views.user_workspace import user_dashboard
+from frontend.views.admin_workspace import admin_dashboard
 
 st.set_page_config(
     page_title="SafeAd AI - Unified Platform",
