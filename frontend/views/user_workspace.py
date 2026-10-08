@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 
 # Use dynamic import to avoid namespace collision with SafeAd's 'website' package
-face_age_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../face-age"))
+face_age_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../sooraj_face_age_core/face-age"))
 if face_age_dir not in sys.path:
     sys.path.insert(0, face_age_dir)
 

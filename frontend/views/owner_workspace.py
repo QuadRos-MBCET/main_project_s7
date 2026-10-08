@@ -6,7 +6,7 @@ import requests
 from datetime import datetime
 
 # Inject backend2jb into sys.path to allow Joseph's true modules to load exactly as they do in his branch
-jb_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "backend2jb"))
+jb_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "joseph_safead_core/backend2jb"))
 if jb_dir not in sys.path:
     sys.path.insert(0, jb_dir)
 
