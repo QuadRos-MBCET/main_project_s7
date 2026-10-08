@@ -131,93 +131,93 @@ def user_dashboard():
             if live_image_np is not None:
                 st.image(live_image_np, caption="Live Captured Face", use_container_width=True)
 
-        st.markdown("---")
-        st.markdown("### 📊 ID vs Live Face Cross-Matching Verdict")
+            st.markdown("---")
+            st.markdown("### 📊 ID vs Live Face Cross-Matching Verdict")
         
-        if id_image_np is not None and live_image_np is not None:
-            with st.spinner("Executing Face Matching & ViT Age Estimation..."):
-                res = verify_id_card_and_live_face(id_image_np, live_image_np, manual_dob, pdf_text)
+            if id_image_np is not None and live_image_np is not None:
+                with st.spinner("Executing Face Matching & ViT Age Estimation..."):
+                    res = verify_id_card_and_live_face(id_image_np, live_image_np, manual_dob, pdf_text)
                 
-                is_spoof = res.get("is_spoof", False)
-                status = res.get("status", "")
-                msg = res.get("message", "")
+                    is_spoof = res.get("is_spoof", False)
+                    status = res.get("status", "")
+                    msg = res.get("message", "")
                 
-                if is_spoof:
-                    st.error("🚨 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
-                    st.warning(f"🚫 Photo/Screen Spoof Detected! ({res.get('spoof_reason')})")
-                elif status == "VERIFIED_SUCCESS":
-                    st.success(f"✅ {msg}")
-                elif status == "FAILED_FACE_MISMATCH":
-                    st.error(f"❌ {msg}")
-                else:
-                    st.warning(f"⚠️ {msg}")
+                    if is_spoof:
+                        st.error("🚨 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+                        st.warning(f"🚫 Photo/Screen Spoof Detected! ({res.get('spoof_reason')})")
+                    elif status == "VERIFIED_SUCCESS":
+                        st.success(f"✅ {msg}")
+                    elif status == "FAILED_FACE_MISMATCH":
+                        st.error(f"❌ {msg}")
+                    else:
+                        st.warning(f"⚠️ {msg}")
                     
-                # Side-by-side face comparison & DOB metrics
-                c_f1, c_f2, c_score = st.columns([1.2, 1.2, 1.6])
+                    # Side-by-side face comparison & DOB metrics
+                    c_f1, c_f2, c_score = st.columns([1.2, 1.2, 1.6])
                 
-                with c_f1:
-                    st.markdown("**ID Card Face Photo**")
-                    id_face = res.get("id_face")
-                    if id_face is not None:
-                        st.image(id_face, width=150)
-                    else:
-                        st.warning("No face detected in ID.")
-                    st.markdown(f"<div class='metric-lbl'>ID Card DOB: {res.get('id_dob_str', 'N/A')}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='metric-lbl'>Extracted ID Age: {res.get('id_age', 'Unknown')} yrs ({res.get('id_age_category', 'Unknown')})</div>", unsafe_allow_html=True)
-
-                with c_f2:
-                    st.markdown("**Live Captured Face**")
-                    live_face = res.get("live_face")
-                    if live_face is not None:
-                        st.image(live_face, width=150)
-                    else:
-                        st.warning("No live face detected.")
-                    st.markdown(f"<div class='metric-lbl'>Live ViT Predicted Age: {res.get('live_age_category', 'Unknown')}</div>", unsafe_allow_html=True)
-
-                with c_score:
-                    st.markdown("**Face Similarity Score**")
-                    score = res.get("face_similarity", 0)
-                    st.markdown(f"<div class='metric-lbl'>Face Match Confidence</div><div style='font-size:32px; font-weight:bold; color:#334155;'>{score*100:.1f}%</div>", unsafe_allow_html=True)
-                    st.progress(float(score))
-                    
-                    if res.get("face_match"):
-                        st.success("✅ Facial Biometrics Match!")
-                    else:
-                        st.error("❌ Facial Mismatch Detected!")
-                        
-                    if res.get("dob_age_match"):
-                        st.success("✅ ID DOB matches Live Face Age!")
-                    else:
-                        st.error("❌ Age verification mismatch!")
-
-                # Set session state if successful
-                if status == "VERIFIED_SUCCESS":
-                    category = res.get("id_age_category", "UNKNOWN")
-                    norm_group = "AGE_18_PLUS"
-                    if category == "Less than 14":
-                        norm_group = "UNDER_14"
-                    elif category == "14 to 17":
-                        norm_group = "AGE_14_TO_17"
-                        
-                    st.markdown("### Complete Registration")
-                    if st.button("Create Account & Enter Instakill", type="primary", use_container_width=True):
-                        ru = st.session_state.get("reg_usr", "")
-                        rp = st.session_state.get("reg_pwd", "")
-                        
-                        if not ru or not rp:
-                            st.error("Please enter a username and password at the top of the form.")
-                        elif ru in st.session_state["user_db"]:
-                            st.error("Username already taken. Please choose another one.")
+                    with c_f1:
+                        st.markdown("**ID Card Face Photo**")
+                        id_face = res.get("id_face")
+                        if id_face is not None:
+                            st.image(id_face, width=150)
                         else:
-                            st.session_state["user_db"][ru] = {
-                                "password": rp,
-                                "category": category,
-                                "norm": norm_group
-                            }
-                            st.session_state["verified_age_category"] = category
-                            st.session_state["verified_age_norm"] = norm_group
-                            st.success("Account created successfully!")
-                            st.rerun()
+                            st.warning("No face detected in ID.")
+                        st.markdown(f"<div class='metric-lbl'>ID Card DOB: {res.get('id_dob_str', 'N/A')}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='metric-lbl'>Extracted ID Age: {res.get('id_age', 'Unknown')} yrs ({res.get('id_age_category', 'Unknown')})</div>", unsafe_allow_html=True)
+
+                    with c_f2:
+                        st.markdown("**Live Captured Face**")
+                        live_face = res.get("live_face")
+                        if live_face is not None:
+                            st.image(live_face, width=150)
+                        else:
+                            st.warning("No live face detected.")
+                        st.markdown(f"<div class='metric-lbl'>Live ViT Predicted Age: {res.get('live_age_category', 'Unknown')}</div>", unsafe_allow_html=True)
+
+                    with c_score:
+                        st.markdown("**Face Similarity Score**")
+                        score = res.get("face_similarity", 0)
+                        st.markdown(f"<div class='metric-lbl'>Face Match Confidence</div><div style='font-size:32px; font-weight:bold; color:#334155;'>{score*100:.1f}%</div>", unsafe_allow_html=True)
+                        st.progress(float(score))
+                    
+                        if res.get("face_match"):
+                            st.success("✅ Facial Biometrics Match!")
+                        else:
+                            st.error("❌ Facial Mismatch Detected!")
+                        
+                        if res.get("dob_age_match"):
+                            st.success("✅ ID DOB matches Live Face Age!")
+                        else:
+                            st.error("❌ Age verification mismatch!")
+
+                    # Set session state if successful
+                    if status == "VERIFIED_SUCCESS":
+                        category = res.get("id_age_category", "UNKNOWN")
+                        norm_group = "AGE_18_PLUS"
+                        if category == "Less than 14":
+                            norm_group = "UNDER_14"
+                        elif category == "14 to 17":
+                            norm_group = "AGE_14_TO_17"
+                        
+                        st.markdown("### Complete Registration")
+                        if st.button("Create Account & Enter Instakill", type="primary", use_container_width=True):
+                            ru = st.session_state.get("reg_usr", "")
+                            rp = st.session_state.get("reg_pwd", "")
+                        
+                            if not ru or not rp:
+                                st.error("Please enter a username and password at the top of the form.")
+                            elif ru in st.session_state["user_db"]:
+                                st.error("Username already taken. Please choose another one.")
+                            else:
+                                st.session_state["user_db"][ru] = {
+                                    "password": rp,
+                                    "category": category,
+                                    "norm": norm_group
+                                }
+                                st.session_state["verified_age_category"] = category
+                                st.session_state["verified_age_norm"] = norm_group
+                                st.success("Account created successfully!")
+                                st.rerun()
     else:
         st.markdown("""
         <style>
