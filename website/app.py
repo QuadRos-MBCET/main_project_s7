@@ -4,7 +4,10 @@ import os
 import time
 import sys
 import subprocess
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore")
 
 # Ensure parent directory is in sys.path for website package imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -130,7 +133,7 @@ with c_id:
             id_image_np = np.array(Image.open(up_id).convert("RGB"))
             
     if id_image_np is not None:
-        st.image(id_image_np, caption="Scanned ID Card / PDF Page", use_container_width=True)
+        st.image(id_image_np, caption="Scanned ID Card / PDF Page", width="stretch")
 
 with c_live:
     st.markdown("#### 2. Live Face Camera Video Stream")
@@ -169,7 +172,7 @@ with c_live:
                 annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
                 
                 if annotated is not None:
-                    video_placeholder.image(annotated, caption="Live Front Camera Video (Locked 30 FPS | ArcFace)", use_container_width=True)
+                    video_placeholder.image(annotated, caption="Live Front Camera Video (Locked 30 FPS | ArcFace)", width="stretch")
                     
                     is_spoof = info.get("is_spoof", False)
                     match_score = info.get("match_score")
@@ -223,7 +226,7 @@ with c_live:
             
     else:
         if live_image_np is not None:
-            video_placeholder.image(live_image_np, caption="Frozen Live Camera Snapshot", use_container_width=True)
+            video_placeholder.image(live_image_np, caption="Frozen Live Camera Snapshot", width="stretch")
         else:
             video_placeholder.markdown("""
             <div style="border:2px dashed #cbd5e1; border-radius:14px; padding:32px; text-align:center; background:#f8fafc; margin-bottom:12px;">
