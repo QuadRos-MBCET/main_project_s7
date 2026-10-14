@@ -126,15 +126,19 @@ with c_id:
     id_pdf_text = None
     
     if up_id:
-        if up_id.name.lower().endswith('.pdf'):
-            with st.spinner("Rendering PDF page and extracting document text..."):
-                id_image_np, id_pdf_text = process_pdf_id_document(up_id.getvalue())
-            if id_image_np is not None:
-                st.success(f"📄 PDF Loaded: '{up_id.name}' (First page rendered)")
+        try:
+            if up_id.name.lower().endswith('.pdf'):
+                with st.spinner("Rendering PDF page and extracting document text..."):
+                    id_image_np, id_pdf_text = process_pdf_id_document(up_id.getvalue())
+                if id_image_np is not None:
+                    st.success(f"📄 PDF Loaded: '{up_id.name}' (First page rendered)")
+                else:
+                    st.error(f"Failed to process PDF: {id_pdf_text}")
             else:
-                st.error(f"Failed to process PDF: {id_pdf_text}")
-        else:
-            id_image_np = np.array(Image.open(up_id).convert("RGB"))
+                up_id.seek(0)
+                id_image_np = np.array(Image.open(up_id).convert("RGB"))
+        except Exception as e:
+            st.error(f"Error loading uploaded ID: {e}")
             
     if id_image_np is not None:
         st.image(id_image_np, caption="Scanned ID Card / PDF Page", width="stretch")
@@ -146,6 +150,12 @@ with c_live:
         if "latest_live_frame" in st.session_state and st.session_state["latest_live_frame"] is not None:
             st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
             st.session_state["t1_cam_toggle"] = False
+            if "vision_engine" in st.session_state:
+                try:
+                    st.session_state["vision_engine"].stop()
+                except Exception:
+                    pass
+                del st.session_state["vision_engine"]
 
     def _on_clear_click():
         if "frozen_live_frame" in st.session_state:
@@ -167,68 +177,79 @@ with c_live:
     if cam_active:
         st.caption("🟢 Live Front Camera Video Active — 30 FPS ArcFace Real-Time Verification")
         
-        engine = Realtime30FPSVisionEngine(id_image_np=id_image_np, target_fps=30.0)
+        # Seamlessly reuse or initialize vision engine so that removing or replacing an ID card
+        # does NOT recreate the camera hardware session or cause DirectShow COM collisions.
+        if "vision_engine" not in st.session_state or not getattr(st.session_state["vision_engine"], "running", False):
+            st.session_state["vision_engine"] = Realtime30FPSVisionEngine(id_image_np=id_image_np, target_fps=30.0)
+        else:
+            st.session_state["vision_engine"].update_id_image(id_image_np)
+
+        engine = st.session_state["vision_engine"]
         target_interval = 1.0 / 30.0  # Strict 33.33ms pacing for 30 FPS
         
-        try:
-            while True:
-                t_frame_start = time.time()
-                annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
+        while engine.running:
+            t_frame_start = time.time()
+            annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
+            
+            if annotated is not None:
+                video_placeholder.image(annotated, caption="Live Front Camera Video (Locked 30 FPS | ArcFace)", width="stretch")
                 
-                if annotated is not None:
-                    video_placeholder.image(annotated, caption="Live Front Camera Video (Locked 30 FPS | ArcFace)", width="stretch")
-                    
-                    is_spoof = info.get("is_spoof", False)
-                    match_score = info.get("match_score")
-                    is_match = info.get("is_match")
-                    
-                    if is_spoof:
-                        score_html = ""
-                        if match_score is not None:
-                            score_color = "#16a34a" if is_match else "#dc2626"
-                            score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
-                            score_html = f"""
-                            <div style="border-top:1px dashed #fca5a5; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <span style="font-weight:700; color:#991b1b; font-size:13px;">{score_tag} (Cross-Matched):</span><br>
-                                    <span style="font-size:11px; color:#7f1d1d;">ArcFace Biometrics Computed Despite Spoof</span>
-                                </div>
-                                <div style="font-size:22px; font-weight:800; color:{score_color};">{match_score:.1%}</div>
-                            </div>
-                            """
-                        spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
-                        status_placeholder.markdown(f"""
-                        <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
-                            <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
-                            <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
-                            {score_html}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    elif match_score is not None:
-                        color = "#16a34a" if is_match else "#dc2626"
-                        tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
-                        status_placeholder.markdown(f"""
-                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                is_spoof = info.get("is_spoof", False)
+                match_score = info.get("match_score")
+                is_match = info.get("is_match")
+                
+                if is_spoof:
+                    score_html = ""
+                    if match_score is not None:
+                        score_color = "#16a34a" if is_match else "#dc2626"
+                        score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
+                        score_html = f"""
+                        <div style="border-top:1px dashed #fca5a5; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
                             <div>
-                                <span style="font-weight:700; color:{color};">{tag}</span><br>
-                                <span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence [30 FPS]</span>
+                                <span style="font-weight:700; color:#991b1b; font-size:13px;">{score_tag} (Cross-Matched):</span><br>
+                                <span style="font-size:11px; color:#7f1d1d;">ArcFace Biometrics Computed Despite Spoof</span>
                             </div>
-                            <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
+                            <div style="font-size:22px; font-weight:800; color:{score_color};">{match_score:.1%}</div>
                         </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
-                        
-                    st.session_state["latest_live_frame"] = raw_rgb
-                    live_image_np = raw_rgb
+                        """
+                    spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
+                    status_placeholder.markdown(f"""
+                    <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
+                        <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
+                        <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
+                        {score_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif match_score is not None:
+                    color = "#16a34a" if is_match else "#dc2626"
+                    tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
+                    status_placeholder.markdown(f"""
+                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <span style="font-weight:700; color:{color};">{tag}</span><br>
+                            <span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence [30 FPS]</span>
+                        </div>
+                        <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
                     
-                elapsed = time.time() - t_frame_start
-                sleep_time = max(0.001, target_interval - elapsed)
-                time.sleep(sleep_time)
-        finally:
-            engine.stop()
+                st.session_state["latest_live_frame"] = raw_rgb
+                live_image_np = raw_rgb
+                
+            elapsed = time.time() - t_frame_start
+            sleep_time = max(0.001, target_interval - elapsed)
+            time.sleep(sleep_time)
             
     else:
+        if "vision_engine" in st.session_state:
+            try:
+                st.session_state["vision_engine"].stop()
+            except Exception:
+                pass
+            del st.session_state["vision_engine"]
+            
         if live_image_np is not None:
             video_placeholder.image(live_image_np, caption="Frozen Live Camera Snapshot", width="stretch")
         else:

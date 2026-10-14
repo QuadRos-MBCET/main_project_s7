@@ -623,6 +623,11 @@ class Realtime30FPSVisionEngine:
     def __init__(self, id_image_np=None, target_fps=30.0):
         self.target_fps = target_fps
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not self.cap.isOpened():
+            time.sleep(0.25)
+            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if not self.cap.isOpened():
+                self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FPS, int(target_fps))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -662,6 +667,11 @@ class Realtime30FPSVisionEngine:
             emb = extract_arcface_embedding(id_face)
             with self.lock:
                 self.id_emb = emb
+        else:
+            with self.lock:
+                self.id_emb = None
+                self.latest_match_score = None
+                self.latest_is_match = None
 
     def _camera_worker(self):
         while self.running:
