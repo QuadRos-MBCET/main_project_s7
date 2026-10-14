@@ -1,4 +1,11 @@
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import cv2
+cv2.setNumThreads(1)
+
 import numpy as np
 import pandas as pd
 import random
@@ -373,6 +380,7 @@ import datetime
 try:
     import timm
     import torch
+    torch.set_num_threads(1)
     import torch.nn.functional as F
     # Pretrained ArcFace ViT MS1MV3 (Additive Angular Margin Loss, s=64, m=0.50, 512-D embeddings)
     _ARCFACE_EMBEDDER = timm.create_model('hf_hub:gaunernst/vit_tiny_patch8_112.arcface_ms1mv3', pretrained=True).eval()
@@ -657,11 +665,17 @@ class Realtime30FPSVisionEngine:
 
     def _camera_worker(self):
         while self.running:
-            ret, frame = self.cap.read()
-            if ret:
-                with self.lock:
-                    self.latest_raw_frame = frame
-            time.sleep(0.005)
+            try:
+                ret, frame = self.cap.read()
+                if not self.running:
+                    break
+                if ret and frame is not None:
+                    with self.lock:
+                        self.latest_raw_frame = frame
+                else:
+                    time.sleep(0.02)
+            except Exception:
+                break
 
     def _ai_worker(self):
         frame_counter = 0
@@ -757,12 +771,23 @@ class Realtime30FPSVisionEngine:
 
     def stop(self):
         self.running = False
-        try:
-            self.cam_thread.join(timeout=0.25)
-            self.ai_thread.join(timeout=0.25)
-        except Exception:
-            pass
-        self.cap.release()
+        if hasattr(self, 'cam_thread') and self.cam_thread.is_alive():
+            try:
+                self.cam_thread.join(timeout=1.5)
+            except Exception:
+                pass
+        if hasattr(self, 'ai_thread') and self.ai_thread.is_alive():
+            try:
+                self.ai_thread.join(timeout=1.5)
+            except Exception:
+                pass
+        with self.lock:
+            if hasattr(self, 'cap') and self.cap is not None:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
 
 
 def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
