@@ -178,6 +178,7 @@ if id_image_np is not None and live_image_np is not None:
         st.markdown("##### Face Similarity Score")
         st.metric("Face Match Confidence", f"{res['face_similarity']:.1%}")
         st.progress(float(res['face_similarity']))
+        st.caption(f"Biometric Model: **{res.get('model_used', 'ArcFace (MS1MV3)')}**")
         
         if res["face_match"]:
             st.success("✅ Facial Biometrics Match!")

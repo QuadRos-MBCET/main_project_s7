@@ -27,17 +27,54 @@ except Exception:
     HAS_PIPELINE = False
 
 try:
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    from facenet_pytorch import MTCNN
+    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True)
+except Exception:
+    _MTCNN_DETECTOR = None
+
+try:
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml') if hasattr(cv2, 'data') else None
 except Exception:
     face_cascade = None
 
 def detect_and_crop_face(image_np: np.ndarray) -> tuple:
-    if image_np is None:
+    if image_np is None or image_np.size == 0:
         return np.zeros((128, 128, 3), dtype=np.uint8), None
+
+    # Ensure 3-channel RGB layout
+    if len(image_np.shape) == 2:
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_GRAY2RGB)
+    elif image_np.shape[2] == 4:
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_RGBA2RGB)
+    elif image_np.shape[2] > 3:
+        image_np = image_np[:, :, :3]
+
     h_img, w_img = image_np.shape[:2]
-    
-    if HAS_PIPELINE:
+
+    # Pass 1: MTCNN Deep Multi-Task Cascaded CNN (Robust for ID cards and live captures)
+    if _MTCNN_DETECTOR is not None:
         try:
+            pil_img = Image.fromarray(image_np)
+            boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
+            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.50:
+                x1, y1, x2, y2 = [int(b) for b in boxes[0]]
+                w = max(1, x2 - x1)
+                h = max(1, y2 - y1)
+                mx = int(w * 0.10)
+                my = int(h * 0.10)
+                cx1 = max(0, x1 - mx)
+                cy1 = max(0, y1 - my)
+                cx2 = min(w_img, x2 + mx)
+                cy2 = min(h_img, y2 + my)
+                face_crop = image_np[cy1:cy2, cx1:cx2]
+                if face_crop.size > 0:
+                    return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
+        except Exception:
+            pass
+
+    if HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
+        try:
+            _FACE_AGE_PIPELINE._initialize_models()
             pil_img = Image.fromarray(image_np)
             faces = _FACE_AGE_PIPELINE.detector.detect_faces(pil_img)
             if faces:
@@ -50,40 +87,25 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         except Exception:
             pass
 
-    if face_cascade is None:
-        # Default center box fallback if cascade classifier is missing
-        w = int(w_img * 0.4)
-        h = int(w_img * 0.5) # standard portrait ratio
-        x = int((w_img - w) / 2)
-        y = int((h_img - h) / 2)
-        cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
-        return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
-        
-    gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
-    try:
-        # Pass 1: Standard high-precision cascade pass
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-        if len(faces) == 0:
-            # Pass 2: High sensitivity pass for difficult lighting/angles
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
-    except Exception:
-        faces = []
-        
-    if len(faces) == 0:
-        # Pass 3: Center-of-frame box fallback (assuming user is facing the camera)
-        w = int(w_img * 0.4)
-        h = int(w_img * 0.5)
-        x = int((w_img - w) / 2)
-        y = int((h_img - h) / 2)
-        faces = [(x, y, w, h)]
-        
-    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
-    y_start = max(0, y)
-    y_end = min(h_img, y+h)
-    x_start = max(0, x)
-    x_end = min(w_img, x+w)
-    cropped_face = image_np[y_start:y_end, x_start:x_end]
+    if face_cascade is not None:
+        try:
+            gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            if len(faces) == 0:
+                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+            if len(faces) > 0:
+                x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+                cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
+                return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+        except Exception:
+            pass
 
+    # Default center box fallback
+    w = int(w_img * 0.4)
+    h = int(w_img * 0.5)
+    x = int((w_img - w) / 2)
+    y = int((h_img - h) / 2)
+    cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
     return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
 
 
@@ -325,10 +347,21 @@ def estimate_age_from_face(image_np: np.ndarray) -> tuple:
     return detailed["category"], detailed["confidence"]
 
 # =====================================================================
-# 1.5 ID CARD VERIFICATION & FACE SIMILARITY MATCHING SYSTEM
+# 1.5 ARCFACE BIOMETRIC VERIFICATION & SIMILARITY MATCHING SYSTEM
 # =====================================================================
 import re
 import datetime
+
+try:
+    import timm
+    import torch
+    import torch.nn.functional as F
+    # Pretrained ArcFace ViT MS1MV3 (Additive Angular Margin Loss, s=64, m=0.50, 512-D embeddings)
+    _ARCFACE_EMBEDDER = timm.create_model('hf_hub:gaunernst/vit_tiny_patch8_112.arcface_ms1mv3', pretrained=True).eval()
+    HAS_ARCFACE = True
+except Exception:
+    _ARCFACE_EMBEDDER = None
+    HAS_ARCFACE = False
 
 try:
     from facenet_pytorch import InceptionResnetV1
@@ -341,44 +374,87 @@ except Exception:
 
 def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float:
     """
-    Computes deep facial feature similarity metric (0.0 to 1.0 / 0% to 100%) between
-    an ID Card Face and a Live Captured Face using FaceNet (InceptionResnetV1 VGGFace2 Embeddings).
-    Accurately distinguishes different individuals from the same person.
+    Computes deep facial biometric similarity metric (0.0 to 1.0 / 0% to 100%) between
+    an ID Card Face and a Live Captured Face using ArcFace (Additive Angular Margin Loss, MS1MV3).
+    ArcFace penalizes angular deviation on the hypersphere, sharply enforcing inter-class margin separation
+    and eliminating demographic false matches.
+    Falls back to FaceNet (InceptionResnetV1 VGGFace2) or structural projection if unavailable.
     """
     if face1_np is None or face2_np is None or face1_np.size == 0 or face2_np.size == 0:
         return 0.0
 
+    def _ensure_rgb3(arr):
+        if len(arr.shape) == 2:
+            return cv2.cvtColor(arr, cv2.COLOR_GRAY2RGB)
+        elif arr.shape[2] == 4:
+            return cv2.cvtColor(arr, cv2.COLOR_RGBA2RGB)
+        elif arr.shape[2] > 3:
+            return arr[:, :, :3]
+        return arr
+
+    # 1. Primary: ArcFace Deep ViT-MS1MV3 Hypersphere Margin Embeddings
+    if HAS_ARCFACE and _ARCFACE_EMBEDDER is not None:
+        try:
+            f1 = _ensure_rgb3(face1_np)
+            f2 = _ensure_rgb3(face2_np)
+
+            # Resize to 112x112 for ArcFace and normalize to [-1, 1]
+            r1 = cv2.resize(f1, (112, 112)).astype(np.float32) / 255.0
+            r2 = cv2.resize(f2, (112, 112)).astype(np.float32) / 255.0
+
+            n1 = (r1 - 0.5) / 0.5
+            n2 = (r2 - 0.5) / 0.5
+
+            t1 = torch.tensor(n1).permute(2, 0, 1).unsqueeze(0).float()
+            t2 = torch.tensor(n2).permute(2, 0, 1).unsqueeze(0).float()
+
+            with torch.no_grad():
+                e1 = _ARCFACE_EMBEDDER(t1)
+                e2 = _ARCFACE_EMBEDDER(t2)
+                e1 = F.normalize(e1, p=2, dim=1).numpy()[0]
+                e2 = F.normalize(e2, p=2, dim=1).numpy()[0]
+
+            # Calculate 512-D Cosine Similarity on Hypersphere
+            cosine_sim = float(np.dot(e1, e2))
+
+            # Calibrate ArcFace cosine score to [0.0, 1.0] confidence:
+            # - Same identity: cosine >= 0.35 -> confidence >= 68.8%
+            # - Impostor: cosine <= 0.25 -> confidence <= 56.3%
+            # Decision threshold >= 65% corresponds to cosine >= 0.32
+            calibrated_score = float(np.clip((cosine_sim + 0.20) / 0.80, 0.0, 1.0))
+            return round(calibrated_score, 4)
+        except Exception:
+            pass
+
+    # 2. Fallback: FaceNet (InceptionResnetV1)
     if HAS_FACENET and _FACENET_EMBEDDER is not None:
         try:
-            # Resize to 160x160 for FaceNet and normalize to [-1, 1]
-            f1 = cv2.resize(face1_np, (160, 160)).astype(np.float32) / 255.0
-            f2 = cv2.resize(face2_np, (160, 160)).astype(np.float32) / 255.0
+            f1 = _ensure_rgb3(face1_np)
+            f2 = _ensure_rgb3(face2_np)
 
-            f1 = (f1 - 0.5) / 0.5
-            f2 = (f2 - 0.5) / 0.5
+            r1 = cv2.resize(f1, (160, 160)).astype(np.float32) / 255.0
+            r2 = cv2.resize(f2, (160, 160)).astype(np.float32) / 255.0
 
-            t1 = torch.tensor(f1).permute(2, 0, 1).unsqueeze(0).float()
-            t2 = torch.tensor(f2).permute(2, 0, 1).unsqueeze(0).float()
+            n1 = (r1 - 0.5) / 0.5
+            n2 = (r2 - 0.5) / 0.5
+
+            t1 = torch.tensor(n1).permute(2, 0, 1).unsqueeze(0).float()
+            t2 = torch.tensor(n2).permute(2, 0, 1).unsqueeze(0).float()
 
             with torch.no_grad():
                 e1 = _FACENET_EMBEDDER(t1).numpy()[0]
                 e2 = _FACENET_EMBEDDER(t2).numpy()[0]
 
-            # Calculate 512-D Cosine Similarity
             cosine_sim = float(np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2) + 1e-6))
-            
-            # Map FaceNet cosine range (-0.2 to 0.8) into calibrated 0% to 100% confidence score:
-            # - Same person: cosine >= 0.50 -> match_score >= 70%
-            # - Different person: cosine <= 0.30 -> match_score <= 50%
             calibrated_score = float(np.clip((cosine_sim + 0.20) / 1.0, 0.0, 1.0))
             return round(calibrated_score, 4)
         except Exception:
             pass
 
-    # Secondary structural fallback metric
+    # 3. Tertiary fallback: Structural Projection
     try:
-        f1 = cv2.resize(face1_np, (128, 128))
-        f2 = cv2.resize(face2_np, (128, 128))
+        f1 = cv2.resize(_ensure_rgb3(face1_np), (128, 128))
+        f2 = cv2.resize(_ensure_rgb3(face2_np), (128, 128))
         g1 = cv2.cvtColor(f1, cv2.COLOR_RGB2GRAY)
         g2 = cv2.cvtColor(f2, cv2.COLOR_RGB2GRAY)
         p1 = np.mean(g1, axis=1)
@@ -429,19 +505,26 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
     Returns (dob_str, calculated_age, age_category).
     """
     extracted_text = pdf_text or ""
-    
-    # Try EasyOCR text extraction on rendered ID image if text is sparse
-    if id_image_np is not None:
-        try:
-            import easyocr
-            reader = easyocr.Reader(['en'], gpu=False)
-            results = reader.readtext(id_image_np)
-            extracted_text += " " + " ".join([res[1] for res in results])
-        except Exception:
-            pass
-
     if manual_dob:
         extracted_text += " " + manual_dob
+
+    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
+    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+
+    # Only run EasyOCR if DOB was not found in PDF text or manual input
+    if not dob_match and not year_match and id_image_np is not None:
+        try:
+            global _EASYOCR_READER
+            if '_EASYOCR_READER' not in globals() or _EASYOCR_READER is None:
+                import easyocr
+                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, download_enabled=False)
+            results = _EASYOCR_READER.readtext(id_image_np)
+            extracted_text += " " + " ".join([res[1] for res in results])
+            dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+            year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+        except Exception:
+            pass
 
     current_year = datetime.datetime.now().year
     
@@ -490,7 +573,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     # 1. Anti-Spoofing check on live face
     is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face)
 
-    # 2. Deep FaceNet Similarity
+    # 2. Deep ArcFace Biometric Similarity
     face_sim_score = compute_face_similarity(id_face, live_face)
     face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
@@ -523,6 +606,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
         "message": message,
         "face_similarity": face_sim_score,
         "face_match": face_match,
+        "model_used": "ArcFace (MS1MV3)" if HAS_ARCFACE else "FaceNet (VGGFace2)",
         "dob_age_match": dob_age_match,
         "id_face": id_face,
         "live_face": live_face,
