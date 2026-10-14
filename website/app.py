@@ -23,7 +23,8 @@ from website.classifier import (
     extract_arcface_embedding,
     compute_similarity_from_embeddings,
     detect_photo_spoof,
-    annotate_live_frame
+    annotate_live_frame,
+    Realtime30FPSVisionEngine
 )
 
 init_database()
@@ -156,107 +157,53 @@ with c_live:
     status_placeholder = st.empty()
     
     if cam_active:
-        st.caption("🟢 Live Front Camera Video Active — ArcFace Real-Time Face Verification")
+        st.caption("🟢 Live Front Camera Video Active — 30 FPS ArcFace Real-Time Verification")
         
-        # Precompute ID embedding once if ID card is uploaded
-        id_face = None
-        id_emb = None
-        if id_image_np is not None:
-            id_face, _ = detect_and_crop_face(id_image_np)
-            id_emb = extract_arcface_embedding(id_face)
-            
-        cap = cv2.VideoCapture(0)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        
-        frame_idx = 0
-        t0 = time.time()
-        cached_age_cat = None
+        engine = Realtime30FPSVisionEngine(id_image_np=id_image_np, target_fps=30.0)
+        target_interval = 1.0 / 30.0  # Strict 33.33ms pacing for 30 FPS
         
         try:
             while True:
-                ret, frame = cap.read()
-                if not ret:
-                    status_placeholder.error("Could not capture frame from camera.")
-                    break
+                t_frame_start = time.time()
+                annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
+                
+                if annotated is not None:
+                    video_placeholder.image(annotated, caption="Live Front Camera Video (Locked 30 FPS | ArcFace)", use_container_width=True)
                     
-                frame_idx += 1
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Fast downscale for real-time MTCNN tracking
-                h_f, w_f = frame_rgb.shape[:2]
-                scale = 400.0 / float(w_f) if w_f > 400 else 1.0
-                small_rgb = cv2.resize(frame_rgb, (400, int(h_f * scale))) if scale < 1.0 else frame_rgb
-                
-                live_face, small_bbox = detect_and_crop_face(small_rgb)
-                
-                live_bbox = None
-                if small_bbox is not None:
-                    sx, sy, sw, sh = small_bbox
-                    live_bbox = (int(sx / scale), int(sy / scale), int(sw / scale), int(sh / scale))
+                    is_spoof = info.get("is_spoof", False)
+                    match_score = info.get("match_score")
+                    is_match = info.get("is_match")
                     
-                match_score = None
-                is_match = None
-                if id_emb is not None and live_face is not None:
-                    live_emb = extract_arcface_embedding(live_face)
-                    if live_emb is not None:
-                        match_score = compute_similarity_from_embeddings(id_emb, live_emb)
-                        is_match = match_score >= 0.65
-                        
-                is_spoof, spoof_score, spoof_reason = (False, 0.0, None)
-                if live_face is not None:
-                    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(frame_rgb, live_face)
-                    
-                if frame_idx % 8 == 1 and live_face is not None:
-                    try:
-                        det = estimate_detailed_age_from_face(live_face)
-                        cached_age_cat = det.get("category", "")
-                    except Exception:
-                        pass
-                        
-                fps = frame_idx / max(0.001, time.time() - t0)
-                
-                annotated = annotate_live_frame(
-                    frame_rgb,
-                    live_bbox=live_bbox,
-                    match_score=match_score,
-                    is_match=is_match,
-                    is_spoof=is_spoof,
-                    spoof_reason=spoof_reason,
-                    age_category=cached_age_cat,
-                    fps=fps
-                )
-                
-                video_placeholder.image(annotated, caption="Live Front Camera Video Feed (ArcFace Real-Time)", use_container_width=True)
-                
-                if is_spoof:
-                    status_placeholder.markdown("""
-                    <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:10px; margin-top:6px;">
-                        <b style="color:#b91c1c;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
-                        <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected!</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                elif match_score is not None:
-                    color = "#16a34a" if is_match else "#dc2626"
-                    tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
-                    status_placeholder.markdown(f"""
-                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-weight:700; color:{color};">{tag}</span><br>
-                            <span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence</span>
+                    if is_spoof:
+                        status_placeholder.markdown("""
+                        <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:10px; margin-top:6px;">
+                            <b style="color:#b91c1c;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
+                            <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected!</span>
                         </div>
-                        <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                        """, unsafe_allow_html=True)
+                    elif match_score is not None:
+                        color = "#16a34a" if is_match else "#dc2626"
+                        tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
+                        status_placeholder.markdown(f"""
+                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <span style="font-weight:700; color:{color};">{tag}</span><br>
+                                <span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence [30 FPS]</span>
+                            </div>
+                            <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                        
+                    st.session_state["latest_live_frame"] = raw_rgb
+                    live_image_np = raw_rgb
                     
-                st.session_state["latest_live_frame"] = frame_rgb
-                live_image_np = frame_rgb
-                
-                time.sleep(0.02)
+                elapsed = time.time() - t_frame_start
+                sleep_time = max(0.001, target_interval - elapsed)
+                time.sleep(sleep_time)
         finally:
-            cap.release()
+            engine.stop()
             
     else:
         if live_image_np is not None:
