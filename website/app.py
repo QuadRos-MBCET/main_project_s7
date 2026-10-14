@@ -134,22 +134,23 @@ with c_id:
 
 with c_live:
     st.markdown("#### 2. Live Face Camera Video Stream")
-    cam_active = st.toggle("🎥 Start Live Camera Feed", value=False, key="t1_cam_toggle")
     
+    def _on_freeze_click():
+        if "latest_live_frame" in st.session_state and st.session_state["latest_live_frame"] is not None:
+            st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
+            st.session_state["t1_cam_toggle"] = False
+
+    def _on_clear_click():
+        if "frozen_live_frame" in st.session_state:
+            del st.session_state["frozen_live_frame"]
+
     col_c1, col_c2 = st.columns([1, 1])
     with col_c1:
-        lock_frame = st.button("📸 Freeze Current Frame", key="freeze_btn", help="Lock current live frame for analysis & report")
+        st.button("📸 Freeze Current Frame", key="freeze_btn", on_click=_on_freeze_click, help="Lock current live frame for analysis & report")
     with col_c2:
-        clear_frozen = st.button("🔄 Clear Frozen Frame", key="clear_frozen_btn")
+        st.button("🔄 Clear Frozen Frame", key="clear_frozen_btn", on_click=_on_clear_click)
 
-    if clear_frozen and "frozen_live_frame" in st.session_state:
-        del st.session_state["frozen_live_frame"]
-        st.rerun()
-
-    if lock_frame and "latest_live_frame" in st.session_state:
-        st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
-        st.session_state["t1_cam_toggle"] = False
-        st.rerun()
+    cam_active = st.toggle("🎥 Start Live Camera Feed", value=False, key="t1_cam_toggle")
 
     live_image_np = st.session_state.get("frozen_live_frame", None)
     
