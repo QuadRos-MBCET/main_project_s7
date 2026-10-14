@@ -158,7 +158,7 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
-def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None) -> tuple[bool, float, str]:
+def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, face_bbox: tuple = None) -> tuple[bool, float, str]:
     """
     Detects whether the captured face image is a photograph/screen display (photo spoof)
     or a real live face.
@@ -169,68 +169,84 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None) ->
     if image_np is None:
         return False, 0.0, "No image"
 
-    if cropped_face is None:
-        cropped_face, _ = detect_and_crop_face(image_np)
-        
+    if face_bbox is None or cropped_face is None:
+        detected_crop, detected_bbox = detect_and_crop_face(image_np)
+        if face_bbox is None:
+            face_bbox = detected_bbox
+        if cropped_face is None:
+            cropped_face = detected_crop
+
     score_indicators = []
     reasons = []
-    
-    # 1. Specular Glare & Reflection Analysis (Screen / Photo reflection)
-    hsv = cv2.cvtColor(image_np, cv2.COLOR_RGB2HSV)
-    v_chan = hsv[:, :, 2]
-    s_chan = hsv[:, :, 1]
-    
-    specular_mask = (v_chan > 245) & (s_chan < 30)
-    specular_ratio = np.mean(specular_mask)
-    if specular_ratio > 0.015:
+    h_img, w_img = image_np.shape[:2]
+
+    # 1. Localized Screen / Printed Photo Border Detection in Face ROI
+    # Genuine live humans have natural soft shoulders/neck contours. Photo/screen attacks
+    # exhibit sharp rectangular bezel or paper border lines immediately framing the face.
+    roi_lines_count = 0
+    if face_bbox is not None:
+        x, y, w, h = face_bbox
+        pad_x = int(0.35 * w)
+        pad_y = int(0.35 * h)
+        x1, y1 = max(0, x - pad_x), max(0, y - pad_y)
+        x2, y2 = min(w_img, x + w + pad_x), min(h_img, y + h + pad_y)
+        roi = image_np[y1:y2, x1:x2]
+        if roi.size > 0:
+            gray_roi = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
+            edges = cv2.Canny(gray_roi, 50, 150)
+            min_len = int(min(w, h) * 0.45)
+            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=12)
+            if lines is not None:
+                for line in lines:
+                    flat = np.ravel(line)
+                    if len(flat) >= 4:
+                        lx1, ly1, lx2, ly2 = flat[:4]
+                        ang = np.abs(np.arctan2(ly2 - ly1, lx2 - lx1) * 180 / np.pi)
+                        if ang < 12 or ang > 78:
+                            roi_lines_count += 1
+
+    if roi_lines_count >= 30:
+        score_indicators.append(0.60)
+        reasons.append(f"Screen / photo rectangular bezel frame detected ({roi_lines_count} border lines)")
+    elif roi_lines_count >= 16:
         score_indicators.append(0.35)
-        reasons.append("Screen / photo specular glare reflection detected")
+        reasons.append(f"Physical photo / display edge boundary detected ({roi_lines_count} lines)")
 
-    # 2. Color Gamut & YCrCb Skin Tone Naturalness
+    # 2. Face Skin Specular Glare (Glass / Plastic Screen Reflections on Face)
     if cropped_face is not None and cropped_face.size > 0:
-        ycrcb = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2YCrCb)
-        cr = ycrcb[:, :, 1]
-        cb = ycrcb[:, :, 2]
-        skin_mask = (cr >= 133) & (cr <= 173) & (cb >= 77) & (cb <= 127)
-        skin_ratio = np.mean(skin_mask)
-        if skin_ratio < 0.25:
-            score_indicators.append(0.30)
-            reasons.append("Unnatural skin tone color response (display/photo gamut)")
+        hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
+        vf, sf = hsv_face[:, :, 2], hsv_face[:, :, 1]
+        specular_face_ratio = float(np.mean((vf > 250) & (sf < 20)))
+        
+        if specular_face_ratio > 0.08:
+            score_indicators.append(0.35)
+            reasons.append("Severe screen glass specular reflection on face")
+        elif specular_face_ratio > 0.04 and roi_lines_count >= 10:
+            score_indicators.append(0.25)
+            reasons.append("Display surface glare reflection")
 
-        # 3. Frequency & FFT Moiré Pattern Analysis
+        # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
+        lap_var = float(cv2.Laplacian(gray_face, cv2.CV_64F).var())
+        
+        # Digital screens captured up close exhibit intense pixel grid contrast (laplacian > 1200)
+        if lap_var > 1200.0:
+            score_indicators.append(0.35)
+            reasons.append(f"High-frequency screen pixel grid / display aliasing (laplacian: {lap_var:.0f})")
+
+        # 2D FFT Moiré pattern analysis
         f = np.fft.fft2(gray_face)
         fshift = np.fft.fftshift(f)
-        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1e-6)
-        h, w = gray_face.shape
-        cy, cx = h // 2, w // 2
-        high_freq_ratio = float(np.mean(magnitude_spectrum[:max(1, cy//2), :max(1, cx//2)]) / (np.mean(magnitude_spectrum) + 1e-6))
-        if high_freq_ratio > 1.25 or high_freq_ratio < 0.65:
-            score_indicators.append(0.25)
-            reasons.append("Display screen Moiré pattern / re-sampling grid artifact")
-
-    # 4. Rectangular Screen / Paper Border Frame Detection
-    try:
-        gray_img = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
-        edges = cv2.Canny(gray_img, 50, 150)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80, minLineLength=60, maxLineGap=10)
-        if lines is not None and len(lines) >= 4:
-            vert_horiz_count = 0
-            for line in lines:
-                flat = np.ravel(line)
-                if len(flat) >= 4:
-                    x1, y1, x2, y2 = flat[:4]
-                    angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
-                    if angle < 10 or angle > 80:
-                        vert_horiz_count += 1
-            if vert_horiz_count >= 4:
-                score_indicators.append(0.25)
-                reasons.append("Rectangular screen / printed photo border frame detected")
-    except Exception:
-        pass
+        mag = 20 * np.log(np.abs(fshift) + 1e-6)
+        fh, fw = gray_face.shape
+        cy, cx = fh // 2, fw // 2
+        high_freq_ratio = float(np.mean(mag[:max(1, cy // 2), :max(1, cx // 2)]) / (np.mean(mag) + 1e-6))
+        if high_freq_ratio > 1.25 or (high_freq_ratio > 0.88 and lap_var > 800):
+            score_indicators.append(0.20)
+            reasons.append("Screen rescan Moiré frequency pattern detected")
 
     total_spoof_score = float(np.sum(score_indicators))
-    is_spoof = total_spoof_score >= 0.40
+    is_spoof = total_spoof_score >= 0.50
     reason_str = "; ".join(reasons) if reasons else "Live face verified"
     
     return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
@@ -266,7 +282,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
     has_facial_hair = detect_facial_hair(cropped_face)
 
     try:
-        is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face)
+        is_spoof, spoof_score, spoof_reason = detect_photo_spoof(image_np, cropped_face, bbox)
     except Exception as e:
         is_spoof, spoof_score, spoof_reason = False, 0.0, f"Spoof check bypass: {e}"
 
@@ -552,7 +568,10 @@ def annotate_live_frame(
 
         if is_spoof:
             box_color = (239, 68, 68) # Red alert
-            badge_text = f"SPOOF ALERT: {spoof_reason or 'Photo Replay'}"
+            if match_score is not None:
+                badge_text = f"SPOOF DETECTED | Match: {match_score:.1%}"
+            else:
+                badge_text = "SPOOF DETECTED"
         elif match_score is not None:
             if is_match:
                 box_color = (34, 197, 94) # Green
@@ -575,6 +594,14 @@ def annotate_live_frame(
         badge_y1 = max(38, y - 24)
         cv2.rectangle(annotated, (x, badge_y1), (min(w_img - 1, x + tw + 14), badge_y1 + 22), box_color, -1)
         cv2.putText(annotated, badge_text, (x + 6, badge_y1 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2, cv2.LINE_AA)
+
+        # Draw lower warning banner if spoof detected
+        if is_spoof:
+            sub_text = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+            (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
+            sub_y1 = min(h_img - 24, y2 + 4)
+            cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
+            cv2.putText(annotated, sub_text, (x + 6, sub_y1 + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
 
     return annotated
 
@@ -673,7 +700,7 @@ class Realtime30FPSVisionEngine:
 
                     is_spoof, _, spoof_reason = (False, 0.0, None)
                     if live_face is not None:
-                        is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face)
+                        is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face, bbox)
 
                     # Update age estimate periodically
                     age_cat = None
@@ -844,7 +871,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     live_face, live_bbox = detect_and_crop_face(live_image_np)
 
     # 1. Anti-Spoofing check on live face
-    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face)
+    is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face, live_bbox)
 
     # 2. Deep ArcFace Biometric Similarity
     face_sim_score = compute_face_similarity(id_face, live_face)

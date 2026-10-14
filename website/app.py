@@ -176,10 +176,25 @@ with c_live:
                     is_match = info.get("is_match")
                     
                     if is_spoof:
-                        status_placeholder.markdown("""
-                        <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:10px; margin-top:6px;">
-                            <b style="color:#b91c1c;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
-                            <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected!</span>
+                        score_html = ""
+                        if match_score is not None:
+                            score_color = "#16a34a" if is_match else "#dc2626"
+                            score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
+                            score_html = f"""
+                            <div style="border-top:1px dashed #fca5a5; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <span style="font-weight:700; color:#991b1b; font-size:13px;">{score_tag} (Cross-Matched):</span><br>
+                                    <span style="font-size:11px; color:#7f1d1d;">ArcFace Biometrics Computed Despite Spoof</span>
+                                </div>
+                                <div style="font-size:22px; font-weight:800; color:{score_color};">{match_score:.1%}</div>
+                            </div>
+                            """
+                        spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
+                        status_placeholder.markdown(f"""
+                        <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
+                            <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
+                            <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
+                            {score_html}
                         </div>
                         """, unsafe_allow_html=True)
                     elif match_score is not None:
