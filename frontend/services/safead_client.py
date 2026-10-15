@@ -1,7 +1,7 @@
 import requests
 import os
 
-SAFEAD_API_URL = os.getenv("SAFEAD_API_URL", "http://localhost:8000/api/v1")
+SAFEAD_API_URL = os.getenv("SAFEAD_API_URL", "http://localhost:8002/api/v1")
 
 class SafeAdClient:
     @staticmethod

@@ -16,8 +16,8 @@ try:
 except ImportError:
     run_safead_inference = None
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000/api/v1")
-backend_online = False # Will use the local inference fallback just like his branch
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8002/api/v1")
+backend_online = False # Will use the local inference fallback with optimized keyframe sampling
 
 def owner_dashboard():
     # Insert custom styling exactly from Joseph's branch

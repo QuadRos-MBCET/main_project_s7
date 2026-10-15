@@ -1,14 +1,41 @@
-import streamlit as st
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+try:
+    import torch
+    torch.backends.mkldnn.enabled = False
+    torch.set_num_threads(1)
+except Exception:
+    pass
+
+import warnings
+warnings.filterwarnings("ignore")
+
+import streamlit as st
 import sys
+from pathlib import Path
 
-# Ensure frontend is in path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Ensure project root and subpackages are in sys.path regardless of execution CWD
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from frontend.auth.auth_manager import login_page
-from frontend.views.owner_workspace import owner_dashboard
-from frontend.views.user_workspace import user_dashboard
-from frontend.views.admin_workspace import admin_dashboard
+FRONTEND_DIR = os.path.abspath(os.path.dirname(__file__))
+if FRONTEND_DIR not in sys.path:
+    sys.path.insert(0, FRONTEND_DIR)
+
+try:
+    from frontend.auth.auth_manager import login_page
+    from frontend.views.owner_workspace import owner_dashboard
+    from frontend.views.user_workspace import user_dashboard
+    from frontend.views.admin_workspace import admin_dashboard
+except ImportError:
+    from auth.auth_manager import login_page
+    from views.owner_workspace import owner_dashboard
+    from views.user_workspace import user_dashboard
+    from views.admin_workspace import admin_dashboard
 
 st.set_page_config(
     page_title="SafeAd AI - Unified Platform",
@@ -36,6 +63,12 @@ else:
     role = st.session_state["role"]
     st.sidebar.title(f"{role.replace('_', ' ').title()} Portal")
     if st.sidebar.button("Logout"):
+        if "vision_engine" in st.session_state:
+            try:
+                st.session_state["vision_engine"].stop()
+            except Exception:
+                pass
+            del st.session_state["vision_engine"]
         st.session_state["role"] = None
         st.rerun()
         

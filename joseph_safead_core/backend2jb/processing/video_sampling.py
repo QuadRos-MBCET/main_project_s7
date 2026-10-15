@@ -92,37 +92,10 @@ def extract_adaptive_keyframes(
         }
         return ([], empty_meta) if return_metadata else []
 
-    # Read all valid raw frames from video stream
-    cap = cv2.VideoCapture(video_path)
-    raw_frames = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        try:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            raw_frames.append(Image.fromarray(frame_rgb))
-        except Exception:
-            continue
-    cap.release()
-
-    available_frames = len(raw_frames)
-    if available_frames == 0:
-        empty_meta = {
-            "filename": os.path.basename(video_path),
-            "duration": duration,
-            "fps": fps,
-            "total_frames": 0,
-            "sampled_count": 0,
-            "sampling_strategy": "NO_VALID_FRAMES",
-            "short_video_handled": False
-        }
-        return ([], empty_meta) if return_metadata else []
-
     # Determine adaptive sampling strategy based on video duration
     if duration <= 30.0:
         strategy_name = "Dense Uniform Sampling (<= 30s Ad)"
-        num_samples = max(target_frames, min(available_frames, 20))
+        num_samples = max(target_frames, min(total_frames, 20))
     elif duration <= 120.0:
         strategy_name = "Representative Clip Sampling (30s - 2m Ad)"
         num_samples = target_frames
@@ -130,18 +103,65 @@ def extract_adaptive_keyframes(
         strategy_name = "Sparse Temporal Sampling (> 2m Video)"
         num_samples = target_frames
 
-    indices = np.linspace(0, available_frames - 1, num_samples, dtype=int)
-    sampled_frames = [raw_frames[i] for i in indices]
+    indices = np.linspace(0, max(0, total_frames - 1), num_samples, dtype=int).tolist()
+    target_set = set(indices)
+
+    # Sample only target keyframes using direct seek without buffering entire video in RAM
+    cap = cv2.VideoCapture(video_path)
+    sampled_frames = []
+    
+    # Try direct seeking first
+    for idx in indices:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
+        ret, frame = cap.read()
+        if ret and frame is not None:
+            try:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                sampled_frames.append(Image.fromarray(frame_rgb))
+            except Exception:
+                pass
+
+    # Fallback to sequential read if direct seek returned insufficient frames (some codecs fail on seek)
+    if len(sampled_frames) < (num_samples // 2):
+        sampled_frames = []
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        curr_idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                break
+            if curr_idx in target_set:
+                try:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    sampled_frames.append(Image.fromarray(frame_rgb))
+                except Exception:
+                    pass
+            curr_idx += 1
+            if len(sampled_frames) >= num_samples:
+                break
+    cap.release()
+
+    if not sampled_frames:
+        empty_meta = {
+            "filename": os.path.basename(video_path),
+            "duration": duration,
+            "fps": fps,
+            "total_frames": total_frames,
+            "sampled_count": 0,
+            "sampling_strategy": "NO_VALID_FRAMES",
+            "short_video_handled": False
+        }
+        return ([], empty_meta) if return_metadata else []
 
     sampling_meta = {
         "filename": os.path.basename(video_path),
         "duration": duration,
         "fps": fps,
-        "total_frames": available_frames,
+        "total_frames": total_frames,
         "sampled_count": len(sampled_frames),
         "sampling_strategy": strategy_name,
-        "short_video_handled": available_frames < target_frames,
-        "indices_sampled": indices.tolist()
+        "short_video_handled": total_frames < target_frames,
+        "indices_sampled": indices
     }
 
     if return_metadata:
