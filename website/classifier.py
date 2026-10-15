@@ -165,10 +165,20 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
+try:
+    from website.fasnet import get_fasnet_predictor
+    HAS_FASNET = True
+except Exception:
+    try:
+        from fasnet import get_fasnet_predictor
+        HAS_FASNET = True
+    except Exception:
+        HAS_FASNET = False
+
 def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, face_bbox: tuple = None) -> tuple[bool, float, str]:
     """
     Detects whether the captured face image is a photograph/screen display (photo spoof)
-    or a real live face.
+    or a real live face using SOTA MiniFASNet Dual-Model Neural Network + Physical/Geometric Edge & Glare Analysis.
     
     Returns:
         (is_spoof: bool, spoof_score: float, reason: str)
@@ -187,7 +197,23 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     reasons = []
     h_img, w_img = image_np.shape[:2]
 
-    # 1. 4-Sided Rectangular Screen / Printed Card Bezel Analysis in Outer Frame
+    # 1. State-of-the-Art Deep Learning Anti-Spoofing Neural Model (MiniFASNet Dual-Scale Ensemble)
+    p_screen = 0.0
+    if HAS_FASNET and face_bbox is not None:
+        try:
+            fas_predictor = get_fasnet_predictor()
+            fas_res = fas_predictor.predict(image_np, face_bbox)
+            p_screen = fas_res.get("p_screen", 0.0)
+            if p_screen >= 0.90:
+                score_indicators.append(0.55)
+                reasons.append(f"MiniFASNet SOTA neural model detected digital screen replay ({p_screen:.1%})")
+            elif p_screen >= 0.70:
+                score_indicators.append(0.35)
+                reasons.append(f"MiniFASNet neural model detected screen replay artifact ({p_screen:.1%})")
+        except Exception:
+            pass
+
+    # 2. 4-Sided Rectangular Screen / Printed Card Bezel Analysis in Outer Frame
     top_lines = 0
     bottom_lines = 0
     left_lines = 0
@@ -245,7 +271,7 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
                 total_bezel_lines = top_lines + bottom_lines + left_lines + right_lines
                 enclosed_quadrants = sum(1 for q in [top_lines, bottom_lines, left_lines, right_lines] if q >= 2)
 
-    # 2. Straight Lines Inside Face (Phone Navigation/UI Bars, Screen Borders)
+    # 3. Straight Lines Inside Face (Phone Navigation/UI Bars, Screen Borders)
     inner_h_lines = 0
     inner_long_h_lines = 0
     inner_v_lines = 0
@@ -285,7 +311,7 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
         score_indicators.append(0.40)
         reasons.append(f"Vertical smartphone screen bezel detected ({inner_v_lines} lines)")
 
-    # 3. Screen Glass Specular Reflection & Glare (Absolute & Adaptive)
+    # 4. Screen Glass Specular Reflection & Glare (Absolute & Adaptive)
     has_screen_glare = False
     if cropped_face is not None and cropped_face.size > 0:
         hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
@@ -302,12 +328,12 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
             has_screen_glare = True
             score_indicators.append(0.20)
             reasons.append("Display surface glare reflection")
-        elif spec_adaptive > 0.02 and (inner_long_h_lines >= 1 or inner_v_lines >= 1 or total_bezel_lines >= 8):
+        elif spec_adaptive > 0.02 and (inner_long_h_lines >= 1 or inner_v_lines >= 1 or total_bezel_lines >= 8 or p_screen >= 0.70):
             has_screen_glare = True
             score_indicators.append(0.20)
             reasons.append("Adaptive screen glass surface glare")
 
-    # 4. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    # 5. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
     has_screen_texture = False
     if cropped_face is not None and cropped_face.size > 0:
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
@@ -329,11 +355,11 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
             score_indicators.append(0.25)
             reasons.append("Screen rescan Moiré frequency pattern detected")
 
-    # 5. Corroborated Bezel Scoring:
+    # 6. Corroborated Bezel Scoring:
     if enclosed_quadrants == 4 and total_bezel_lines >= 18:
         score_indicators.append(0.60)
         reasons.append(f"Enclosing 4-sided screen/card bezel frame detected ({total_bezel_lines} border lines)")
-    elif enclosed_quadrants >= 3 and (has_screen_glare or has_screen_texture):
+    elif enclosed_quadrants >= 3 and (has_screen_glare or has_screen_texture or p_screen >= 0.70):
         score_indicators.append(0.50)
         reasons.append(f"Display screen border frame corroborated by glass reflection ({total_bezel_lines} lines)")
     elif total_bezel_lines >= 15:
