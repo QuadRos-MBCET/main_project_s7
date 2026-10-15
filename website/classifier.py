@@ -187,11 +187,7 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     reasons = []
     h_img, w_img = image_np.shape[:2]
 
-    # 1. 4-Sided Rectangular Screen / Printed Card Bezel Analysis
-    # A physical phone, tablet, or printed card creates an enclosing quadrilateral with distinct
-    # borders on all four sides around the head (top, bottom, left, and right).
-    # Background furniture (doors, blinds, bookshelves) only ever appears on 1 or 2 sides and
-    # never forms an enclosed box around a live person whose neck extends down into their body.
+    # 1. 4-Sided Rectangular Screen / Printed Card Bezel Analysis in Outer Frame
     top_lines = 0
     bottom_lines = 0
     left_lines = 0
@@ -249,23 +245,69 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
                 total_bezel_lines = top_lines + bottom_lines + left_lines + right_lines
                 enclosed_quadrants = sum(1 for q in [top_lines, bottom_lines, left_lines, right_lines] if q >= 2)
 
-    # 2. Face Skin Specular Glare (Glass / Plastic Screen Reflections on Face)
+    # 2. Straight Lines Inside Face (Phone Navigation/UI Bars, Screen Borders)
+    inner_h_lines = 0
+    inner_long_h_lines = 0
+    inner_v_lines = 0
+    if cropped_face is not None and cropped_face.size > 0:
+        ch, cw = cropped_face.shape[:2]
+        m_x = max(8, int(cw * 0.08))
+        m_y = max(8, int(ch * 0.08))
+        inner = cropped_face[m_y:ch-m_y, m_x:cw-m_x]
+        ich, icw = inner.shape[:2]
+        gray_inner = cv2.cvtColor(inner, cv2.COLOR_RGB2GRAY)
+        edges_inner = cv2.Canny(gray_inner, 30, 100)
+        lines_inner = cv2.HoughLinesP(edges_inner, 1, np.pi/180, threshold=25, minLineLength=int(icw * 0.28), maxLineGap=6)
+        if lines_inner is not None:
+            for l in lines_inner:
+                flat = np.ravel(l)
+                if len(flat) >= 4:
+                    x1, y1, x2, y2 = flat[:4]
+                    ang = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
+                    length = np.hypot(x2 - x1, y2 - y1)
+                    if ang < 10:
+                        inner_h_lines += 1
+                        if length > icw * 0.50:
+                            inner_long_h_lines += 1
+                    elif ang > 80:
+                        inner_v_lines += 1
+
+    if inner_long_h_lines >= 2:
+        score_indicators.append(0.55)
+        reasons.append(f"Smartphone UI display bar/screen border detected ({inner_long_h_lines} straight horizontal edges)")
+    elif inner_h_lines >= 8:
+        score_indicators.append(0.50)
+        reasons.append(f"Display scanlines/raster artifacts detected ({inner_h_lines} horizontal edges)")
+    elif inner_long_h_lines >= 1 and inner_v_lines >= 2:
+        score_indicators.append(0.50)
+        reasons.append(f"Rectangular display bezel & UI bar detected on face ({inner_long_h_lines}H + {inner_v_lines}V lines)")
+    elif inner_v_lines >= 3:
+        score_indicators.append(0.40)
+        reasons.append(f"Vertical smartphone screen bezel detected ({inner_v_lines} lines)")
+
+    # 3. Screen Glass Specular Reflection & Glare (Absolute & Adaptive)
     has_screen_glare = False
     if cropped_face is not None and cropped_face.size > 0:
         hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
         vf, sf = hsv_face[:, :, 2], hsv_face[:, :, 1]
-        specular_face_ratio = float(np.mean((vf > 250) & (sf < 20)))
+        v_max = int(np.max(vf))
+        spec_absolute = float(np.mean((vf > 250) & (sf < 20)))
+        spec_adaptive = float(np.mean((vf > max(160, 0.88 * v_max)) & (sf < 45)))
 
-        if specular_face_ratio > 0.08:
+        if spec_absolute > 0.08:
             has_screen_glare = True
             score_indicators.append(0.35)
             reasons.append("Severe screen glass specular reflection on face")
-        elif specular_face_ratio > 0.04:
+        elif spec_absolute > 0.04:
             has_screen_glare = True
             score_indicators.append(0.20)
             reasons.append("Display surface glare reflection")
+        elif spec_adaptive > 0.02 and (inner_long_h_lines >= 1 or inner_v_lines >= 1 or total_bezel_lines >= 8):
+            has_screen_glare = True
+            score_indicators.append(0.20)
+            reasons.append("Adaptive screen glass surface glare")
 
-    # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    # 4. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
     has_screen_texture = False
     if cropped_face is not None and cropped_face.size > 0:
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
@@ -287,9 +329,7 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
             score_indicators.append(0.25)
             reasons.append("Screen rescan Moiré frequency pattern detected")
 
-    # Corroborated Bezel Scoring:
-    # A genuine user in a room may have background lines, but lines only enclose 0-2 quadrants.
-    # An attack card/phone produces lines enclosing all 4 quadrants (or 3 quadrants + glare/texture).
+    # 5. Corroborated Bezel Scoring:
     if enclosed_quadrants == 4 and total_bezel_lines >= 18:
         score_indicators.append(0.60)
         reasons.append(f"Enclosing 4-sided screen/card bezel frame detected ({total_bezel_lines} border lines)")
@@ -297,7 +337,6 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
         score_indicators.append(0.50)
         reasons.append(f"Display screen border frame corroborated by glass reflection ({total_bezel_lines} lines)")
     elif total_bezel_lines >= 15:
-        # Partial background lines without 4-sided enclosure or glare: cap at 0.15 (safe for live users)
         score_indicators.append(0.15)
 
     total_spoof_score = float(np.sum(score_indicators))
