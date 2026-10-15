@@ -692,7 +692,7 @@ def annotate_live_frame(
 
         # Draw lower warning banner if spoof detected
         if is_spoof:
-            sub_text = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+            sub_text = "YOU ARE SHOWING A MOBILE SCREEN"
             (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
             sub_y1 = min(h_img - 24, y2 + 4)
             cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
@@ -1012,7 +1012,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     # Overall Status
     if is_spoof:
         status = "FAILED_SPOOF"
-        message = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+        message = "YOU ARE SHOWING A MOBILE SCREEN"
     elif not face_match:
         status = "FAILED_FACE_MISMATCH"
         message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."
