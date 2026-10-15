@@ -19,7 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import cv2
 from PIL import Image
+import importlib
 from website.database import get_connection, init_database
+import website.classifier as classifier_module
+try:
+    importlib.reload(classifier_module)
+except Exception:
+    pass
 from website.classifier import (
     estimate_age_from_face,
     estimate_detailed_age_from_face,
