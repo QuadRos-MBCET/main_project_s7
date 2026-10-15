@@ -187,61 +187,95 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     reasons = []
     h_img, w_img = image_np.shape[:2]
 
-    # 1. Localized Screen / Printed Photo Border Detection in Face ROI
-    # Genuine live humans have natural soft shoulders/neck contours. Photo/screen attacks
-    # exhibit sharp rectangular bezel or paper border lines immediately framing the face.
-    roi_lines_count = 0
+    # 1. 4-Sided Rectangular Screen / Printed Card Bezel Analysis
+    # A physical phone, tablet, or printed card creates an enclosing quadrilateral with distinct
+    # borders on all four sides around the head (top, bottom, left, and right).
+    # Background furniture (doors, blinds, bookshelves) only ever appears on 1 or 2 sides and
+    # never forms an enclosed box around a live person whose neck extends down into their body.
+    top_lines = 0
+    bottom_lines = 0
+    left_lines = 0
+    right_lines = 0
+    total_bezel_lines = 0
+    enclosed_quadrants = 0
+
     if face_bbox is not None:
         x, y, w, h = face_bbox
-        pad_x = int(0.35 * w)
-        pad_y = int(0.35 * h)
+        pad_x = int(0.45 * w)
+        pad_y = int(0.45 * h)
         x1, y1 = max(0, x - pad_x), max(0, y - pad_y)
         x2, y2 = min(w_img, x + w + pad_x), min(h_img, y + h + pad_y)
         roi = image_np[y1:y2, x1:x2]
+
         if roi.size > 0:
             gray_roi = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
-            edges = cv2.Canny(gray_roi, 50, 150)
-            min_len = int(min(w, h) * 0.45)
-            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=12)
+            rx, ry = x - x1, y - y1
+
+            # Mask out inner face center (inner 80%) so eyes, glasses, lips, and collars aren't counted as bezels
+            masked_gray = gray_roi.copy()
+            inner_pad_x = int(0.10 * w)
+            inner_pad_y = int(0.10 * h)
+            mx1, my1 = min(roi.shape[1], rx + inner_pad_x), min(roi.shape[0], ry + inner_pad_y)
+            mx2, my2 = max(0, rx + w - inner_pad_x), max(0, ry + h - inner_pad_y)
+            if mx2 > mx1 and my2 > my1:
+                masked_gray[my1:my2, mx1:mx2] = 128
+
+            edges = cv2.Canny(masked_gray, 50, 150)
+            min_len = int(min(w, h) * 0.40)
+            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=10)
+
             if lines is not None:
                 for line in lines:
                     flat = np.ravel(line)
                     if len(flat) >= 4:
                         lx1, ly1, lx2, ly2 = flat[:4]
                         ang = np.abs(np.arctan2(ly2 - ly1, lx2 - lx1) * 180 / np.pi)
-                        if ang < 12 or ang > 78:
-                            roi_lines_count += 1
+                        mid_x = (lx1 + lx2) / 2.0
+                        mid_y = (ly1 + ly2) / 2.0
 
-    if roi_lines_count >= 30:
-        score_indicators.append(0.60)
-        reasons.append(f"Screen / photo rectangular bezel frame detected ({roi_lines_count} border lines)")
-    elif roi_lines_count >= 16:
-        score_indicators.append(0.35)
-        reasons.append(f"Physical photo / display edge boundary detected ({roi_lines_count} lines)")
+                        # Horizontal line (top or bottom border)
+                        if ang < 15:
+                            if mid_y < ry:
+                                top_lines += 1
+                            elif mid_y > ry + h:
+                                bottom_lines += 1
+                        # Vertical line (left or right border)
+                        elif ang > 75:
+                            if mid_x < rx:
+                                left_lines += 1
+                            elif mid_x > rx + w:
+                                right_lines += 1
+
+                total_bezel_lines = top_lines + bottom_lines + left_lines + right_lines
+                enclosed_quadrants = sum(1 for q in [top_lines, bottom_lines, left_lines, right_lines] if q >= 2)
 
     # 2. Face Skin Specular Glare (Glass / Plastic Screen Reflections on Face)
+    has_screen_glare = False
     if cropped_face is not None and cropped_face.size > 0:
         hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
         vf, sf = hsv_face[:, :, 2], hsv_face[:, :, 1]
         specular_face_ratio = float(np.mean((vf > 250) & (sf < 20)))
-        
+
         if specular_face_ratio > 0.08:
+            has_screen_glare = True
             score_indicators.append(0.35)
             reasons.append("Severe screen glass specular reflection on face")
-        elif specular_face_ratio > 0.04 and roi_lines_count >= 10:
-            score_indicators.append(0.25)
+        elif specular_face_ratio > 0.04:
+            has_screen_glare = True
+            score_indicators.append(0.20)
             reasons.append("Display surface glare reflection")
 
-        # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    has_screen_texture = False
+    if cropped_face is not None and cropped_face.size > 0:
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
         lap_var = float(cv2.Laplacian(gray_face, cv2.CV_64F).var())
-        
-        # Digital screens captured up close exhibit intense pixel grid contrast (laplacian > 1200)
-        if lap_var > 1200.0:
-            score_indicators.append(0.35)
-            reasons.append(f"High-frequency screen pixel grid / display aliasing (laplacian: {lap_var:.0f})")
 
-        # 2D FFT Moiré pattern analysis
+        if lap_var > 1200.0:
+            has_screen_texture = True
+            score_indicators.append(0.35)
+            reasons.append(f"High-frequency screen pixel grid aliasing (laplacian: {lap_var:.0f})")
+
         f = np.fft.fft2(gray_face)
         fshift = np.fft.fftshift(f)
         mag = 20 * np.log(np.abs(fshift) + 1e-6)
@@ -249,13 +283,27 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
         cy, cx = fh // 2, fw // 2
         high_freq_ratio = float(np.mean(mag[:max(1, cy // 2), :max(1, cx // 2)]) / (np.mean(mag) + 1e-6))
         if high_freq_ratio > 1.25 or (high_freq_ratio > 0.88 and lap_var > 800):
-            score_indicators.append(0.20)
+            has_screen_texture = True
+            score_indicators.append(0.25)
             reasons.append("Screen rescan Moiré frequency pattern detected")
+
+    # Corroborated Bezel Scoring:
+    # A genuine user in a room may have background lines, but lines only enclose 0-2 quadrants.
+    # An attack card/phone produces lines enclosing all 4 quadrants (or 3 quadrants + glare/texture).
+    if enclosed_quadrants == 4 and total_bezel_lines >= 18:
+        score_indicators.append(0.60)
+        reasons.append(f"Enclosing 4-sided screen/card bezel frame detected ({total_bezel_lines} border lines)")
+    elif enclosed_quadrants >= 3 and (has_screen_glare or has_screen_texture):
+        score_indicators.append(0.50)
+        reasons.append(f"Display screen border frame corroborated by glass reflection ({total_bezel_lines} lines)")
+    elif total_bezel_lines >= 15:
+        # Partial background lines without 4-sided enclosure or glare: cap at 0.15 (safe for live users)
+        score_indicators.append(0.15)
 
     total_spoof_score = float(np.sum(score_indicators))
     is_spoof = total_spoof_score >= 0.50
     reason_str = "; ".join(reasons) if reasons else "Live face verified"
-    
+
     return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
 
 

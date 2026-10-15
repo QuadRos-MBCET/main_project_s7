@@ -203,35 +203,33 @@ with c_live:
                     if match_score is not None:
                         score_color = "#16a34a" if is_match else "#dc2626"
                         score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
-                        score_html = f"""
-                        <div style="border-top:1px dashed #fca5a5; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <span style="font-weight:700; color:#991b1b; font-size:13px;">{score_tag} (Cross-Matched):</span><br>
-                                <span style="font-size:11px; color:#7f1d1d;">ArcFace Biometrics Computed Despite Spoof</span>
-                            </div>
-                            <div style="font-size:22px; font-weight:800; color:{score_color};">{match_score:.1%}</div>
-                        </div>
-                        """
+                        score_html = (
+                            f'<div style="border-top:1px dashed #fca5a5; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">'
+                            f'<div><span style="font-weight:700; color:#991b1b; font-size:13px;">{score_tag} (Cross-Matched):</span><br>'
+                            f'<span style="font-size:11px; color:#7f1d1d;">ArcFace Biometrics Computed Despite Spoof</span></div>'
+                            f'<div style="font-size:22px; font-weight:800; color:{score_color};">{match_score:.1%}</div>'
+                            f'</div>'
+                        )
                     spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
-                    status_placeholder.markdown(f"""
-                    <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
-                        <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
-                        <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
-                        {score_html}
-                    </div>
-                    """, unsafe_allow_html=True)
+                    card_html = (
+                        f'<div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">'
+                        f'<b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>'
+                        f'<span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>'
+                        f'{score_html}'
+                        f'</div>'
+                    )
+                    status_placeholder.markdown(card_html, unsafe_allow_html=True)
                 elif match_score is not None:
                     color = "#16a34a" if is_match else "#dc2626"
                     tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
-                    status_placeholder.markdown(f"""
-                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-weight:700; color:{color};">{tag}</span><br>
-                            <span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence [30 FPS]</span>
-                        </div>
-                        <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    card_html = (
+                        f'<div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">'
+                        f'<div><span style="font-weight:700; color:{color};">{tag}</span><br>'
+                        f'<span style="font-size:12px; color:#64748b;">ArcFace MS1MV3 Confidence [30 FPS]</span></div>'
+                        f'<div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>'
+                        f'</div>'
+                    )
+                    status_placeholder.markdown(card_html, unsafe_allow_html=True)
                 else:
                     status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
                     
