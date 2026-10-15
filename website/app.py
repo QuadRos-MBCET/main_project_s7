@@ -192,9 +192,12 @@ with c_live:
 
         engine = st.session_state["vision_engine"]
         target_interval = 1.0 / 30.0  # Strict 33.33ms pacing for 30 FPS
+        last_card_html = None
+        loop_counter = 0
         
         while engine.running:
             t_frame_start = time.time()
+            loop_counter += 1
             annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
             
             if annotated is not None:
@@ -204,6 +207,7 @@ with c_live:
                 match_score = info.get("match_score")
                 is_match = info.get("is_match")
                 
+                card_html = None
                 if is_spoof:
                     score_html = ""
                     if match_score is not None:
@@ -224,7 +228,6 @@ with c_live:
                         f'{score_html}'
                         f'</div>'
                     )
-                    status_placeholder.markdown(card_html, unsafe_allow_html=True)
                 elif match_score is not None:
                     color = "#16a34a" if is_match else "#dc2626"
                     tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
@@ -235,9 +238,16 @@ with c_live:
                         f'<div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>'
                         f'</div>'
                     )
-                    status_placeholder.markdown(card_html, unsafe_allow_html=True)
                 else:
-                    status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                    card_html = "WAITING"
+
+                # Throttle DOM updates to avoid WebSocket flooding and eliminate browser video lag
+                if card_html != last_card_html or (loop_counter % 15 == 0):
+                    if card_html == "WAITING":
+                        status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                    elif card_html is not None:
+                        status_placeholder.markdown(card_html, unsafe_allow_html=True)
+                    last_card_html = card_html
                     
                 st.session_state["latest_live_frame"] = raw_rgb
                 live_image_np = raw_rgb

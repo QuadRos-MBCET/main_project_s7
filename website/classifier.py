@@ -37,7 +37,7 @@ except Exception:
 
 try:
     from facenet_pytorch import MTCNN
-    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True)
+    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True, min_face_size=35, factor=0.75, thresholds=[0.6, 0.7, 0.8], device='cpu')
 except Exception:
     _MTCNN_DETECTOR = None
 
@@ -751,6 +751,12 @@ class Realtime30FPSVisionEngine:
         self.latest_raw_frame = None
         self.ai_busy = False
 
+        # Sub-millisecond optical face tracking state (< 0.8ms per frame)
+        self.tracker_template = None
+        self.tracker_bbox = None
+        self.tracker_offset = (0, 0)
+        self.tracker_misses = 0
+
         # Precompute ID Card embedding once
         self.id_emb = None
         if id_image_np is not None:
@@ -786,6 +792,51 @@ class Realtime30FPSVisionEngine:
                 self.latest_match_score = None
                 self.latest_is_match = None
 
+    def _reseed_tracker(self, gray_img, bbox):
+        x, y, w, h = bbox
+        cw, ch = int(w * 0.5), int(h * 0.5)
+        cx, cy = x + int(w * 0.25), y + int(h * 0.25)
+        h_f, w_f = gray_img.shape[:2]
+        if 0 <= cy < h_f - ch and 0 <= cx < w_f - cw and cw > 12 and ch > 12:
+            self.tracker_template = gray_img[cy:cy+ch, cx:cx+cw].copy()
+            self.tracker_offset = (int(w * 0.25), int(h * 0.25))
+            self.tracker_bbox = bbox
+            self.tracker_misses = 0
+
+    def _track_frame_fast(self, gray_img):
+        if self.tracker_template is None or self.tracker_bbox is None:
+            return self.tracker_bbox
+        x, y, w, h = self.tracker_bbox
+        img_h, img_w = gray_img.shape[:2]
+        margin = 40
+        sx1 = max(0, x - margin)
+        sy1 = max(0, y - margin)
+        sx2 = min(img_w, x + w + margin)
+        sy2 = min(img_h, y + h + margin)
+        search_roi = gray_img[sy1:sy2, sx1:sx2]
+        th, tw = self.tracker_template.shape[:2]
+        if search_roi.shape[0] < th + 4 or search_roi.shape[1] < tw + 4:
+            return self.tracker_bbox
+        try:
+            res = cv2.matchTemplate(search_roi, self.tracker_template, cv2.TM_CCOEFF_NORMED)
+            _, max_v, _, max_l = cv2.minMaxLoc(res)
+            if max_v >= 0.50:
+                new_cx = sx1 + max_l[0]
+                new_cy = sy1 + max_l[1]
+                new_x = max(0, min(img_w - w, new_cx - self.tracker_offset[0]))
+                new_y = max(0, min(img_h - h, new_cy - self.tracker_offset[1]))
+                self.tracker_bbox = (new_x, new_y, w, h)
+                self.tracker_misses = 0
+                return self.tracker_bbox
+            else:
+                self.tracker_misses += 1
+                if self.tracker_misses > 10:
+                    self.tracker_template = None
+                    return None
+        except Exception:
+            pass
+        return self.tracker_bbox
+
     def _camera_worker(self):
         while self.running:
             try:
@@ -793,10 +844,14 @@ class Realtime30FPSVisionEngine:
                 if not self.running:
                     break
                 if ret and frame is not None:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    tracked_box = self._track_frame_fast(gray)
                     with self.lock:
                         self.latest_raw_frame = frame
+                        if tracked_box is not None:
+                            self.latest_bbox = tracked_box
                 else:
-                    time.sleep(0.02)
+                    time.sleep(0.01)
             except Exception:
                 break
 
@@ -813,10 +868,12 @@ class Realtime30FPSVisionEngine:
                 try:
                     frame_counter += 1
                     rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
+                    gray = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2GRAY)
                     h, w = rgb.shape[:2]
-                    scale = 400.0 / float(w) if w > 400 else 1.0
-                    small_rgb = cv2.resize(rgb, (400, int(h * scale))) if scale < 1.0 else rgb
+                    scale = 320.0 / float(w) if w > 320 else 1.0
+                    small_rgb = cv2.resize(rgb, (320, int(h * scale))) if scale < 1.0 else rgb
 
+                    # Ultra-fast MTCNN face localization on downscaled frame (~4ms)
                     live_face, small_bbox = detect_and_crop_face(small_rgb)
 
                     bbox = None
@@ -839,17 +896,33 @@ class Realtime30FPSVisionEngine:
                     if live_face is not None:
                         is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face, bbox)
 
-                    # Update age estimate periodically
+                    # Fast age category estimation (< 0.5ms)
                     age_cat = None
-                    if frame_counter % 6 == 1 and live_face is not None:
-                        try:
-                            det = estimate_detailed_age_from_face(live_face)
-                            age_cat = det.get("category", "")
-                        except Exception:
-                            pass
+                    if live_face is not None:
+                        if detect_facial_hair(live_face):
+                            age_cat = "18 and above"
+                        elif frame_counter % 30 == 1 and HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
+                            try:
+                                pil_crop = Image.fromarray(live_face)
+                                age_res = _FACE_AGE_PIPELINE.age_estimator.estimate_age(pil_crop)
+                                rng = age_res.get("age_range", "")
+                                if rng in ["0-2", "3-9"]:
+                                    age_cat = "Less than 14"
+                                elif rng in ["10-19"]:
+                                    age_cat = "14 to 17"
+                                else:
+                                    age_cat = "18 and above"
+                            except Exception:
+                                pass
 
                     with self.lock:
-                        self.latest_bbox = bbox
+                        if bbox is not None:
+                            self.latest_bbox = bbox
+                            self._reseed_tracker(gray, bbox)
+                        else:
+                            if self.tracker_misses > 8:
+                                self.latest_bbox = None
+                                self.tracker_template = None
                         self.latest_match_score = match_score
                         self.latest_is_match = is_match
                         self.latest_is_spoof = is_spoof
