@@ -186,9 +186,9 @@ def generate_pdf_report(output_pdf_path):
     if os.path.exists(arch_img_path):
         story.append(Spacer(1, 4))
         story.append(KeepTogether([
-            Image(arch_img_path, width=540, height=337),
-            Spacer(1, 2),
-            Paragraph("<b>Figure 1:</b> SafeAd AI Unified System Architecture — Integrating Multimodal Video Moderation (Left), Central Fusion Decision Engine (Center), Biometric Identity KYC (Right), and the Instakill Age-Aware Content Delivery Feed.", ParagraphStyle('FigCap', fontName='Helvetica-Oblique', fontSize=7.5, leading=9.5, textColor=colors.HexColor("#475569"), alignment=1))
+            Image(arch_img_path, width=520, height=380),
+            Spacer(1, 3),
+            Paragraph("<b>Figure 1:</b> SafeAd AI Unified System Architecture — Integrating User Identity & Age Verification Pipeline (Port 8001, Left), Multimodal Advertisement Safety Pipeline (Right), Central Assessment & Two-Stage Policy Engine, and Age-Aware Delivery via Unified Backend (Port 8002).", ParagraphStyle('FigCap', fontName='Helvetica-Oblique', fontSize=7.5, leading=9.5, textColor=colors.HexColor("#475569"), alignment=1))
         ]))
         story.append(Spacer(1, 6))
 

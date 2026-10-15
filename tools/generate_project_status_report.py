@@ -146,6 +146,22 @@ def build_status_report(output_path):
         border_color="16A34A"
     )
 
+    # Embed Official System Architecture Diagram
+    arch_path = r"c:\Users\hello\Videos\sourav\system_architecture.png"
+    if os.path.exists(arch_path):
+        p_img = doc.add_paragraph()
+        p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_img.paragraph_format.space_before = Pt(8)
+        p_img.paragraph_format.space_after = Pt(2)
+        doc.add_picture(arch_path, width=Inches(6.8))
+        p_cap = doc.add_paragraph()
+        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_cap.paragraph_format.space_after = Pt(8)
+        r_cap = p_cap.add_run("Figure 1: SafeAd AI Unified System Architecture (Identity & Age Verification + Multimodal Ad Safety Pipeline)")
+        r_cap.font.size = Pt(8.5)
+        r_cap.font.italic = True
+        r_cap.font.color.rgb = RGBColor(0x64, 0x74, 0x8b)
+
     # ==============================================================================
     # 2. Comprehensive Inventory of Models, Methods & Algorithms
     # ==============================================================================
@@ -648,8 +664,13 @@ def build_status_report(output_path):
     r_f.font.italic = True
     r_f.font.color.rgb = RGBColor(0x94, 0xa3, 0xb8)
 
-    doc.save(output_path)
-    print(f"Successfully generated: {output_path}")
+    try:
+        doc.save(output_path)
+        print(f"Successfully generated: {output_path}")
+    except PermissionError:
+        alt_path = output_path.replace(".docx", "_Updated.docx")
+        doc.save(alt_path)
+        print(f"Primary file open in Word. Successfully generated updated copy: {alt_path}")
 
 if __name__ == "__main__":
     out_file = r"c:\Users\hello\Videos\sourav\SafeAd_AI_Project_Status_And_Methodology_Report.docx"
