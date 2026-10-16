@@ -110,6 +110,96 @@ async def check_advertisement(
         "faiss_match": ai_results.get("faiss_match", {"title": "Vector Exemplar Index Searched", "distance": 0.0})
     }
 
+@router.post("/upload")
+async def upload_advertisement(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    caption: Optional[str] = Form(""),
+    user_id: int = Form(1),
+    db: Session = Depends(get_db)
+):
+    """
+    Step 1 of split ad workflow: saves advertisement file and creates record.
+    """
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    filename = f"ad_{int(time.time())}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        
+    media_type = "video" if file_ext in [".mp4", ".avi", ".mov"] else "image"
+    ad = Advertisement(
+        title=title,
+        caption=caption,
+        file_path=file_path,
+        media_type=media_type,
+        status="PENDING",
+        owner_id=user_id
+    )
+    db.add(ad)
+    db.commit()
+    db.refresh(ad)
+    return {"id": ad.id, "title": ad.title, "file_path": ad.file_path, "status": ad.status}
+
+@router.post("/{ad_id}/analyze")
+async def analyze_advertisement(ad_id: int, db: Session = Depends(get_db)):
+    """
+    Step 2 of split ad workflow: executes SafeAd AI multimodal inference and evaluates policy.
+    """
+    ad = db.query(Advertisement).filter(Advertisement.id == ad_id).first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+        
+    ai_results = AIClientService.process_advertisement(ad.file_path, ad.title, ad.caption)
+    classification_str = ai_results.get("classification", "UNSAFE_FOR_ALL")
+    try:
+        classification_enum = SafetyClassification(classification_str)
+    except Exception:
+        classification_enum = SafetyClassification.UNSAFE_FOR_ALL
+        
+    publication_action = PolicyService.determine_publication_action(classification_enum)
+    ad.status = publication_action.value
+    
+    mod_result = ModerationResult(
+        advertisement_id=ad.id,
+        model_version="SafeAd_V1_ColabFree",
+        classification=classification_enum,
+        risk_category=ai_results.get("risk_category", "general_audience"),
+        risk_score=ai_results.get("risk_score", None),
+        risk_score_available=ai_results.get("risk_score_available", False),
+        explanation=ai_results.get("explanation", "Completed safety audit."),
+        evidence=str(ai_results.get("violations", [])),
+        moderation_action=publication_action,
+        age_restriction=ai_results.get("age_restriction", None),
+        publishable=ai_results.get("publishable", False)
+    )
+    db.add(mod_result)
+    
+    log_entry = AuditLog(
+        ad_id=ad.id,
+        user_id=ad.owner_id,
+        action=publication_action.value,
+        details=f"Processed via SafeAd AI Pipeline. Classification: {classification_str}"
+    )
+    db.add(log_entry)
+    db.commit()
+    
+    resp_dict = dict(ai_results)
+    resp_dict.update({
+        "ad_id": ad.id,
+        "classification": classification_enum.value,
+        "publication_action": publication_action.value,
+        "action": publication_action.value,
+        "risk_score": mod_result.risk_score,
+        "risk_score_available": mod_result.risk_score_available,
+        "risk_category": mod_result.risk_category,
+        "explanation": mod_result.explanation,
+        "requires_human_review": publication_action.value == "HUMAN_REVIEW"
+    })
+    return resp_dict
+
+
 @router.get("/user_feed")
 def get_user_feed(user_age_group: str = "AGE_18_PLUS", db: Session = Depends(get_db)):
     """

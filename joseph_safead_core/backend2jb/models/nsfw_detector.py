@@ -1,4 +1,10 @@
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -7,9 +13,13 @@ from typing import Dict, Any, List, Union
 try:
     import torch
     HAS_TORCH = True
-except ImportError:
+    torch.set_num_threads(1)
+    if hasattr(torch.backends, "mkldnn"):
+        torch.backends.mkldnn.enabled = False
+except Exception:
     torch = None
     HAS_TORCH = False
+
 
 class SafeAdNSFWDetector:
     """

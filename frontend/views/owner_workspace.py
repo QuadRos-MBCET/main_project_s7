@@ -17,7 +17,14 @@ except ImportError:
     run_safead_inference = None
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8002/api/v1")
-backend_online = False # Will use the local inference fallback with optimized keyframe sampling
+
+def check_backend_online():
+    try:
+        resp = requests.get("http://127.0.0.1:8002/health", timeout=1.0)
+        return resp.status_code == 200
+    except Exception:
+        return False
+
 
 def owner_dashboard():
     # Insert custom styling exactly from Joseph's branch
@@ -146,9 +153,9 @@ def owner_dashboard():
                         f.write(file_bytes)
                         
                     report = None
-                    if backend_online:
+                    if check_backend_online():
                         try:
-                            files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type)}
+                            files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type or "video/mp4")}
                             data = {"title": ad_title, "caption": ad_caption, "user_id": 1}
                             resp = requests.post(f"{BACKEND_URL}/advertisements/upload", files=files, data=data, timeout=30)
                             if resp.status_code == 200:
@@ -158,8 +165,9 @@ def owner_dashboard():
                                 analyze_resp = requests.post(f"{BACKEND_URL}/advertisements/{ad_data['id']}/analyze", timeout=120)
                                 if analyze_resp.status_code == 200:
                                     report = analyze_resp.json()
-                        except Exception:
-                            pass
+                        except Exception as backend_err:
+                            print(f"[Owner Workspace] Backend API call error: {backend_err}")
+
                             
                     if not report:
                         if run_safead_inference:

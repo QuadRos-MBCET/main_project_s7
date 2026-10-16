@@ -1,7 +1,22 @@
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+try:
+    import torch
+    torch.set_num_threads(1)
+    if hasattr(torch.backends, "mkldnn"):
+        torch.backends.mkldnn.enabled = False
+except Exception:
+    pass
+
 import time
 from typing import Dict, Any, List, Optional
 from PIL import Image
+
 
 from processing.preprocessing import validate_advertisement_file
 from processing.video_sampling import extract_adaptive_keyframes, get_video_metadata
