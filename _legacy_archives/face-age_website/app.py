@@ -238,7 +238,7 @@ with tabs[0]:
             
             # Status & Anti-Spoof Warning
             if res["is_spoof"]:
-                st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+                st.error("🛑 **YOU ARE SHOWING A MOBILE SCREEN**")
                 st.warning(f"⚠️ Photo/Screen Spoof Detected! ({res['spoof_reason']})")
             elif res["status"] == "VERIFIED_SUCCESS":
                 st.success(f"### {res['message']}")

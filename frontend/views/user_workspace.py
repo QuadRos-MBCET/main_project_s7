@@ -276,9 +276,12 @@ def user_dashboard():
 
                 engine = st.session_state["vision_engine"]
                 target_interval = 1.0 / 30.0  # Strict 33.33ms pacing for 30 FPS
+                last_card_html = None
+                loop_counter = 0
                 
                 while engine.running:
                     t_frame_start = time.time()
+                    loop_counter += 1
                     annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
                     
                     if annotated is not None:
@@ -288,6 +291,7 @@ def user_dashboard():
                         match_score = info.get("match_score")
                         is_match = info.get("is_match")
                         
+                        card_html = None
                         if is_spoof:
                             score_html = ""
                             if match_score is not None:
@@ -303,17 +307,17 @@ def user_dashboard():
                                 </div>
                                 """
                             spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
-                            status_placeholder.markdown(f"""
+                            card_html = f"""
                             <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
-                                <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
+                                <b style="color:#b91c1c; font-size:15px;">🛑 YOU ARE SHOWING A MOBILE SCREEN</b><br>
                                 <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
                                 {score_html}
                             </div>
-                            """, unsafe_allow_html=True)
+                            """
                         elif match_score is not None:
                             color = "#16a34a" if is_match else "#dc2626"
                             tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
-                            status_placeholder.markdown(f"""
+                            card_html = f"""
                             <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
                                 <div>
                                     <span style="font-weight:700; color:{color};">{tag}</span><br>
@@ -321,9 +325,17 @@ def user_dashboard():
                                 </div>
                                 <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
                             </div>
-                            """, unsafe_allow_html=True)
+                            """
                         else:
-                            status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                            card_html = "WAITING"
+
+                        # Throttle DOM updates to avoid WebSocket flooding and eliminate browser video lag
+                        if card_html != last_card_html or (loop_counter % 15 == 0):
+                            if card_html == "WAITING":
+                                status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
+                            elif card_html is not None:
+                                status_placeholder.markdown(card_html, unsafe_allow_html=True)
+                            last_card_html = card_html
                             
                         st.session_state["latest_live_frame"] = raw_rgb
                         live_image_np = raw_rgb
@@ -379,7 +391,7 @@ def user_dashboard():
             
             # Status & Anti-Spoof Warning
             if res.get("is_spoof"):
-                st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+                st.error("🛑 **YOU ARE SHOWING A MOBILE SCREEN**")
                 st.warning(f"⚠️ Photo/Screen Spoof Detected! ({res.get('spoof_reason')})")
             elif res.get("status") == "VERIFIED_SUCCESS":
                 st.success(f"### {res.get('message')}")

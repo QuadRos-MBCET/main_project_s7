@@ -1,0 +1,5 @@
+model:
+  detector: "MTCNN"
+  age_estimator: "nateraw/vit-age-classifier"
+  confidence_threshold: 0.5
+  keep_all_faces: true

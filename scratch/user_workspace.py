@@ -99,7 +99,7 @@ def user_dashboard():
                 msg = res.get("message", "")
                 
                 if is_spoof:
-                    st.error("🚨 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+                    st.error("🚨 **YOU ARE SHOWING A MOBILE SCREEN**")
                     st.warning(f"🚫 Photo/Screen Spoof Detected! ({res.get('spoof_reason')})")
                 elif status == "VERIFIED_SUCCESS":
                     st.success(f"✅ {msg}")

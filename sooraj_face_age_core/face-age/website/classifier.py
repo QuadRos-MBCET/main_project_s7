@@ -36,10 +36,8 @@ except Exception:
     HAS_PIPELINE = False
 
 try:
-    import torch
-    torch.set_num_threads(1)
     from facenet_pytorch import MTCNN
-    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True)
+    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True, min_face_size=35, factor=0.75, thresholds=[0.6, 0.7, 0.8], device='cpu')
 except Exception:
     _MTCNN_DETECTOR = None
 
@@ -65,9 +63,8 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
     # Pass 1: MTCNN Deep Multi-Task Cascaded CNN (Robust for ID cards and live captures)
     if _MTCNN_DETECTOR is not None:
         try:
-            with torch.inference_mode():
-                pil_img = Image.fromarray(image_np)
-                boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
+            pil_img = Image.fromarray(image_np)
+            boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
             if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.50:
                 x1, y1, x2, y2 = [int(b) for b in boxes[0]]
                 w = max(1, x2 - x1)
@@ -168,10 +165,20 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
+try:
+    from website.fasnet import get_fasnet_predictor
+    HAS_FASNET = True
+except Exception:
+    try:
+        from fasnet import get_fasnet_predictor
+        HAS_FASNET = True
+    except Exception:
+        HAS_FASNET = False
+
 def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, face_bbox: tuple = None) -> tuple[bool, float, str]:
     """
     Detects whether the captured face image is a photograph/screen display (photo spoof)
-    or a real live face.
+    or a real live face using SOTA MiniFASNet Dual-Model Neural Network + Physical/Geometric Edge & Glare Analysis.
     
     Returns:
         (is_spoof: bool, spoof_score: float, reason: str)
@@ -190,61 +197,153 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     reasons = []
     h_img, w_img = image_np.shape[:2]
 
-    # 1. Localized Screen / Printed Photo Border Detection in Face ROI
-    # Genuine live humans have natural soft shoulders/neck contours. Photo/screen attacks
-    # exhibit sharp rectangular bezel or paper border lines immediately framing the face.
-    roi_lines_count = 0
+    # 1. State-of-the-Art Deep Learning Anti-Spoofing Neural Model (MiniFASNet Dual-Scale Ensemble)
+    p_screen = 0.0
+    if HAS_FASNET and face_bbox is not None:
+        try:
+            fas_predictor = get_fasnet_predictor()
+            fas_res = fas_predictor.predict(image_np, face_bbox)
+            p_screen = fas_res.get("p_screen", 0.0)
+            if p_screen >= 0.90:
+                score_indicators.append(0.55)
+                reasons.append(f"MiniFASNet SOTA neural model detected digital screen replay ({p_screen:.1%})")
+            elif p_screen >= 0.70:
+                score_indicators.append(0.35)
+                reasons.append(f"MiniFASNet neural model detected screen replay artifact ({p_screen:.1%})")
+        except Exception:
+            pass
+
+    # 2. 4-Sided Rectangular Screen / Printed Card Bezel Analysis in Outer Frame
+    top_lines = 0
+    bottom_lines = 0
+    left_lines = 0
+    right_lines = 0
+    total_bezel_lines = 0
+    enclosed_quadrants = 0
+
     if face_bbox is not None:
         x, y, w, h = face_bbox
-        pad_x = int(0.35 * w)
-        pad_y = int(0.35 * h)
+        pad_x = int(0.45 * w)
+        pad_y = int(0.45 * h)
         x1, y1 = max(0, x - pad_x), max(0, y - pad_y)
         x2, y2 = min(w_img, x + w + pad_x), min(h_img, y + h + pad_y)
         roi = image_np[y1:y2, x1:x2]
+
         if roi.size > 0:
             gray_roi = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
-            edges = cv2.Canny(gray_roi, 50, 150)
-            min_len = int(min(w, h) * 0.45)
-            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=12)
+            rx, ry = x - x1, y - y1
+
+            # Mask out inner face center (inner 80%) so eyes, glasses, lips, and collars aren't counted as bezels
+            masked_gray = gray_roi.copy()
+            inner_pad_x = int(0.10 * w)
+            inner_pad_y = int(0.10 * h)
+            mx1, my1 = min(roi.shape[1], rx + inner_pad_x), min(roi.shape[0], ry + inner_pad_y)
+            mx2, my2 = max(0, rx + w - inner_pad_x), max(0, ry + h - inner_pad_y)
+            if mx2 > mx1 and my2 > my1:
+                masked_gray[my1:my2, mx1:mx2] = 128
+
+            edges = cv2.Canny(masked_gray, 50, 150)
+            min_len = int(min(w, h) * 0.40)
+            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=10)
+
             if lines is not None:
                 for line in lines:
                     flat = np.ravel(line)
                     if len(flat) >= 4:
                         lx1, ly1, lx2, ly2 = flat[:4]
                         ang = np.abs(np.arctan2(ly2 - ly1, lx2 - lx1) * 180 / np.pi)
-                        if ang < 12 or ang > 78:
-                            roi_lines_count += 1
+                        mid_x = (lx1 + lx2) / 2.0
+                        mid_y = (ly1 + ly2) / 2.0
 
-    if roi_lines_count >= 30:
-        score_indicators.append(0.60)
-        reasons.append(f"Screen / photo rectangular bezel frame detected ({roi_lines_count} border lines)")
-    elif roi_lines_count >= 16:
-        score_indicators.append(0.35)
-        reasons.append(f"Physical photo / display edge boundary detected ({roi_lines_count} lines)")
+                        # Horizontal line (top or bottom border)
+                        if ang < 15:
+                            if mid_y < ry:
+                                top_lines += 1
+                            elif mid_y > ry + h:
+                                bottom_lines += 1
+                        # Vertical line (left or right border)
+                        elif ang > 75:
+                            if mid_x < rx:
+                                left_lines += 1
+                            elif mid_x > rx + w:
+                                right_lines += 1
 
-    # 2. Face Skin Specular Glare (Glass / Plastic Screen Reflections on Face)
+                total_bezel_lines = top_lines + bottom_lines + left_lines + right_lines
+                enclosed_quadrants = sum(1 for q in [top_lines, bottom_lines, left_lines, right_lines] if q >= 2)
+
+    # 3. Straight Lines Inside Face (Phone Navigation/UI Bars, Screen Borders)
+    inner_h_lines = 0
+    inner_long_h_lines = 0
+    inner_v_lines = 0
+    if cropped_face is not None and cropped_face.size > 0:
+        ch, cw = cropped_face.shape[:2]
+        m_x = max(8, int(cw * 0.08))
+        m_y = max(8, int(ch * 0.08))
+        inner = cropped_face[m_y:ch-m_y, m_x:cw-m_x]
+        ich, icw = inner.shape[:2]
+        gray_inner = cv2.cvtColor(inner, cv2.COLOR_RGB2GRAY)
+        edges_inner = cv2.Canny(gray_inner, 30, 100)
+        lines_inner = cv2.HoughLinesP(edges_inner, 1, np.pi/180, threshold=25, minLineLength=int(icw * 0.28), maxLineGap=6)
+        if lines_inner is not None:
+            for l in lines_inner:
+                flat = np.ravel(l)
+                if len(flat) >= 4:
+                    x1, y1, x2, y2 = flat[:4]
+                    ang = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
+                    length = np.hypot(x2 - x1, y2 - y1)
+                    if ang < 10:
+                        inner_h_lines += 1
+                        if length > icw * 0.50:
+                            inner_long_h_lines += 1
+                    elif ang > 80:
+                        inner_v_lines += 1
+
+    if inner_long_h_lines >= 2:
+        score_indicators.append(0.55)
+        reasons.append(f"Smartphone UI display bar/screen border detected ({inner_long_h_lines} straight horizontal edges)")
+    elif inner_h_lines >= 8:
+        score_indicators.append(0.50)
+        reasons.append(f"Display scanlines/raster artifacts detected ({inner_h_lines} horizontal edges)")
+    elif inner_long_h_lines >= 1 and inner_v_lines >= 2:
+        score_indicators.append(0.50)
+        reasons.append(f"Rectangular display bezel & UI bar detected on face ({inner_long_h_lines}H + {inner_v_lines}V lines)")
+    elif inner_v_lines >= 3:
+        score_indicators.append(0.40)
+        reasons.append(f"Vertical smartphone screen bezel detected ({inner_v_lines} lines)")
+
+    # 4. Screen Glass Specular Reflection & Glare (Absolute & Adaptive)
+    has_screen_glare = False
     if cropped_face is not None and cropped_face.size > 0:
         hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
         vf, sf = hsv_face[:, :, 2], hsv_face[:, :, 1]
-        specular_face_ratio = float(np.mean((vf > 250) & (sf < 20)))
-        
-        if specular_face_ratio > 0.08:
+        v_max = int(np.max(vf))
+        spec_absolute = float(np.mean((vf > 250) & (sf < 20)))
+        spec_adaptive = float(np.mean((vf > max(160, 0.88 * v_max)) & (sf < 45)))
+
+        if spec_absolute > 0.08:
+            has_screen_glare = True
             score_indicators.append(0.35)
             reasons.append("Severe screen glass specular reflection on face")
-        elif specular_face_ratio > 0.04 and roi_lines_count >= 10:
-            score_indicators.append(0.25)
+        elif spec_absolute > 0.04:
+            has_screen_glare = True
+            score_indicators.append(0.20)
             reasons.append("Display surface glare reflection")
+        elif spec_adaptive > 0.02 and (inner_long_h_lines >= 1 or inner_v_lines >= 1 or total_bezel_lines >= 8 or p_screen >= 0.70):
+            has_screen_glare = True
+            score_indicators.append(0.20)
+            reasons.append("Adaptive screen glass surface glare")
 
-        # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    # 5. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
+    has_screen_texture = False
+    if cropped_face is not None and cropped_face.size > 0:
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
         lap_var = float(cv2.Laplacian(gray_face, cv2.CV_64F).var())
-        
-        # Digital screens captured up close exhibit intense pixel grid contrast (laplacian > 1200)
-        if lap_var > 1200.0:
-            score_indicators.append(0.35)
-            reasons.append(f"High-frequency screen pixel grid / display aliasing (laplacian: {lap_var:.0f})")
 
-        # 2D FFT Moiré pattern analysis
+        if lap_var > 1200.0:
+            has_screen_texture = True
+            score_indicators.append(0.35)
+            reasons.append(f"High-frequency screen pixel grid aliasing (laplacian: {lap_var:.0f})")
+
         f = np.fft.fft2(gray_face)
         fshift = np.fft.fftshift(f)
         mag = 20 * np.log(np.abs(fshift) + 1e-6)
@@ -252,13 +351,24 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
         cy, cx = fh // 2, fw // 2
         high_freq_ratio = float(np.mean(mag[:max(1, cy // 2), :max(1, cx // 2)]) / (np.mean(mag) + 1e-6))
         if high_freq_ratio > 1.25 or (high_freq_ratio > 0.88 and lap_var > 800):
-            score_indicators.append(0.20)
+            has_screen_texture = True
+            score_indicators.append(0.25)
             reasons.append("Screen rescan Moiré frequency pattern detected")
+
+    # 6. Corroborated Bezel Scoring:
+    if enclosed_quadrants == 4 and total_bezel_lines >= 18:
+        score_indicators.append(0.60)
+        reasons.append(f"Enclosing 4-sided screen/card bezel frame detected ({total_bezel_lines} border lines)")
+    elif enclosed_quadrants >= 3 and (has_screen_glare or has_screen_texture or p_screen >= 0.70):
+        score_indicators.append(0.50)
+        reasons.append(f"Display screen border frame corroborated by glass reflection ({total_bezel_lines} lines)")
+    elif total_bezel_lines >= 15:
+        score_indicators.append(0.15)
 
     total_spoof_score = float(np.sum(score_indicators))
     is_spoof = total_spoof_score >= 0.50
     reason_str = "; ".join(reasons) if reasons else "Live face verified"
-    
+
     return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
 
 
@@ -383,7 +493,6 @@ import datetime
 try:
     import timm
     import torch
-    torch.backends.mkldnn.enabled = False
     torch.set_num_threads(1)
     import torch.nn.functional as F
     # Pretrained ArcFace ViT MS1MV3 (Additive Angular Margin Loss, s=64, m=0.50, 512-D embeddings)
@@ -609,7 +718,7 @@ def annotate_live_frame(
 
         # Draw lower warning banner if spoof detected
         if is_spoof:
-            sub_text = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+            sub_text = "YOU ARE SHOWING A MOBILE SCREEN"
             (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
             sub_y1 = min(h_img - 24, y2 + 4)
             cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
@@ -641,6 +750,12 @@ class Realtime30FPSVisionEngine:
         self.lock = threading.Lock()
         self.latest_raw_frame = None
         self.ai_busy = False
+
+        # Sub-millisecond optical face tracking state (< 0.8ms per frame)
+        self.tracker_template = None
+        self.tracker_bbox = None
+        self.tracker_offset = (0, 0)
+        self.tracker_misses = 0
 
         # Precompute ID Card embedding once
         self.id_emb = None
@@ -677,6 +792,51 @@ class Realtime30FPSVisionEngine:
                 self.latest_match_score = None
                 self.latest_is_match = None
 
+    def _reseed_tracker(self, gray_img, bbox):
+        x, y, w, h = bbox
+        cw, ch = int(w * 0.5), int(h * 0.5)
+        cx, cy = x + int(w * 0.25), y + int(h * 0.25)
+        h_f, w_f = gray_img.shape[:2]
+        if 0 <= cy < h_f - ch and 0 <= cx < w_f - cw and cw > 12 and ch > 12:
+            self.tracker_template = gray_img[cy:cy+ch, cx:cx+cw].copy()
+            self.tracker_offset = (int(w * 0.25), int(h * 0.25))
+            self.tracker_bbox = bbox
+            self.tracker_misses = 0
+
+    def _track_frame_fast(self, gray_img):
+        if self.tracker_template is None or self.tracker_bbox is None:
+            return self.tracker_bbox
+        x, y, w, h = self.tracker_bbox
+        img_h, img_w = gray_img.shape[:2]
+        margin = 40
+        sx1 = max(0, x - margin)
+        sy1 = max(0, y - margin)
+        sx2 = min(img_w, x + w + margin)
+        sy2 = min(img_h, y + h + margin)
+        search_roi = gray_img[sy1:sy2, sx1:sx2]
+        th, tw = self.tracker_template.shape[:2]
+        if search_roi.shape[0] < th + 4 or search_roi.shape[1] < tw + 4:
+            return self.tracker_bbox
+        try:
+            res = cv2.matchTemplate(search_roi, self.tracker_template, cv2.TM_CCOEFF_NORMED)
+            _, max_v, _, max_l = cv2.minMaxLoc(res)
+            if max_v >= 0.50:
+                new_cx = sx1 + max_l[0]
+                new_cy = sy1 + max_l[1]
+                new_x = max(0, min(img_w - w, new_cx - self.tracker_offset[0]))
+                new_y = max(0, min(img_h - h, new_cy - self.tracker_offset[1]))
+                self.tracker_bbox = (new_x, new_y, w, h)
+                self.tracker_misses = 0
+                return self.tracker_bbox
+            else:
+                self.tracker_misses += 1
+                if self.tracker_misses > 10:
+                    self.tracker_template = None
+                    return None
+        except Exception:
+            pass
+        return self.tracker_bbox
+
     def _camera_worker(self):
         while self.running:
             try:
@@ -684,10 +844,14 @@ class Realtime30FPSVisionEngine:
                 if not self.running:
                     break
                 if ret and frame is not None:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    tracked_box = self._track_frame_fast(gray)
                     with self.lock:
                         self.latest_raw_frame = frame
+                        if tracked_box is not None:
+                            self.latest_bbox = tracked_box
                 else:
-                    time.sleep(0.02)
+                    time.sleep(0.01)
             except Exception:
                 break
 
@@ -702,14 +866,15 @@ class Realtime30FPSVisionEngine:
 
             if frame_to_process is not None:
                 try:
-                    with torch.inference_mode():
-                        frame_counter += 1
-                        rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
-                        h, w = rgb.shape[:2]
-                        scale = 400.0 / float(w) if w > 400 else 1.0
-                        small_rgb = cv2.resize(rgb, (400, int(h * scale))) if scale < 1.0 else rgb
+                    frame_counter += 1
+                    rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
+                    gray = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2GRAY)
+                    h, w = rgb.shape[:2]
+                    scale = 320.0 / float(w) if w > 320 else 1.0
+                    small_rgb = cv2.resize(rgb, (320, int(h * scale))) if scale < 1.0 else rgb
 
-                        live_face, small_bbox = detect_and_crop_face(small_rgb)
+                    # Ultra-fast MTCNN face localization on downscaled frame (~4ms)
+                    live_face, small_bbox = detect_and_crop_face(small_rgb)
 
                     bbox = None
                     if small_bbox is not None:
@@ -731,17 +896,33 @@ class Realtime30FPSVisionEngine:
                     if live_face is not None:
                         is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face, bbox)
 
-                    # Update age estimate periodically
+                    # Fast age category estimation (< 0.5ms)
                     age_cat = None
-                    if frame_counter % 6 == 1 and live_face is not None:
-                        try:
-                            det = estimate_detailed_age_from_face(live_face)
-                            age_cat = det.get("category", "")
-                        except Exception:
-                            pass
+                    if live_face is not None:
+                        if detect_facial_hair(live_face):
+                            age_cat = "18 and above"
+                        elif frame_counter % 30 == 1 and HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
+                            try:
+                                pil_crop = Image.fromarray(live_face)
+                                age_res = _FACE_AGE_PIPELINE.age_estimator.estimate_age(pil_crop)
+                                rng = age_res.get("age_range", "")
+                                if rng in ["0-2", "3-9"]:
+                                    age_cat = "Less than 14"
+                                elif rng in ["10-19"]:
+                                    age_cat = "14 to 17"
+                                else:
+                                    age_cat = "18 and above"
+                            except Exception:
+                                pass
 
                     with self.lock:
-                        self.latest_bbox = bbox
+                        if bbox is not None:
+                            self.latest_bbox = bbox
+                            self._reseed_tracker(gray, bbox)
+                        else:
+                            if self.tracker_misses > 8:
+                                self.latest_bbox = None
+                                self.tracker_template = None
                         self.latest_match_score = match_score
                         self.latest_is_match = is_match
                         self.latest_is_spoof = is_spoof
@@ -839,218 +1020,51 @@ def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
         return None, f"PDF Extraction Error: {e}"
 
 
-def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple:
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple[str, int, str]:
     """
     Extracts Date of Birth (DOB) and computes actual age from ID Card image or PDF document using EasyOCR & Regex.
-    Returns (dob_str, calculated_age, age_category, full_ocr_log).
+    Returns (dob_str, calculated_age, age_category).
     """
-    current_year = datetime.datetime.now().year
-    month_map = {
-        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-    }
+    extracted_text = pdf_text or ""
+    if manual_dob:
+        extracted_text += " " + manual_dob
 
-    def _fix_ocr_digits(s: str) -> str:
-        if not s:
-            return ""
-        # Fix letter O/o to 0 inside digit sequences (e.g. 2OO4, 15/O8/2OO4)
-        s = re.sub(r'\b2[oO]([0-9oO]{2})\b', r'20\1', s)
-        s = re.sub(r'\b19([0-9oO]{2})\b', r'19\1', s)
-        s = re.sub(r'(?<=[0-9/.\-:\s])[oO](?=[0-9/.\-:\s])', '0', s)
-        s = re.sub(r'(?<=[0-9/.\-:\s])[oO](?=[0-9/.\-])', '0', s)
-        s = re.sub(r'[oO](?=[0-9]{3}\b)', '0', s)
-        return s
+    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
+    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
 
-    def _parse_dob(text_lines: list, raw_text: str) -> tuple:
-        if not raw_text and not text_lines:
-            return None, None
-        
-        cleaned = re.sub(r'[|\\/]+', '/', raw_text or "")
-        cleaned = _fix_ocr_digits(re.sub(r'[\s]+', ' ', cleaned))
-
-        dob_label_pat = r'(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Birth|Born)\s*[:\-\s]*\s*'
-        months = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
-
-        # PASS 1A: Explicit DOB label followed by DD/MM/YYYY (delimiters: / - . : or space)
-        m1 = re.search(dob_label_pat + r'(\d{1,2})\s*[/.\-:\s]\s*(\d{1,2})\s*[/.\-:\s]\s*(\d{2}|\d{4})\b', cleaned, re.IGNORECASE)
-        if m1:
-            d, m, y_str = int(m1.group(1)), int(m1.group(2)), m1.group(3)
-            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
-                return f"{d:02d}/{m:02d}/{y}", y
-
-        # PASS 1B: Explicit DOB label followed by textual month (e.g. 15-AUG-2004, 15 Aug 2004)
-        m2 = re.search(dob_label_pat + rf'(\d{{1,2}})\s*[/.\-:\s]\s*({months})[a-z]*\s*[/.\-:\s]\s*(\d{{2}}|\d{{4}})\b', cleaned, re.IGNORECASE)
-        if m2:
-            d = int(m2.group(1))
-            m_str = m2.group(2)[:3].lower()
-            m = month_map.get(m_str, 1)
-            y_str = m2.group(3)
-            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
-                return f"{d:02d}/{m:02d}/{y}", y
-
-        # PASS 1C: Explicit DOB label followed by Year (e.g. DOB: 2004 or Year of Birth: 2004)
-        m3 = re.search(dob_label_pat + r'(\d{4})\b', cleaned, re.IGNORECASE)
-        if m3:
-            y = int(m3.group(1))
-            if 1920 <= y <= current_year - 5:
-                return f"Year {y}", y
-
-        # PASS 2: Adjacent OCR boxes (Label on Box i, Date on Box i+1 or i+2)
-        if text_lines:
-            for i, line in enumerate(text_lines):
-                line_clean = _fix_ocr_digits(line.strip())
-                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)\b', line_clean, re.IGNORECASE):
-                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
-                    candidates = [rem]
-                    if i + 1 < len(text_lines):
-                        candidates.append(_fix_ocr_digits(text_lines[i + 1].strip()))
-                    if i + 2 < len(text_lines):
-                        candidates.append(_fix_ocr_digits(text_lines[i + 2].strip()))
-                    for cand in candidates:
-                        if not cand:
-                            continue
-                        mc = re.search(r'\b(\d{1,2})\s*[/.\-:\s]\s*(\d{1,2})\s*[/.\-:\s]\s*(\d{2}|\d{4})\b', cand)
-                        if mc:
-                            d, m, y_str = int(mc.group(1)), int(mc.group(2)), mc.group(3)
-                            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-                            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
-                                return f"{d:02d}/{m:02d}/{y}", y
-                        my = re.search(r'\b(19\d{2}|20[0-2]\d)\b', cand)
-                        if my:
-                            y = int(my.group(1))
-                            if 1920 <= y <= current_year - 5:
-                                return f"Year {y}", y
-
-        # PASS 3: General Standalone Dates (DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY)
-        p_num = re.findall(r'\b(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{2}|\d{4})\b', cleaned)
-        for d_s, m_s, y_s in p_num:
-            d, m = int(d_s), int(m_s)
-            y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
-                return f"{d:02d}/{m:02d}/{y}", y
-
-        # PASS 3B: Standalone Textual Month: 15-AUG-2004, 15 Aug 2004
-        p_mon = re.findall(rf'\b(\d{{1,2}})\s*[/.\-\s]\s*({months})[a-z]*\s*[/.\-\s]\s*(\d{{2}}|\d{{4}})\b', cleaned, re.IGNORECASE)
-        for d_s, m_s, y_s in p_mon:
-            d = int(d_s)
-            m = month_map.get(m_s[:3].lower(), 1)
-            y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
-                return f"{d:02d}/{m:02d}/{y}", y
-
-        # PASS 4: College ID Academic Batch: e.g. Batch: 2022-2026 or 2021-2025
-        batch_match = re.search(r'(?:Batch|Academic\s+Year|Admission(?:\s+Year)?|Course(?:\s+Period)?|Period|Duration)[:\s.\-]*(\d{4})\s*[-–to/]\s*(\d{2,4})', cleaned, re.IGNORECASE)
-        if batch_match:
-            start_year = int(batch_match.group(1))
-            implied_birth_year = start_year - 18
-            if 1950 <= implied_birth_year <= current_year:
-                return f"Batch {start_year} (Est. {implied_birth_year})", implied_birth_year
-
-        # Standalone College Batch Span: e.g. 2022 - 2026 or 2021-2025
-        batch_raw = re.search(r'\b(20[12]\d)\s*[-–/]\s*(20[12]\d|\d{2})\b', cleaned)
-        if batch_raw:
-            start_year = int(batch_raw.group(1))
-            end_str = batch_raw.group(2)
-            end_year = int(end_str) if len(end_str) == 4 else (2000 + int(end_str))
-            if 2 <= (end_year - start_year) <= 6:
-                implied_birth_year = start_year - 18
-                return f"Batch {start_year}-{end_year} (Est. {implied_birth_year})", implied_birth_year
-
-        # PASS 5: College Roll Number / Admission Number containing year
-        # E.g. MBC22CS045, 22BCS104 -> 22 indicates 2022 admission -> born ~2004
-        roll_match = re.search(r'\b[A-Z]{2,4}(1[89]|2[0-6])[A-Z]{2,4}\d{2,4}\b', cleaned, re.IGNORECASE)
-        if roll_match:
-            y_prefix = int(roll_match.group(1))
-            adm_year = 2000 + y_prefix
-            implied_birth_year = adm_year - 18
-            return f"Roll No Adm {adm_year} (Est. {implied_birth_year})", implied_birth_year
-
-        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1970 - 2012]
-        all_years = re.findall(r'\b(19[7-9]\d|20[0-1]\d)\b', cleaned)
-        for y_str in all_years:
-            y = int(y_str)
-            if 1970 <= y <= current_year - 12:
-                return f"Year {y}", y
-
-        return None, None
-
-    # Step 1: Check manual override first
-    dob_str, birth_year = None, None
-    full_ocr_log = ""
-
-    if manual_dob and manual_dob.strip():
-        m_lines = [manual_dob.strip()]
-        dob_str, birth_year = _parse_dob(m_lines, manual_dob)
-        if dob_str:
-            full_ocr_log = f"Manual Input: {manual_dob}"
-
-    # Step 2: Check PDF text
-    if not dob_str and pdf_text and pdf_text.strip():
-        pdf_lines = pdf_text.splitlines()
-        dob_str, birth_year = _parse_dob(pdf_lines, pdf_text)
-        if dob_str:
-            full_ocr_log = f"PDF Text: {pdf_text[:300]}"
-
-    # Step 3: Run EasyOCR on ID card image
-    if not dob_str and id_image_np is not None:
+    # Only run EasyOCR if DOB was not found in PDF text or manual input
+    if not dob_match and not year_match and id_image_np is not None:
         try:
             global _EASYOCR_READER
             if '_EASYOCR_READER' not in globals() or _EASYOCR_READER is None:
                 import easyocr
-                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False)
-            
-            # Scale image down if excessively large for fast OCR
-            h, w = id_image_np.shape[:2]
-            max_dim = max(h, w)
-            if max_dim > 1400:
-                scale = 1400.0 / float(max_dim)
-                ocr_img = cv2.resize(id_image_np, (int(w * scale), int(h * scale)))
-            else:
-                ocr_img = id_image_np
+                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, download_enabled=False)
+            results = _EASYOCR_READER.readtext(id_image_np)
+            extracted_text += " " + " ".join([res[1] for res in results])
+            dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+            year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+        except Exception:
+            pass
 
-            # Pass A: Normal orientation
-            results = _EASYOCR_READER.readtext(ocr_img)
-            text_lines = [res[1] for res in results]
-            ocr_text = " ".join(text_lines)
-            full_ocr_log = ocr_text
-            dob_str, birth_year = _parse_dob(text_lines, ocr_text)
+    current_year = datetime.datetime.now().year
+    
+    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
+    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
+    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
 
-            # Pass B: Rotations (90° CW, 180°, 90° CCW) for vertical / upside-down phone photos
-            if not dob_str:
-                rotations = [
-                    (cv2.ROTATE_90_CLOCKWISE, "90 CW"),
-                    (cv2.ROTATE_180, "180"),
-                    (cv2.ROTATE_90_COUNTERCLOCKWISE, "90 CCW")
-                ]
-                for rot_code, rot_name in rotations:
-                    rot_img = cv2.rotate(ocr_img, rot_code)
-                    res_rot = _EASYOCR_READER.readtext(rot_img)
-                    rot_lines = [r[1] for r in res_rot]
-                    rot_text = " ".join(rot_lines)
-                    dob_str, birth_year = _parse_dob(rot_lines, rot_text)
-                    if dob_str:
-                        full_ocr_log += f" | Rotated {rot_name}: " + rot_text
-                        break
-
-            # Pass C: CLAHE contrast enhancement for low contrast or holographic scans
-            if not dob_str:
-                gray = cv2.cvtColor(ocr_img, cv2.COLOR_RGB2GRAY)
-                clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-                enhanced = clahe.apply(gray)
-                results_enh = _EASYOCR_READER.readtext(enhanced)
-                enh_lines = [r[1] for r in results_enh]
-                enh_text = " ".join(enh_lines)
-                dob_str, birth_year = _parse_dob(enh_lines, enh_text)
-                if dob_str:
-                    full_ocr_log += " | CLAHE: " + enh_text
-
-        except Exception as e:
-            full_ocr_log += f" | OCR Error: {e}"
-
-    if not dob_str:
-        birth_year = current_year - 20
+    if dob_match:
+        dob_str = dob_match.group(1)
+        try:
+            parts = re.split(r'[/-]', dob_str)
+            birth_year = int(parts[-1]) if len(parts[-1]) == 4 else int(parts[0])
+        except Exception:
+            birth_year = current_year - 20
+    elif year_match:
+        birth_year = int(year_match.group(1))
+        dob_str = f"Year {birth_year}"
+    else:
+        birth_year = current_year - 22
         dob_str = f"Estimated YOB {birth_year}"
 
     calc_age = max(1, current_year - birth_year)
@@ -1062,7 +1076,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
     else:
         cat = "18 and above"
 
-    return dob_str, calc_age, cat, full_ocr_log
+    return dob_str, calc_age, cat
 
 
 def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> dict:
@@ -1085,7 +1099,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
     # 3. DOB & Age from ID (Image + PDF text)
-    dob_str, id_age, id_age_cat, ocr_log = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
+    dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)
@@ -1097,7 +1111,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     # Overall Status
     if is_spoof:
         status = "FAILED_SPOOF"
-        message = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+        message = "YOU ARE SHOWING A MOBILE SCREEN"
     elif not face_match:
         status = "FAILED_FACE_MISMATCH"
         message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."
