@@ -1020,51 +1020,218 @@ def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
         return None, f"PDF Extraction Error: {e}"
 
 
-def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple[str, int, str]:
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple:
     """
     Extracts Date of Birth (DOB) and computes actual age from ID Card image or PDF document using EasyOCR & Regex.
-    Returns (dob_str, calculated_age, age_category).
+    Returns (dob_str, calculated_age, age_category, full_ocr_log).
     """
-    extracted_text = pdf_text or ""
-    if manual_dob:
-        extracted_text += " " + manual_dob
+    current_year = datetime.datetime.now().year
+    month_map = {
+        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+    }
 
-    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
-    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
-    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+    def _fix_ocr_digits(s: str) -> str:
+        if not s:
+            return ""
+        # Fix letter O/o to 0 inside digit sequences (e.g. 2OO4, 15/O8/2OO4)
+        s = re.sub(r'\b2[oO]([0-9oO]{2})\b', r'20\1', s)
+        s = re.sub(r'\b19([0-9oO]{2})\b', r'19\1', s)
+        s = re.sub(r'(?<=[0-9/.\-:\s])[oO](?=[0-9/.\-:\s])', '0', s)
+        s = re.sub(r'(?<=[0-9/.\-:\s])[oO](?=[0-9/.\-])', '0', s)
+        s = re.sub(r'[oO](?=[0-9]{3}\b)', '0', s)
+        return s
 
-    # Only run EasyOCR if DOB was not found in PDF text or manual input
-    if not dob_match and not year_match and id_image_np is not None:
+    def _parse_dob(text_lines: list, raw_text: str) -> tuple:
+        if not raw_text and not text_lines:
+            return None, None
+        
+        cleaned = re.sub(r'[|\\/]+', '/', raw_text or "")
+        cleaned = _fix_ocr_digits(re.sub(r'[\s]+', ' ', cleaned))
+
+        dob_label_pat = r'(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Birth|Born)\s*[:\-\s]*\s*'
+        months = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
+
+        # PASS 1A: Explicit DOB label followed by DD/MM/YYYY (delimiters: / - . : or space)
+        m1 = re.search(dob_label_pat + r'(\d{1,2})\s*[/.\-:\s]\s*(\d{1,2})\s*[/.\-:\s]\s*(\d{2}|\d{4})\b', cleaned, re.IGNORECASE)
+        if m1:
+            d, m, y_str = int(m1.group(1)), int(m1.group(2)), m1.group(3)
+            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+                return f"{d:02d}/{m:02d}/{y}", y
+
+        # PASS 1B: Explicit DOB label followed by textual month (e.g. 15-AUG-2004, 15 Aug 2004)
+        m2 = re.search(dob_label_pat + rf'(\d{{1,2}})\s*[/.\-:\s]\s*({months})[a-z]*\s*[/.\-:\s]\s*(\d{{2}}|\d{{4}})\b', cleaned, re.IGNORECASE)
+        if m2:
+            d = int(m2.group(1))
+            m_str = m2.group(2)[:3].lower()
+            m = month_map.get(m_str, 1)
+            y_str = m2.group(3)
+            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+                return f"{d:02d}/{m:02d}/{y}", y
+
+        # PASS 1C: Explicit DOB label followed by Year (e.g. DOB: 2004 or Year of Birth: 2004)
+        m3 = re.search(dob_label_pat + r'(\d{4})\b', cleaned, re.IGNORECASE)
+        if m3:
+            y = int(m3.group(1))
+            if 1920 <= y <= current_year - 5:
+                return f"Year {y}", y
+
+        # PASS 2: Adjacent OCR boxes (Label on Box i, Date on Box i+1 or i+2)
+        if text_lines:
+            for i, line in enumerate(text_lines):
+                line_clean = _fix_ocr_digits(line.strip())
+                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)\b', line_clean, re.IGNORECASE):
+                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
+                    candidates = [rem]
+                    if i + 1 < len(text_lines):
+                        candidates.append(_fix_ocr_digits(text_lines[i + 1].strip()))
+                    if i + 2 < len(text_lines):
+                        candidates.append(_fix_ocr_digits(text_lines[i + 2].strip()))
+                    for cand in candidates:
+                        if not cand:
+                            continue
+                        mc = re.search(r'\b(\d{1,2})\s*[/.\-:\s]\s*(\d{1,2})\s*[/.\-:\s]\s*(\d{2}|\d{4})\b', cand)
+                        if mc:
+                            d, m, y_str = int(mc.group(1)), int(mc.group(2)), mc.group(3)
+                            y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
+                            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+                                return f"{d:02d}/{m:02d}/{y}", y
+                        my = re.search(r'\b(19\d{2}|20[0-2]\d)\b', cand)
+                        if my:
+                            y = int(my.group(1))
+                            if 1920 <= y <= current_year - 5:
+                                return f"Year {y}", y
+
+        # PASS 3: General Standalone Dates (DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY)
+        p_num = re.findall(r'\b(\d{1,2})\s*[/.\-]\s*(\d{1,2})\s*[/.\-]\s*(\d{2}|\d{4})\b', cleaned)
+        for d_s, m_s, y_s in p_num:
+            d, m = int(d_s), int(m_s)
+            y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+                return f"{d:02d}/{m:02d}/{y}", y
+
+        # PASS 3B: Standalone Textual Month: 15-AUG-2004, 15 Aug 2004
+        p_mon = re.findall(rf'\b(\d{{1,2}})\s*[/.\-\s]\s*({months})[a-z]*\s*[/.\-\s]\s*(\d{{2}}|\d{{4}})\b', cleaned, re.IGNORECASE)
+        for d_s, m_s, y_s in p_mon:
+            d = int(d_s)
+            m = month_map.get(m_s[:3].lower(), 1)
+            y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+                return f"{d:02d}/{m:02d}/{y}", y
+
+        # PASS 4: College ID Academic Batch: e.g. Batch: 2022-2026 or 2021-2025
+        batch_match = re.search(r'(?:Batch|Academic\s+Year|Admission(?:\s+Year)?|Course(?:\s+Period)?|Period|Duration)[:\s.\-]*(\d{4})\s*[-–to/]\s*(\d{2,4})', cleaned, re.IGNORECASE)
+        if batch_match:
+            start_year = int(batch_match.group(1))
+            implied_birth_year = start_year - 18
+            if 1950 <= implied_birth_year <= current_year:
+                return f"Batch {start_year} (Est. {implied_birth_year})", implied_birth_year
+
+        # Standalone College Batch Span: e.g. 2022 - 2026 or 2021-2025
+        batch_raw = re.search(r'\b(20[12]\d)\s*[-–/]\s*(20[12]\d|\d{2})\b', cleaned)
+        if batch_raw:
+            start_year = int(batch_raw.group(1))
+            end_str = batch_raw.group(2)
+            end_year = int(end_str) if len(end_str) == 4 else (2000 + int(end_str))
+            if 2 <= (end_year - start_year) <= 6:
+                implied_birth_year = start_year - 18
+                return f"Batch {start_year}-{end_year} (Est. {implied_birth_year})", implied_birth_year
+
+        # PASS 5: College Roll Number / Admission Number containing year
+        # E.g. MBC22CS045, 22BCS104 -> 22 indicates 2022 admission -> born ~2004
+        roll_match = re.search(r'\b[A-Z]{2,4}(1[89]|2[0-6])[A-Z]{2,4}\d{2,4}\b', cleaned, re.IGNORECASE)
+        if roll_match:
+            y_prefix = int(roll_match.group(1))
+            adm_year = 2000 + y_prefix
+            implied_birth_year = adm_year - 18
+            return f"Roll No Adm {adm_year} (Est. {implied_birth_year})", implied_birth_year
+
+        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1970 - 2012]
+        all_years = re.findall(r'\b(19[7-9]\d|20[0-1]\d)\b', cleaned)
+        for y_str in all_years:
+            y = int(y_str)
+            if 1970 <= y <= current_year - 12:
+                return f"Year {y}", y
+
+        return None, None
+
+    # Step 1: Check manual override first
+    dob_str, birth_year = None, None
+    full_ocr_log = ""
+
+    if manual_dob and manual_dob.strip():
+        m_lines = [manual_dob.strip()]
+        dob_str, birth_year = _parse_dob(m_lines, manual_dob)
+        if dob_str:
+            full_ocr_log = f"Manual Input: {manual_dob}"
+
+    # Step 2: Check PDF text
+    if not dob_str and pdf_text and pdf_text.strip():
+        pdf_lines = pdf_text.splitlines()
+        dob_str, birth_year = _parse_dob(pdf_lines, pdf_text)
+        if dob_str:
+            full_ocr_log = f"PDF Text: {pdf_text[:300]}"
+
+    # Step 3: Run EasyOCR on ID card image
+    if not dob_str and id_image_np is not None:
         try:
             global _EASYOCR_READER
             if '_EASYOCR_READER' not in globals() or _EASYOCR_READER is None:
                 import easyocr
-                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, download_enabled=False)
-            results = _EASYOCR_READER.readtext(id_image_np)
-            extracted_text += " " + " ".join([res[1] for res in results])
-            dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
-            year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
-        except Exception:
-            pass
+                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False)
+            
+            # Scale image down if excessively large for fast OCR
+            h, w = id_image_np.shape[:2]
+            max_dim = max(h, w)
+            if max_dim > 1400:
+                scale = 1400.0 / float(max_dim)
+                ocr_img = cv2.resize(id_image_np, (int(w * scale), int(h * scale)))
+            else:
+                ocr_img = id_image_np
 
-    current_year = datetime.datetime.now().year
-    
-    # Search for DOB patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or Year YYYY
-    dob_match = re.search(r'(\d{2}[/-]\d{2}[/-]\d{4}|\d{4}[/-]\d{2}[/-]\d{2})', extracted_text)
-    year_match = re.search(r'(?:DOB|Birth|Year)[:\s]*(\d{4})', extracted_text, re.IGNORECASE)
+            # Pass A: Normal orientation
+            results = _EASYOCR_READER.readtext(ocr_img)
+            text_lines = [res[1] for res in results]
+            ocr_text = " ".join(text_lines)
+            full_ocr_log = ocr_text
+            dob_str, birth_year = _parse_dob(text_lines, ocr_text)
 
-    if dob_match:
-        dob_str = dob_match.group(1)
-        try:
-            parts = re.split(r'[/-]', dob_str)
-            birth_year = int(parts[-1]) if len(parts[-1]) == 4 else int(parts[0])
-        except Exception:
-            birth_year = current_year - 20
-    elif year_match:
-        birth_year = int(year_match.group(1))
-        dob_str = f"Year {birth_year}"
-    else:
-        birth_year = current_year - 22
+            # Pass B: Rotations (90° CW, 180°, 90° CCW) for vertical / upside-down phone photos
+            if not dob_str:
+                rotations = [
+                    (cv2.ROTATE_90_CLOCKWISE, "90 CW"),
+                    (cv2.ROTATE_180, "180"),
+                    (cv2.ROTATE_90_COUNTERCLOCKWISE, "90 CCW")
+                ]
+                for rot_code, rot_name in rotations:
+                    rot_img = cv2.rotate(ocr_img, rot_code)
+                    res_rot = _EASYOCR_READER.readtext(rot_img)
+                    rot_lines = [r[1] for r in res_rot]
+                    rot_text = " ".join(rot_lines)
+                    dob_str, birth_year = _parse_dob(rot_lines, rot_text)
+                    if dob_str:
+                        full_ocr_log += f" | Rotated {rot_name}: " + rot_text
+                        break
+
+            # Pass C: CLAHE contrast enhancement for low contrast or holographic scans
+            if not dob_str:
+                gray = cv2.cvtColor(ocr_img, cv2.COLOR_RGB2GRAY)
+                clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+                enhanced = clahe.apply(gray)
+                results_enh = _EASYOCR_READER.readtext(enhanced)
+                enh_lines = [r[1] for r in results_enh]
+                enh_text = " ".join(enh_lines)
+                dob_str, birth_year = _parse_dob(enh_lines, enh_text)
+                if dob_str:
+                    full_ocr_log += " | CLAHE: " + enh_text
+
+        except Exception as e:
+            full_ocr_log += f" | OCR Error: {e}"
+
+    if not dob_str:
+        birth_year = current_year - 20
         dob_str = f"Estimated YOB {birth_year}"
 
     calc_age = max(1, current_year - birth_year)
@@ -1076,7 +1243,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
     else:
         cat = "18 and above"
 
-    return dob_str, calc_age, cat
+    return dob_str, calc_age, cat, full_ocr_log
 
 
 def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> dict:
@@ -1099,7 +1266,12 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
     # 3. DOB & Age from ID (Image + PDF text)
-    dob_str, id_age, id_age_cat = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
+    dob_res = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
+    if len(dob_res) == 4:
+        dob_str, id_age, id_age_cat, ocr_log = dob_res
+    else:
+        dob_str, id_age, id_age_cat = dob_res
+        ocr_log = ""
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)

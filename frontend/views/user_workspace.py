@@ -211,7 +211,12 @@ def user_dashboard():
                 cache_key = f"{getattr(up_id, 'name', 'id')}_{id_image_np.shape}_{id_image_np.sum() % 1000000}"
                 if st.session_state.get("cached_ocr_key") != cache_key or "cached_ocr_res" not in st.session_state:
                     with st.spinner("🔍 Reading ID Card text & Date of Birth via EasyOCR..."):
-                        extracted_dob_str, id_calc_age, id_cat, ocr_log = extract_dob_and_age_from_id(id_image_np, pdf_text=id_pdf_text)
+                        dob_res = extract_dob_and_age_from_id(id_image_np, pdf_text=id_pdf_text)
+                        if len(dob_res) == 4:
+                            extracted_dob_str, id_calc_age, id_cat, ocr_log = dob_res
+                        else:
+                            extracted_dob_str, id_calc_age, id_cat = dob_res
+                            ocr_log = ""
                         st.session_state["cached_ocr_key"] = cache_key
                         st.session_state["cached_ocr_res"] = (extracted_dob_str, id_calc_age, id_cat, ocr_log)
                 else:
