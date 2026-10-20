@@ -90,7 +90,12 @@ def owner_dashboard():
         </style>
     """, unsafe_allow_html=True)
     
-    # Header from Joseph's code
+    try:
+        from frontend.styles.instagram_theme import render_instagram_logo
+        render_instagram_logo(subtitle="CREATOR STUDIO")
+    except Exception:
+        pass
+        
     st.header("📢 Brand Owner Advertisement Safety Portal")
     
     if "owner_action_msg" in st.session_state and st.session_state["owner_action_msg"]:

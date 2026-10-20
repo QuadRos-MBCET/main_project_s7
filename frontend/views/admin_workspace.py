@@ -72,6 +72,12 @@ def admin_dashboard():
     pending_cases = st.session_state["pending_human_reviews"]
     reviewed_cases = st.session_state["reviewed_cases"]
 
+    try:
+        from frontend.styles.instagram_theme import render_instagram_logo
+        render_instagram_logo(subtitle="SAFETY DESK")
+    except Exception:
+        pass
+
     st.header("🛡️ SAFEAD AI — HUMAN REVIEW DASHBOARD")
     st.caption("Review advertisements awaiting human moderator decision")
     

@@ -27,51 +27,89 @@ if FRONTEND_DIR not in sys.path:
     sys.path.insert(0, FRONTEND_DIR)
 
 try:
+    from frontend.styles.instagram_theme import inject_instagram_styles, render_instagram_logo
     from frontend.auth.auth_manager import login_page
     from frontend.views.owner_workspace import owner_dashboard
     from frontend.views.user_workspace import user_dashboard
     from frontend.views.admin_workspace import admin_dashboard
 except ImportError:
+    from styles.instagram_theme import inject_instagram_styles, render_instagram_logo
     from auth.auth_manager import login_page
     from views.owner_workspace import owner_dashboard
     from views.user_workspace import user_dashboard
     from views.admin_workspace import admin_dashboard
 
 st.set_page_config(
-    page_title="SafeAd AI - Unified Platform",
-    page_icon="🛡️",
-    layout="wide"
+    page_title="Instagram • SafeAd AI",
+    page_icon="📸",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-.main-title { font-size: 36px; color: #1e3a8a; font-weight: 700; text-align: center; }
-.sub-title { font-size: 16px; color: #64748b; text-align: center; margin-bottom: 30px; }
-.card { background: rgba(255, 255, 255, 0.7); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); }
-</style>
-""", unsafe_allow_html=True)
+# Inject Instagram Dark & Phone-Responsive Design System
+inject_instagram_styles()
 
 if "role" not in st.session_state:
     st.session_state["role"] = None
 
 if st.session_state["role"] is None:
-    st.markdown("<div class='main-title'>SAFEAD AI</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-title'>Multimodal Advertisement Safety & Age-Aware Content Platform</div>", unsafe_allow_html=True)
     login_page()
 else:
     role = st.session_state["role"]
-    st.sidebar.title(f"{role.replace('_', ' ').title()} Portal")
-    if st.sidebar.button("Logout"):
-        if "vision_engine" in st.session_state:
-            try:
-                st.session_state["vision_engine"].stop()
-            except Exception:
-                pass
-            del st.session_state["vision_engine"]
-        st.session_state["role"] = None
-        st.rerun()
+    
+    with st.sidebar:
+        st.markdown("""
+        <div style="padding:10px 0 16px 0; border-bottom:1px solid #262626; margin-bottom:14px;">
+            <div style="font-family:'Grand Hotel', cursive, -apple-system, sans-serif; font-size:32px; background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1;">
+                Instagram
+            </div>
+            <div style="font-size:11px; font-weight:700; color:#0095f6; letter-spacing:0.8px; margin-top:2px;">
+                SAFEAD AI PLATFORM
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
+        # Display Current Active Profile
+        role_label = role.replace('_', ' ').title()
+        role_icon = "📱" if role == "USER" else ("🏢" if role == "ADVERTISEMENT_OWNER" else "🛡️")
+        user_name = st.session_state.get("logged_in_username") or ("social_user" if role == "USER" else role.lower())
+        
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:10px; background:#181818; border:1px solid #262626; border-radius:10px; padding:10px 12px; margin-bottom:16px;">
+            <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
+                <div style="width:100%; height:100%; border-radius:50%; background:#121212; display:flex; align-items:center; justify-content:center; font-size:16px;">
+                    {role_icon}
+                </div>
+            </div>
+            <div>
+                <div style="font-size:13px; font-weight:700; color:#ffffff;">@{user_name}</div>
+                <div style="font-size:11px; color:#8e8e8e;">{role_label}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.caption("Navigation")
+        if role == "USER":
+            view = st.session_state.get("user_page_view", "feed")
+            if st.button("🎥 Explore Reels Feed", key="sb_reels", use_container_width=True, type="primary" if view == "feed" else "secondary"):
+                st.session_state["user_page_view"] = "feed"
+                st.rerun()
+            if st.button("🛡️ Get Verified (Blue Badge)", key="sb_verify", use_container_width=True, type="primary" if view == "verification" else "secondary"):
+                st.session_state["user_page_view"] = "verification"
+                st.rerun()
+                
+        st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+        if st.button("🚪 Switch Account / Logout", key="sb_logout", use_container_width=True):
+            if "vision_engine" in st.session_state:
+                try:
+                    st.session_state["vision_engine"].stop()
+                except Exception:
+                    pass
+                del st.session_state["vision_engine"]
+            st.session_state["role"] = None
+            st.rerun()
+            
+    # Route to dashboards
     if role == "ADVERTISEMENT_OWNER":
         owner_dashboard()
     elif role == "USER":
