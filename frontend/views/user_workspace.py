@@ -579,6 +579,10 @@ def user_dashboard():
             def _on_clear_click():
                 if "frozen_live_frame" in st.session_state:
                     del st.session_state["frozen_live_frame"]
+                if "cached_verif_res" in st.session_state:
+                    del st.session_state["cached_verif_res"]
+                if "cached_verif_key" in st.session_state:
+                    del st.session_state["cached_verif_key"]
 
             col_c1, col_c2 = st.columns([1, 1])
             with col_c1:
@@ -683,7 +687,14 @@ def user_dashboard():
             live_image_np = st.session_state["latest_live_frame"]
 
         if id_image_np is not None and live_image_np is not None:
-            res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob, id_pdf_text)
+            cache_verif_key = f"{id_image_np.shape}_{id_image_np.sum() % 1000000}_{live_image_np.shape}_{live_image_np.sum() % 1000000}_{id_manual_dob}"
+            if st.session_state.get("cached_verif_key") != cache_verif_key or "cached_verif_res" not in st.session_state:
+                with st.spinner("⚡ Verifying ID Card Photo vs Live Biometrics & DOB..."):
+                    res = verify_id_card_and_live_face(id_image_np, live_image_np, id_manual_dob, id_pdf_text)
+                    st.session_state["cached_verif_key"] = cache_verif_key
+                    st.session_state["cached_verif_res"] = res
+            else:
+                res = st.session_state["cached_verif_res"]
             
             c_r1, c_r2, c_r3, c_r4 = st.columns(4)
             with c_r1:

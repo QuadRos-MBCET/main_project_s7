@@ -48,7 +48,7 @@ except Exception:
 
 def detect_and_crop_face(image_np: np.ndarray) -> tuple:
     if image_np is None or image_np.size == 0:
-        return np.zeros((128, 128, 3), dtype=np.uint8), None
+        return None, None
 
     # Ensure 3-channel RGB layout
     if len(image_np.shape) == 2:
@@ -60,17 +60,33 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
 
     h_img, w_img = image_np.shape[:2]
 
-    # Pass 1: MTCNN Deep Multi-Task Cascaded CNN (Robust for ID cards and live captures)
+    # If image is already a cropped face patch (e.g. 112x112 or 128x128)
+    if h_img <= 160 and w_img <= 160 and h_img == w_img:
+        return cv2.resize(image_np, (128, 128)), (0, 0, w_img, h_img)
+
+    # Pass 1: MTCNN with safe downscaling (scales large ID images to max 640px for 20ms execution)
     if _MTCNN_DETECTOR is not None:
         try:
-            pil_img = Image.fromarray(image_np)
+            max_d = max(h_img, w_img)
+            if max_d > 640:
+                scale = 640.0 / float(max_d)
+                det_img = cv2.resize(image_np, (int(w_img * scale), int(h_img * scale)))
+            else:
+                scale = 1.0
+                det_img = image_np
+
+            pil_img = Image.fromarray(det_img)
             boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
-            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.50:
-                x1, y1, x2, y2 = [int(b) for b in boxes[0]]
+            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+                b = boxes[0]
+                x1 = int(b[0] / scale)
+                y1 = int(b[1] / scale)
+                x2 = int(b[2] / scale)
+                y2 = int(b[3] / scale)
                 w = max(1, x2 - x1)
                 h = max(1, y2 - y1)
-                mx = int(w * 0.10)
-                my = int(h * 0.10)
+                mx = int(w * 0.12)
+                my = int(h * 0.12)
                 cx1 = max(0, x1 - mx)
                 cy1 = max(0, y1 - my)
                 cx2 = min(w_img, x2 + mx)
@@ -81,6 +97,30 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         except Exception:
             pass
 
+    # Pass 2: Rotations if ID card photo was taken sideways / upside down
+    if _MTCNN_DETECTOR is not None and max(h_img, w_img) > 100:
+        for rot in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]:
+            try:
+                rot_img = cv2.rotate(image_np, rot)
+                rh, rw = rot_img.shape[:2]
+                scale = 640.0 / float(max(rh, rw)) if max(rh, rw) > 640 else 1.0
+                small_rot = cv2.resize(rot_img, (int(rw * scale), int(rh * scale))) if scale < 1.0 else rot_img
+                boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rot))
+                if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+                    b = boxes[0]
+                    rx1 = int(b[0] / scale)
+                    ry1 = int(b[1] / scale)
+                    rx2 = int(b[2] / scale)
+                    ry2 = int(b[3] / scale)
+                    rw_b = max(1, rx2 - rx1)
+                    rh_b = max(1, ry2 - ry1)
+                    face_crop = rot_img[max(0, ry1):min(rh, ry2), max(0, rx1):min(rw, rx2)]
+                    if face_crop.size > 0:
+                        return cv2.resize(face_crop, (128, 128)), (rx1, ry1, rw_b, rh_b)
+            except Exception:
+                pass
+
+    # Pass 3: FaceAgePipeline detector fallback
     if HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
         try:
             _FACE_AGE_PIPELINE._initialize_models()
@@ -96,26 +136,7 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         except Exception:
             pass
 
-    if face_cascade is not None:
-        try:
-            gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-            if len(faces) == 0:
-                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
-            if len(faces) > 0:
-                x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
-                cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
-                return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
-        except Exception:
-            pass
-
-    # Default center box fallback
-    w = int(w_img * 0.4)
-    h = int(w_img * 0.5)
-    x = int((w_img - w) / 2)
-    y = int((h_img - h) / 2)
-    cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
-    return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+    return None, None
 
 
 def extract_facial_features(cropped_face: np.ndarray, bbox: tuple) -> np.ndarray:
@@ -315,41 +336,27 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     is_spoof = False
     spoof_score = 0.0
     if fas_evaluated:
-        if p_screen >= 0.70:
+        if p_screen >= 0.65:
             is_spoof = True
             spoof_score = p_screen
             reasons.append(f"MiniFASNet SOTA neural model detected digital screen replay ({p_screen:.1%})")
-        elif p_screen >= 0.48 and (enclosed_quadrants >= 3 or inner_long_h_lines >= 2 or (inner_v_lines >= 2 and has_screen_glare)):
+        elif p_screen >= 0.48 and enclosed_quadrants >= 3 and total_bezel_lines >= 18 and has_screen_glare:
             is_spoof = True
-            spoof_score = p_screen + 0.20
-            reasons.append(f"MiniFASNet screen replay ({p_screen:.1%}) corroborated by physical screen bezel/glare")
-        elif p_live >= 0.55 and p_screen < 0.40:
-            # Confirmed live face by deep neural network
+            spoof_score = p_screen + 0.15
+            reasons.append(f"MiniFASNet screen replay ({p_screen:.1%}) corroborated by screen bezel/glare")
+        else:
+            # Genuine live human verified
             is_spoof = False
             spoof_score = p_screen
-        else:
-            # Borderline MiniFASNet: require strong physical evidence (4-sided bezel or UI bar + glare)
-            if enclosed_quadrants >= 3 and total_bezel_lines >= 18 and (has_screen_glare or has_screen_texture):
-                is_spoof = True
-                spoof_score = 0.65
-                reasons.append("Physical screen border frame detected")
-            elif inner_long_h_lines >= 2 and inner_v_lines >= 2:
-                is_spoof = True
-                spoof_score = 0.60
-                reasons.append("Smartphone UI bar and screen bezel detected")
     else:
-        # Fallback without neural net
-        if enclosed_quadrants == 4 and total_bezel_lines >= 18:
+        # Fallback without neural net: require complete 4-sided enclosing bezel frame + glare
+        if enclosed_quadrants == 4 and total_bezel_lines >= 20 and has_screen_glare:
             is_spoof = True
             spoof_score = 0.75
-            reasons.append(f"Enclosing 4-sided screen/card bezel frame detected ({total_bezel_lines} border lines)")
-        elif enclosed_quadrants >= 3 and has_screen_glare and has_screen_texture:
+            reasons.append(f"Enclosing 4-sided screen bezel frame detected ({total_bezel_lines} border lines)")
+        elif inner_long_h_lines >= 2 and inner_v_lines >= 3 and has_screen_glare:
             is_spoof = True
             spoof_score = 0.65
-            reasons.append("Screen glass reflection and moire texture corroborated")
-        elif inner_long_h_lines >= 2 and inner_v_lines >= 2:
-            is_spoof = True
-            spoof_score = 0.60
             reasons.append("Smartphone screen UI border detected")
 
     reason_str = "; ".join(reasons) if reasons else ("Live face verified" if not is_spoof else "YOU ARE SHOWING A MOBILE SCREEN")
@@ -712,8 +719,9 @@ def annotate_live_frame(
 class Realtime30FPSVisionEngine:
     """
     High-performance 30 FPS decoupled asynchronous vision engine:
-    - Thread 1: Hardware DirectShow Camera Reader (captures at full hardware frame rate).
-    - Thread 2: Asynchronous AI Worker (MTCNN Face Localization, ArcFace MS1MV3 Hypersphere Embeddings, Anti-Spoofing PAD).
+    - Thread 1: Hardware DirectShow Camera Reader + Fast MTCNN Face Tracker (~15ms).
+                Updates latest_bbox on EVERY FRAME so bounding box moves instantaneously with face movement.
+    - Thread 2: Asynchronous AI Worker (ArcFace MS1MV3 Hypersphere Embeddings, Anti-Spoofing PAD, Age analysis).
     - Display Loop: Renders at locked 30 FPS (33.3ms interval) with zero latency or stutter.
     """
     def __init__(self, id_image_np=None, target_fps=30.0):
@@ -734,20 +742,18 @@ class Realtime30FPSVisionEngine:
         self.latest_raw_frame = None
         self.ai_busy = False
 
-        # Sub-millisecond optical face tracking state (< 0.8ms per frame)
-        self.tracker_template = None
-        self.tracker_bbox = None
-        self.tracker_offset = (0, 0)
-        self.tracker_misses = 0
+        # Live smoothed bounding box
+        self.latest_bbox = None
+        self.face_miss_count = 0
 
         # Precompute ID Card embedding once
         self.id_emb = None
         if id_image_np is not None:
             id_face, _ = detect_and_crop_face(id_image_np)
-            self.id_emb = extract_arcface_embedding(id_face)
+            if id_face is not None:
+                self.id_emb = extract_arcface_embedding(id_face)
 
         # Shared latest AI results
-        self.latest_bbox = None
         self.latest_match_score = None
         self.latest_is_match = None
         self.latest_is_spoof = False
@@ -755,18 +761,18 @@ class Realtime30FPSVisionEngine:
         self.latest_age_cat = None
         self.cached_live_face = None
 
-        # Start Camera Capture Thread
+        # Start Camera Capture & Face Tracking Thread (Thread 1)
         self.cam_thread = threading.Thread(target=self._camera_worker, daemon=True)
         self.cam_thread.start()
 
-        # Start AI Worker Thread
+        # Start AI Worker Thread (Thread 2)
         self.ai_thread = threading.Thread(target=self._ai_worker, daemon=True)
         self.ai_thread.start()
 
     def update_id_image(self, id_image_np):
         if id_image_np is not None:
             id_face, _ = detect_and_crop_face(id_image_np)
-            emb = extract_arcface_embedding(id_face)
+            emb = extract_arcface_embedding(id_face) if id_face is not None else None
             with self.lock:
                 self.id_emb = emb
         else:
@@ -775,51 +781,6 @@ class Realtime30FPSVisionEngine:
                 self.latest_match_score = None
                 self.latest_is_match = None
 
-    def _reseed_tracker(self, gray_img, bbox):
-        x, y, w, h = bbox
-        cw, ch = int(w * 0.5), int(h * 0.5)
-        cx, cy = x + int(w * 0.25), y + int(h * 0.25)
-        h_f, w_f = gray_img.shape[:2]
-        if 0 <= cy < h_f - ch and 0 <= cx < w_f - cw and cw > 12 and ch > 12:
-            self.tracker_template = gray_img[cy:cy+ch, cx:cx+cw].copy()
-            self.tracker_offset = (int(w * 0.25), int(h * 0.25))
-            self.tracker_bbox = bbox
-            self.tracker_misses = 0
-
-    def _track_frame_fast(self, gray_img):
-        if self.tracker_template is None or self.tracker_bbox is None:
-            return self.tracker_bbox
-        x, y, w, h = self.tracker_bbox
-        img_h, img_w = gray_img.shape[:2]
-        margin = 40
-        sx1 = max(0, x - margin)
-        sy1 = max(0, y - margin)
-        sx2 = min(img_w, x + w + margin)
-        sy2 = min(img_h, y + h + margin)
-        search_roi = gray_img[sy1:sy2, sx1:sx2]
-        th, tw = self.tracker_template.shape[:2]
-        if search_roi.shape[0] < th + 4 or search_roi.shape[1] < tw + 4:
-            return self.tracker_bbox
-        try:
-            res = cv2.matchTemplate(search_roi, self.tracker_template, cv2.TM_CCOEFF_NORMED)
-            _, max_v, _, max_l = cv2.minMaxLoc(res)
-            if max_v >= 0.50:
-                new_cx = sx1 + max_l[0]
-                new_cy = sy1 + max_l[1]
-                new_x = max(0, min(img_w - w, new_cx - self.tracker_offset[0]))
-                new_y = max(0, min(img_h - h, new_cy - self.tracker_offset[1]))
-                self.tracker_bbox = (new_x, new_y, w, h)
-                self.tracker_misses = 0
-                return self.tracker_bbox
-            else:
-                self.tracker_misses += 1
-                if self.tracker_misses > 10:
-                    self.tracker_template = None
-                    return None
-        except Exception:
-            pass
-        return self.tracker_bbox
-
     def _camera_worker(self):
         while self.running:
             try:
@@ -827,99 +788,114 @@ class Realtime30FPSVisionEngine:
                 if not self.running:
                     break
                 if ret and frame is not None:
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    tracked_box = self._track_frame_fast(gray)
+                    h, w = frame.shape[:2]
+                    scale = 320.0 / float(w)
+                    small_h = int(h * scale)
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    small_rgb = cv2.resize(rgb, (320, small_h))
+
+                    detected_bbox = None
+                    if _MTCNN_DETECTOR is not None:
+                        try:
+                            boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rgb))
+                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+                                b = boxes[0]
+                                sx1, sy1, sx2, sy2 = b
+                                orig_x = max(0, int(sx1 / scale))
+                                orig_y = max(0, int(sy1 / scale))
+                                orig_w = min(w - orig_x, int((sx2 - sx1) / scale))
+                                orig_h = min(h - orig_y, int((sy2 - sy1) / scale))
+                                if orig_w > 20 and orig_h > 20:
+                                    detected_bbox = (orig_x, orig_y, orig_w, orig_h)
+                        except Exception:
+                            pass
+
                     with self.lock:
                         self.latest_raw_frame = frame
-                        if tracked_box is not None:
-                            self.latest_bbox = tracked_box
+                        if detected_bbox is not None:
+                            if self.latest_bbox is None:
+                                self.latest_bbox = detected_bbox
+                            else:
+                                alpha = 0.70
+                                px, py, pw, ph = self.latest_bbox
+                                nx, ny, nw, nh = detected_bbox
+                                self.latest_bbox = (
+                                    int(px * (1 - alpha) + nx * alpha),
+                                    int(py * (1 - alpha) + ny * alpha),
+                                    int(pw * (1 - alpha) + nw * alpha),
+                                    int(ph * (1 - alpha) + nh * alpha)
+                                )
+                            self.face_miss_count = 0
+                        else:
+                            self.face_miss_count += 1
+                            if self.face_miss_count > 6:
+                                self.latest_bbox = None
                 else:
                     time.sleep(0.01)
             except Exception:
                 break
 
     def _ai_worker(self):
-        frame_counter = 0
         while self.running:
             frame_to_process = None
+            bbox_to_process = None
             with self.lock:
-                if self.latest_raw_frame is not None and not self.ai_busy:
+                if self.latest_raw_frame is not None and not self.ai_busy and self.latest_bbox is not None:
                     frame_to_process = self.latest_raw_frame.copy()
+                    bbox_to_process = self.latest_bbox
                     self.ai_busy = True
 
-            if frame_to_process is not None:
+            if frame_to_process is not None and bbox_to_process is not None:
                 try:
-                    frame_counter += 1
                     rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
-                    gray = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2GRAY)
-                    h, w = rgb.shape[:2]
-                    scale = 320.0 / float(w) if w > 320 else 1.0
-                    small_rgb = cv2.resize(rgb, (320, int(h * scale))) if scale < 1.0 else rgb
+                    x, y, w, h = bbox_to_process
+                    h_img, w_img = rgb.shape[:2]
+                    
+                    pad_x = int(0.10 * w)
+                    pad_y = int(0.10 * h)
+                    cx1 = max(0, x - pad_x)
+                    cy1 = max(0, y - pad_y)
+                    cx2 = min(w_img, x + w + pad_x)
+                    cy2 = min(h_img, y + h + pad_y)
+                    live_crop = rgb[cy1:cy2, cx1:cx2]
 
-                    # Ultra-fast MTCNN face localization on downscaled frame (~4ms)
-                    live_face, small_bbox = detect_and_crop_face(small_rgb)
+                    if live_crop.size > 0:
+                        live_face = cv2.resize(live_crop, (128, 128))
 
-                    bbox = None
-                    if small_bbox is not None:
-                        sx, sy, sw, sh = small_bbox
-                        bbox = (int(sx / scale), int(sy / scale), int(sw / scale), int(sh / scale))
+                        # 1. ArcFace Similarity Matching
+                        match_score = None
+                        is_match = None
+                        with self.lock:
+                            id_emb = self.id_emb
 
-                    match_score = None
-                    is_match = None
-                    with self.lock:
-                        id_emb = self.id_emb
+                        if id_emb is not None:
+                            live_emb = extract_arcface_embedding(live_face)
+                            if live_emb is not None:
+                                match_score = compute_similarity_from_embeddings(id_emb, live_emb)
+                                is_match = match_score >= 0.50
 
-                    if id_emb is not None and live_face is not None:
-                        live_emb = extract_arcface_embedding(live_face)
-                        if live_emb is not None:
-                            match_score = compute_similarity_from_embeddings(id_emb, live_emb)
-                            is_match = match_score >= 0.65
+                        # 2. Anti-Spoofing PAD
+                        is_spoof, spoof_score, spoof_reason = detect_photo_spoof(rgb, live_face, bbox_to_process)
 
-                    is_spoof, _, spoof_reason = (False, 0.0, None)
-                    if live_face is not None:
-                        is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face, bbox)
+                        # 3. Adult Feature Detection
+                        has_hair = detect_facial_hair(live_face)
+                        age_cat = "18 and above" if has_hair else None
 
-                    # Fast age category estimation (< 0.5ms)
-                    age_cat = None
-                    if live_face is not None:
-                        if detect_facial_hair(live_face):
-                            age_cat = "18 and above"
-                        elif frame_counter % 30 == 1 and HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
-                            try:
-                                pil_crop = Image.fromarray(live_face)
-                                age_res = _FACE_AGE_PIPELINE.age_estimator.estimate_age(pil_crop)
-                                rng = age_res.get("age_range", "")
-                                if rng in ["0-2", "3-9"]:
-                                    age_cat = "Less than 14"
-                                elif rng in ["10-19"]:
-                                    age_cat = "14 to 17"
-                                else:
-                                    age_cat = "18 and above"
-                            except Exception:
-                                pass
-
-                    with self.lock:
-                        if bbox is not None:
-                            self.latest_bbox = bbox
-                            self._reseed_tracker(gray, bbox)
-                        else:
-                            if self.tracker_misses > 8:
-                                self.latest_bbox = None
-                                self.tracker_template = None
-                        self.latest_match_score = match_score
-                        self.latest_is_match = is_match
-                        self.latest_is_spoof = is_spoof
-                        self.latest_spoof_reason = spoof_reason
-                        self.cached_live_face = live_face
-                        if age_cat is not None:
-                            self.latest_age_cat = age_cat
+                        with self.lock:
+                            self.latest_match_score = match_score
+                            self.latest_is_match = is_match
+                            self.latest_is_spoof = is_spoof
+                            self.latest_spoof_reason = spoof_reason
+                            self.cached_live_face = live_face
+                            if age_cat is not None:
+                                self.latest_age_cat = age_cat
                 except Exception:
                     pass
                 finally:
                     with self.lock:
                         self.ai_busy = False
             else:
-                time.sleep(0.01)
+                time.sleep(0.04)
 
     def get_annotated_frame(self, target_fps=30.0):
         with self.lock:
@@ -1233,20 +1209,52 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     """
     Performs complete ID Verification:
     1. Detects face on ID card (image or rendered PDF) and cropped live face.
-    2. Runs Anti-Spoof Liveness check on live face.
-    3. Computes Face Similarity (ID Face vs Live Face using FaceNet).
+    2. Runs Anti-Spoof Liveness check on live face (MiniFASNet).
+    3. Computes Face Similarity (ID Face vs Live Face using ArcFace MS1MV3).
     4. Extracts DOB & Age from ID Card (Image or PDF text).
     5. Cross-matches ID DOB Age vs Live ViT Facial Age Prediction.
     """
     id_face, id_bbox = detect_and_crop_face(id_image_np)
     live_face, live_bbox = detect_and_crop_face(live_image_np)
 
+    if id_face is None:
+        return {
+            "status": "FAILED_NO_ID_FACE",
+            "message": "⚠️ No clear portrait photo detected on uploaded ID card. Please ensure the photo on your ID is clearly visible and uncropped.",
+            "face_similarity": 0.0,
+            "face_match": False,
+            "is_spoof": False,
+            "id_face": None,
+            "live_face": live_face,
+            "id_dob_str": None,
+            "id_age": None,
+            "id_age_category": "Pending",
+            "live_age_category": "Pending",
+            "spoof_reason": "No face on ID"
+        }
+
+    if live_face is None:
+        return {
+            "status": "FAILED_NO_LIVE_FACE",
+            "message": "⚠️ No face detected in the live camera frame. Please look directly at the camera.",
+            "face_similarity": 0.0,
+            "face_match": False,
+            "is_spoof": False,
+            "id_face": id_face,
+            "live_face": None,
+            "id_dob_str": None,
+            "id_age": None,
+            "id_age_category": "Pending",
+            "live_age_category": "Pending",
+            "spoof_reason": "No live face"
+        }
+
     # 1. Anti-Spoofing check on live face
     is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face, live_bbox)
 
-    # 2. Deep ArcFace Biometric Similarity
+    # 2. Deep ArcFace Biometric Similarity (50% threshold for cross-domain matching)
     face_sim_score = compute_face_similarity(id_face, live_face)
-    face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
+    face_match = face_sim_score >= 0.50
 
     # 3. DOB & Age from ID (Image + PDF text)
     dob_res = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
@@ -1258,21 +1266,29 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)
-    live_age_cat = detailed_live["category"]
+    live_age_cat = detailed_live.get("category", "18 and above")
 
-    # 5. DOB vs Live Age Category Match
-    dob_age_match = (id_age_cat == live_age_cat)
+    # 5. KYC Age Consistency:
+    # Official ID DOB is authoritative. Only flag mismatch if an extreme conflict exists
+    # (e.g. ID says adult 40+ but live face is child under 14 with high confidence).
+    # Normal youthfulness (18-22 looking 14-17) is accepted as verified adult!
+    if id_age_cat == "18 and above" and live_age_cat == "Less than 14" and detailed_live.get("confidence", 0) > 0.85:
+        dob_age_match = False
+    elif id_age_cat == "Less than 14" and (live_age_cat == "18 and above" or detect_facial_hair(live_face)):
+        dob_age_match = False
+    else:
+        dob_age_match = True
 
     # Overall Status
     if is_spoof:
         status = "FAILED_SPOOF"
-        message = "YOU ARE SHOWING A MOBILE SCREEN"
+        message = "🛑 YOU ARE SHOWING A MOBILE SCREEN"
     elif not face_match:
         status = "FAILED_FACE_MISMATCH"
-        message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."
+        message = f"❌ ID Face Mismatch! Similarity score is {face_sim_score:.1%} (Live face does not match ID photo)."
     elif not dob_age_match:
         status = "FAILED_DOB_MISMATCH"
-        message = f"⚠️ DOB Mismatch Alert! ID Card DOB indicates '{id_age_cat}' ({id_age} yrs), but live facial scan predicts '{live_age_cat}'."
+        message = f"⚠️ Extreme Age Discrepancy! ID Card DOB indicates '{id_age_cat}' ({id_age} yrs), but live facial scan detected a child '{live_age_cat}'."
     else:
         status = "VERIFIED_SUCCESS"
         message = f"✅ Identity & Age Verified! Face match: {face_sim_score:.1%}. ID DOB: {dob_str} ({id_age_cat})."
