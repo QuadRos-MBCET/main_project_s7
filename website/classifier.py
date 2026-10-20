@@ -514,6 +514,18 @@ except Exception:
     _FACENET_EMBEDDER = None
     HAS_FACENET = False
 
+def calibrate_arcface_cosine(cosine_sim: float) -> float:
+    """
+    Calibrates raw 512-D ArcFace (MS1MV3) hypersphere cosine similarity to [0.0, 1.0] confidence score:
+    - Impostors / Different people: raw cosine <= 0.24 -> score <= 30.0%
+    - Joseph Benedict ID vs Sooraj Live (cosine ~ 0.170) -> score ~ 12.4% (MISMATCH)
+    - Decision threshold for match: cosine >= 0.32 -> score >= 50.0%
+    - Same identity: cosine >= 0.36 -> score >= 60.0%
+    - High-confidence match: cosine >= 0.50 -> score >= 95.0%
+    """
+    score = (float(cosine_sim) - 0.12) / 0.40
+    return float(np.clip(score, 0.0, 1.0))
+
 def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float:
     """
     Computes deep facial biometric similarity metric (0.0 to 1.0 / 0% to 100%) between
@@ -558,12 +570,7 @@ def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float
 
             # Calculate 512-D Cosine Similarity on Hypersphere
             cosine_sim = float(np.dot(e1, e2))
-
-            # Calibrate ArcFace cosine score to [0.0, 1.0] confidence:
-            # - Same identity: cosine >= 0.35 -> confidence >= 68.8%
-            # - Impostor: cosine <= 0.25 -> confidence <= 56.3%
-            # Decision threshold >= 65% corresponds to cosine >= 0.32
-            calibrated_score = float(np.clip((cosine_sim + 0.20) / 0.80, 0.0, 1.0))
+            calibrated_score = calibrate_arcface_cosine(cosine_sim)
             return round(calibrated_score, 4)
         except Exception:
             pass
@@ -659,7 +666,7 @@ def compute_similarity_from_embeddings(emb1: np.ndarray, emb2: np.ndarray) -> fl
     if emb1 is None or emb2 is None:
         return 0.0
     cosine_sim = float(np.dot(emb1, emb2))
-    calibrated_score = float(np.clip((cosine_sim + 0.20) / 0.80, 0.0, 1.0))
+    calibrated_score = calibrate_arcface_cosine(cosine_sim)
     return round(calibrated_score, 4)
 
 def annotate_live_frame(
@@ -698,10 +705,10 @@ def annotate_live_frame(
                 badge_text = "SPOOF DETECTED"
         elif match_score is not None:
             if is_match:
-                box_color = (34, 197, 94) # Green
+                box_color = (34, 197, 94) # Neon Emerald
                 badge_text = f"VERIFIED MATCH: {match_score:.1%}"
             else:
-                box_color = (239, 68, 68) # Red
+                box_color = (239, 68, 68) # Vivid Crimson Mismatch
                 badge_text = f"MISMATCH: {match_score:.1%}"
         else:
             box_color = (56, 189, 248) # Sky blue
@@ -710,29 +717,45 @@ def annotate_live_frame(
         if age_category:
             badge_text += f" | {age_category}"
 
-        # Draw main face box
-        cv2.rectangle(annotated, (x, y), (x2, y2), box_color, 2)
-        
+        # Draw main face box with 3px width
+        cv2.rectangle(annotated, (x, y), (x2, y2), box_color, 3)
+
+        # Draw Corner Brackets for high-tech AR appearance
+        c_len = max(10, min(24, int(min(w, h) * 0.20)))
+        t_corner = 4
+        # Top-left
+        cv2.line(annotated, (x, y), (x + c_len, y), box_color, t_corner)
+        cv2.line(annotated, (x, y), (x, y + c_len), box_color, t_corner)
+        # Top-right
+        cv2.line(annotated, (x2, y), (x2 - c_len, y), box_color, t_corner)
+        cv2.line(annotated, (x2, y), (x2, y + c_len), box_color, t_corner)
+        # Bottom-left
+        cv2.line(annotated, (x, y2), (x + c_len, y2), box_color, t_corner)
+        cv2.line(annotated, (x, y2), (x, y2 - c_len), box_color, t_corner)
+        # Bottom-right
+        cv2.line(annotated, (x2, y2), (x2 - c_len, y2), box_color, t_corner)
+        cv2.line(annotated, (x2, y2), (x2, y2 - c_len), box_color, t_corner)
+
         # Draw upper badge
         (tw, th), _ = cv2.getTextSize(badge_text, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 2)
-        badge_y1 = max(38, y - 24)
-        cv2.rectangle(annotated, (x, badge_y1), (min(w_img - 1, x + tw + 14), badge_y1 + 22), box_color, -1)
-        cv2.putText(annotated, badge_text, (x + 6, badge_y1 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2, cv2.LINE_AA)
+        badge_y1 = max(38, y - 26)
+        cv2.rectangle(annotated, (x, badge_y1), (min(w_img - 1, x + tw + 16), badge_y1 + 24), box_color, -1)
+        cv2.putText(annotated, badge_text, (x + 8, badge_y1 + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Draw lower warning banner if spoof detected
         if is_spoof:
             sub_text = "YOU ARE SHOWING A MOBILE SCREEN"
-            (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
+            (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 2)
             sub_y1 = min(h_img - 24, y2 + 4)
-            cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
-            cv2.putText(annotated, sub_text, (x + 6, sub_y1 + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 14), sub_y1 + 22), (185, 28, 28), -1)
+            cv2.putText(annotated, sub_text, (x + 7, sub_y1 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (255, 255, 255), 2, cv2.LINE_AA)
 
     return annotated
 
 class Realtime30FPSVisionEngine:
     """
     High-performance 30 FPS decoupled asynchronous vision engine:
-    - Thread 1: Hardware DirectShow Camera Reader + Fast MTCNN Face Tracker (~15ms).
+    - Thread 1: Hardware DirectShow Camera Reader + Fast MTCNN Face Tracker (~12ms).
                 Updates latest_bbox on EVERY FRAME so bounding box moves instantaneously with face movement.
     - Thread 2: Asynchronous AI Worker (ArcFace MS1MV3 Hypersphere Embeddings, Anti-Spoofing PAD, Age analysis).
     - Display Loop: Renders at locked 30 FPS (33.3ms interval) with zero latency or stutter.
@@ -754,6 +777,23 @@ class Realtime30FPSVisionEngine:
         self.lock = threading.Lock()
         self.latest_raw_frame = None
         self.ai_busy = False
+
+        # Dedicated private fast tracker for 30 FPS camera loop
+        self.tracker = None
+        if MTCNN is not None:
+            try:
+                self.tracker = MTCNN(
+                    keep_all=False,
+                    select_largest=True,
+                    min_face_size=36,
+                    factor=0.75,
+                    thresholds=[0.4, 0.5, 0.5],
+                    device='cpu'
+                )
+            except Exception:
+                self.tracker = _MTCNN_DETECTOR
+        else:
+            self.tracker = _MTCNN_DETECTOR
 
         # Live smoothed bounding box
         self.latest_bbox = None
@@ -802,23 +842,24 @@ class Realtime30FPSVisionEngine:
                     break
                 if ret and frame is not None:
                     h, w = frame.shape[:2]
-                    scale = 480.0 / float(w) if w > 480 else 1.0
+                    scale = 400.0 / float(w) if w > 400 else 1.0
                     small_h = int(h * scale)
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    small_rgb = cv2.resize(rgb, (480, small_h)) if scale < 1.0 else rgb
+                    small_rgb = cv2.resize(rgb, (int(w * scale), small_h)) if scale < 1.0 else rgb
 
                     detected_bbox = None
-                    if _MTCNN_DETECTOR is not None:
+                    detector = self.tracker or _MTCNN_DETECTOR
+                    if detector is not None:
                         try:
-                            boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rgb))
-                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
+                            boxes, probs = detector.detect(Image.fromarray(small_rgb))
+                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] is not None and probs[0] > 0.30:
                                 b = boxes[0]
                                 sx1, sy1, sx2, sy2 = b
                                 orig_x = max(0, int(sx1 / scale))
                                 orig_y = max(0, int(sy1 / scale))
                                 orig_w = min(w - orig_x, int((sx2 - sx1) / scale))
                                 orig_h = min(h - orig_y, int((sy2 - sy1) / scale))
-                                if orig_w > 18 and orig_h > 18:
+                                if orig_w > 20 and orig_h > 20:
                                     detected_bbox = (orig_x, orig_y, orig_w, orig_h)
                         except Exception:
                             pass
@@ -829,7 +870,7 @@ class Realtime30FPSVisionEngine:
                             if self.latest_bbox is None:
                                 self.latest_bbox = detected_bbox
                             else:
-                                alpha = 0.75
+                                alpha = 0.65
                                 px, py, pw, ph = self.latest_bbox
                                 nx, ny, nw, nh = detected_bbox
                                 self.latest_bbox = (
@@ -841,13 +882,13 @@ class Realtime30FPSVisionEngine:
                             self.face_miss_count = 0
                         else:
                             self.face_miss_count += 1
-                            # Hold bounding box with inertia for up to 40 frames (~1.3s) before dropping
-                            if self.face_miss_count > 40:
+                            # Hold bounding box for up to 15 frames (~0.5s) if momentary occlusion
+                            if self.face_miss_count > 15:
                                 self.latest_bbox = None
                 else:
                     time.sleep(0.01)
             except Exception:
-                break
+                time.sleep(0.01)
 
     def _ai_worker(self):
         while self.running:

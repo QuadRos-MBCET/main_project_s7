@@ -671,7 +671,12 @@ def user_dashboard():
 
                 disp_frame = st.session_state.get("frozen_annotated_frame", live_image_np)
                 if disp_frame is not None:
-                    video_placeholder.image(disp_frame, caption="Frozen Live Camera Snapshot (Biometrics Verified)", width="stretch")
+                    is_match_confirmed = (
+                        "cached_verif_res" in st.session_state 
+                        and st.session_state["cached_verif_res"].get("status") == "VERIFIED_SUCCESS"
+                    )
+                    snap_caption = "Frozen Live Camera Snapshot (✅ Biometrics Verified)" if is_match_confirmed else "Frozen Live Camera Snapshot (Biometrics Captured)"
+                    video_placeholder.image(disp_frame, caption=snap_caption, width="stretch")
                 else:
                     video_placeholder.markdown("""
                     <div style="border:2px dashed #333333; border-radius:14px; padding:32px; text-align:center; background:#121212; margin-bottom:12px;">
@@ -778,7 +783,23 @@ def user_dashboard():
                 with col_act2:
                     st.info(f"Verified Policy Bracket: `{norm}` ({cat}) | ID DOB: **{res.get('id_dob_str')}**")
             elif res.get("is_spoof"):
-                st.error("🛑 **Presentation Attack Blocked**: YOU ARE SHOWING A MOBILE SCREEN. MiniFASNet anti-spoofing detector identified digital screen replay artifacts.")
+                st.markdown("""
+                <div style="background:#450a0a; border:1px solid #ef4444; border-radius:12px; padding:18px; margin-top:16px; margin-bottom:18px;">
+                    <h3 style="color:#f87171; margin:0 0 6px 0;">
+                        🛑 Presentation Attack Blocked: YOU ARE SHOWING A MOBILE SCREEN
+                    </h3>
+                    <p style="color:#fca5a5; margin:0; font-size:13px;">MiniFASNet dual-scale neural liveness detector identified digital screen replay artifacts. Please present a real live person.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            elif not res.get("face_match"):
+                st.markdown(f"""
+                <div style="background:#450a0a; border:1px solid #ef4444; border-radius:12px; padding:18px; margin-top:16px; margin-bottom:18px;">
+                    <h3 style="color:#f87171; margin:0 0 6px 0;">
+                        ❌ Biometric Mismatch: ID Card & Live User Do Not Match!
+                    </h3>
+                    <p style="color:#fca5a5; margin:0; font-size:13px;">ArcFace MS1MV3 biometric similarity confidence is <b>{res.get('face_similarity', 0.0):.1%}</b> (Threshold: &ge; 50.0%). The live user in front of the camera is a different individual than the person on the uploaded ID card. Verification rejected.</p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.error(f"❌ **Login Denied**: {res.get('message', 'Facial biometrics do not match.')}")
         else:
