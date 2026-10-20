@@ -32,8 +32,26 @@ try:
     _FACE_AGE_PIPELINE = FaceAgePipeline()
     HAS_PIPELINE = True
 except Exception:
-    _FACE_AGE_PIPELINE = None
-    HAS_PIPELINE = False
+    try:
+        import sys
+        from pathlib import Path
+        _base_dir = Path(__file__).resolve().parent.parent
+        if str(_base_dir) not in sys.path:
+            sys.path.insert(0, str(_base_dir))
+        try:
+            import ai
+            _ai_core = str(_base_dir / "ai")
+            if hasattr(ai, "__path__") and _ai_core not in ai.__path__:
+                ai.__path__.insert(0, _ai_core)
+        except Exception:
+            pass
+        from ai.face_age.face_age_pipeline import FaceAgePipeline
+        from PIL import Image
+        _FACE_AGE_PIPELINE = FaceAgePipeline()
+        HAS_PIPELINE = True
+    except Exception:
+        _FACE_AGE_PIPELINE = None
+        HAS_PIPELINE = False
 
 try:
     import torch
@@ -322,6 +340,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
 
                 return {
                     "age_range": category,
+                    "fine_age_range": age_range,
                     "normalized_group": norm_group,
                     "confidence": float(conf),
                     "category": category,
@@ -609,7 +628,7 @@ def annotate_live_frame(
 
         # Draw lower warning banner if spoof detected
         if is_spoof:
-            sub_text = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+            sub_text = "YOU ARE A SCREEN"
             (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
             sub_y1 = min(h_img - 24, y2 + 4)
             cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
@@ -837,11 +856,10 @@ def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
         return id_image_np, text.strip()
     except Exception as e:
         return None, f"PDF Extraction Error: {e}"
-
-
-def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple:
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None, id_face_np: np.ndarray = None) -> tuple:
     """
     Extracts Date of Birth (DOB) and computes actual age from ID Card image or PDF document using EasyOCR & Regex.
+    If OCR cannot detect an explicit text DOB, it leverages deep facial age estimation on the ID card photo.
     Returns (dob_str, calculated_age, age_category, full_ocr_log).
     """
     current_year = datetime.datetime.now().year
@@ -868,7 +886,16 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         cleaned = re.sub(r'[|\\/]+', '/', raw_text or "")
         cleaned = _fix_ocr_digits(re.sub(r'[\s]+', ' ', cleaned))
 
-        dob_label_pat = r'(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Birth|Born)\s*[:\-\s]*\s*'
+        dob_label_pat = (
+            r'(?:'
+            r'DOB|D\.?O\.?B\.?|'
+            r'Date\s+of\s+Birth|Birth\s+Date|'
+            r'Year\s+of\s+Birth|Birth\s+Year|YOB|Y\.?O\.?B\.?|'
+            r'DOB\s*/\s*(?:Year\s+of\s+Birth|Age)|Date\s+of\s+Birth\s*/\s*Age|'
+            r'Birth|Born|'
+            r'जन्म\s*(?:तिथि|तारीख|वर्ष)?|ജനന\s*(?:തീയതി|വർഷം)?'
+            r')\s*[:\-\s/]*\s*'
+        )
         months = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
 
         # PASS 1A: Explicit DOB label followed by DD/MM/YYYY (delimiters: / - . : or space)
@@ -876,7 +903,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         if m1:
             d, m, y_str = int(m1.group(1)), int(m1.group(2)), m1.group(3)
             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 1B: Explicit DOB label followed by textual month (e.g. 15-AUG-2004, 15 Aug 2004)
@@ -887,22 +914,30 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             m = month_map.get(m_str, 1)
             y_str = m2.group(3)
             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                 return f"{d:02d}/{m:02d}/{y}", y
 
-        # PASS 1C: Explicit DOB label followed by Year (e.g. DOB: 2004 or Year of Birth: 2004)
+        # PASS 1C: Explicit DOB / Year of Birth label followed by Year (e.g. Year of Birth: 1948 or DOB: 1952)
         m3 = re.search(dob_label_pat + r'(\d{4})\b', cleaned, re.IGNORECASE)
         if m3:
             y = int(m3.group(1))
-            if 1920 <= y <= current_year - 5:
+            if 1910 <= y <= current_year - 5:
                 return f"Year {y}", y
+
+        # PASS 1D: Explicit Age field (e.g. Voter ID / EPIC card: "Age: 68", "Age: 72 Years")
+        m_age = re.search(r'\b(?:Age|Age\s+as\s+on[^:\d]*)\s*[:\-\s]*\s*(\d{1,2})\s*(?:yrs|years|yr)?\b', cleaned, re.IGNORECASE)
+        if m_age:
+            age_val = int(m_age.group(1))
+            if 5 <= age_val <= 110:
+                implied_year = current_year - age_val
+                return f"Age {age_val} (Est. {implied_year})", implied_year
 
         # PASS 2: Adjacent OCR boxes (Label on Box i, Date on Box i+1 or i+2)
         if text_lines:
             for i, line in enumerate(text_lines):
                 line_clean = _fix_ocr_digits(line.strip())
-                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)\b', line_clean, re.IGNORECASE):
-                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
+                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Year\s+of\s+Birth|Birth\s+Year|YOB|Age)\b', line_clean, re.IGNORECASE):
+                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Year\s+of\s+Birth|Birth\s+Year|YOB|Age)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
                     candidates = [rem]
                     if i + 1 < len(text_lines):
                         candidates.append(_fix_ocr_digits(text_lines[i + 1].strip()))
@@ -915,12 +950,12 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
                         if mc:
                             d, m, y_str = int(mc.group(1)), int(mc.group(2)), mc.group(3)
                             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-                            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+                            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                                 return f"{d:02d}/{m:02d}/{y}", y
                         my = re.search(r'\b(19\d{2}|20[0-2]\d)\b', cand)
                         if my:
                             y = int(my.group(1))
-                            if 1920 <= y <= current_year - 5:
+                            if 1910 <= y <= current_year - 5:
                                 return f"Year {y}", y
 
         # PASS 3: General Standalone Dates (DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY)
@@ -928,7 +963,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         for d_s, m_s, y_s in p_num:
             d, m = int(d_s), int(m_s)
             y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year - 5:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 3B: Standalone Textual Month: 15-AUG-2004, 15 Aug 2004
@@ -937,7 +972,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             d = int(d_s)
             m = month_map.get(m_s[:3].lower(), 1)
             y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year - 5:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 4: College ID Academic Batch: e.g. Batch: 2022-2026 or 2021-2025
@@ -945,7 +980,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         if batch_match:
             start_year = int(batch_match.group(1))
             implied_birth_year = start_year - 18
-            if 1950 <= implied_birth_year <= current_year:
+            if 1910 <= implied_birth_year <= current_year:
                 return f"Batch {start_year} (Est. {implied_birth_year})", implied_birth_year
 
         # Standalone College Batch Span: e.g. 2022 - 2026 or 2021-2025
@@ -967,11 +1002,11 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             implied_birth_year = adm_year - 18
             return f"Roll No Adm {adm_year} (Est. {implied_birth_year})", implied_birth_year
 
-        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1970 - 2012]
-        all_years = re.findall(r'\b(19[7-9]\d|20[0-1]\d)\b', cleaned)
+        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1920 - 2020]
+        all_years = re.findall(r'\b(19[2-9]\d|20[0-2]\d)\b', cleaned)
         for y_str in all_years:
             y = int(y_str)
-            if 1970 <= y <= current_year - 12:
+            if 1920 <= y <= current_year - 10:
                 return f"Year {y}", y
 
         return None, None
@@ -1049,18 +1084,71 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         except Exception as e:
             full_ocr_log += f" | OCR Error: {e}"
 
+    calc_age = None
+    cat = None
+
+    # Step 4: Facial Age Estimation Fallback from ID Card Photo
+    # If OCR could not find an explicit printed DOB on the ID, infer age from the ID card face!
     if not dob_str:
-        birth_year = current_year - 20
+        face_to_analyze = id_face_np
+        if face_to_analyze is None and id_image_np is not None:
+            face_to_analyze, _ = detect_and_crop_face(id_image_np)
+
+        if face_to_analyze is not None and face_to_analyze.size > 0:
+            try:
+                detailed_age = estimate_detailed_age_from_face(face_to_analyze)
+                pred_range = detailed_age.get("fine_age_range")
+                pipe_res = detailed_age.get("pipeline_result")
+                if not pred_range and pipe_res and pipe_res.get("faces"):
+                    pred_range = pipe_res["faces"][0]["age_estimation"].get("age_range")
+
+                range_to_est_age = {
+                    "0-2": 1,
+                    "3-9": 6,
+                    "10-19": 15,
+                    "20-29": 25,
+                    "30-39": 35,
+                    "40-49": 45,
+                    "50-59": 55,
+                    "60-69": 65,
+                    "70+": 75,
+                }
+                if pred_range and pred_range in range_to_est_age:
+                    calc_age = range_to_est_age[pred_range]
+                    birth_year = current_year - calc_age
+                    dob_str = f"Estimated from Face (~{calc_age} yrs, YOB {birth_year})"
+                    cat = detailed_age.get("category", "18 and above")
+                    full_ocr_log += f" | ID Face Age Model: {pred_range} (~{calc_age} yrs)"
+                else:
+                    cat = detailed_age.get("category", "18 and above")
+                    if cat == "Less than 14":
+                        calc_age = 10
+                    elif cat == "14 to 17":
+                        calc_age = 16
+                    else:
+                        calc_age = 40
+                    birth_year = current_year - calc_age
+                    dob_str = f"Estimated from Face (~{calc_age} yrs, YOB {birth_year})"
+                    full_ocr_log += f" | ID Face Category: {cat}"
+            except Exception as ex:
+                full_ocr_log += f" | ID Face Age Estimation Error: {ex}"
+
+    # Absolute fallback if neither OCR nor face detection could infer age
+    if not dob_str:
+        birth_year = current_year - 25
         dob_str = f"Estimated YOB {birth_year}"
-
-    calc_age = max(1, current_year - birth_year)
-
-    if calc_age < 14:
-        cat = "Less than 14"
-    elif 14 <= calc_age <= 17:
-        cat = "14 to 17"
-    else:
+        calc_age = 25
         cat = "18 and above"
+    else:
+        if calc_age is None:
+            calc_age = max(1, current_year - birth_year)
+        if cat is None:
+            if calc_age < 14:
+                cat = "Less than 14"
+            elif 14 <= calc_age <= 17:
+                cat = "14 to 17"
+            else:
+                cat = "18 and above"
 
     return dob_str, calc_age, cat, full_ocr_log
 
@@ -1085,7 +1173,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
     # 3. DOB & Age from ID (Image + PDF text)
-    dob_str, id_age, id_age_cat, ocr_log = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
+    dob_str, id_age, id_age_cat, ocr_log = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text, id_face_np=id_face)
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)
@@ -1097,7 +1185,7 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     # Overall Status
     if is_spoof:
         status = "FAILED_SPOOF"
-        message = "DONT TRY TO PLAY A FOOL WITH ME NIGESH"
+        message = "YOU ARE A SCREEN"
     elif not face_match:
         status = "FAILED_FACE_MISMATCH"
         message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."

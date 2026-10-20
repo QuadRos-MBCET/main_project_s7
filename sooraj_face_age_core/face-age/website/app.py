@@ -215,9 +215,9 @@ with c_live:
                     spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
                     status_placeholder.markdown(f"""
                     <div style="background:#fee2e2; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:6px;">
-                        <b style="color:#b91c1c; font-size:15px;">🛑 DONT TRY TO PLAY A FOOL WITH ME NIGESH</b><br>
+                        <b style="color:#b91c1c; font-size:15px;">🛑 YOU ARE A SCREEN</b><br>
                         <span style="color:#991b1b; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
-                        {score_html}
+                        {score_html.strip()}
                     </div>
                     """, unsafe_allow_html=True)
                 elif match_score is not None:
@@ -274,7 +274,7 @@ if id_image_np is not None and live_image_np is not None:
     
     # Status & Anti-Spoof Warning
     if res["is_spoof"]:
-        st.error("🛑 **DONT TRY TO PLAY A FOOL WITH ME NIGESH**")
+        st.error("🛑 **YOU ARE A SCREEN**")
         st.warning(f"⚠️ Photo/Screen Spoof Detected! ({res['spoof_reason']})")
     elif res["status"] == "VERIFIED_SUCCESS":
         st.success(f"### {res['message']}")
