@@ -565,113 +565,76 @@ def user_dashboard():
             st.markdown("#### 2. Live Front Camera & Liveness Verification")
             st.caption("Real-time ArcFace face tracking + MiniFASNet dual presentation attack detection")
             
-            cam_active = st.toggle("🎥 Start Live Camera Feed (ArcFace + Anti-Spoof)", key="t1_cam_toggle", value=False)
-            
+            def _on_freeze_click():
+                if "latest_live_frame" in st.session_state and st.session_state["latest_live_frame"] is not None:
+                    st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
+                    st.session_state["t1_cam_toggle"] = False
+                    if "vision_engine" in st.session_state:
+                        try:
+                            st.session_state["vision_engine"].stop()
+                        except Exception:
+                            pass
+                        del st.session_state["vision_engine"]
+
+            def _on_clear_click():
+                if "frozen_live_frame" in st.session_state:
+                    del st.session_state["frozen_live_frame"]
+
             col_c1, col_c2 = st.columns([1, 1])
             with col_c1:
-                lock_frame = st.button("📸 Freeze Current Frame", key="freeze_btn", help="Lock current live frame for analysis & report")
+                st.button("📸 Freeze Current Frame", key="freeze_btn", on_click=_on_freeze_click, help="Lock current live frame for analysis & report")
             with col_c2:
-                clear_frozen = st.button("🔄 Clear Frozen Frame", key="clear_frozen_btn")
+                st.button("🔄 Clear Frozen Frame", key="clear_frozen_btn", on_click=_on_clear_click)
 
-            if clear_frozen and "frozen_live_frame" in st.session_state:
-                del st.session_state["frozen_live_frame"]
-                st.rerun()
-
-            if lock_frame and "latest_live_frame" in st.session_state:
-                st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
-                st.session_state["t1_cam_toggle"] = False
-                st.rerun()
-
+            cam_active = st.toggle("🎥 Start Live Camera Feed (ArcFace + Anti-Spoof)", key="t1_cam_toggle", value=False)
+            
             live_image_np = st.session_state.get("frozen_live_frame", None)
             
             video_placeholder = st.empty()
             status_placeholder = st.empty()
             
             if cam_active:
-                st.caption("🟢 Live Front Camera Video Active — ArcFace Real-Time Face Verification")
+                st.caption("🟢 Live Front Camera Video Active — 30 FPS ArcFace Real-Time Verification")
                 
-                # Precompute ID embedding once if ID card is uploaded
-                id_face = None
-                id_emb = None
-                if id_image_np is not None:
-                    id_face, _ = detect_and_crop_face(id_image_np)
-                    id_emb = extract_arcface_embedding(id_face)
+                # Precompute ID embedding or reuse engine
+                if "vision_engine" not in st.session_state or not getattr(st.session_state["vision_engine"], "running", False):
+                    st.session_state["vision_engine"] = Realtime30FPSVisionEngine(id_image_np=id_image_np, target_fps=30.0)
+                else:
+                    st.session_state["vision_engine"].update_id_image(id_image_np)
+
+                engine = st.session_state["vision_engine"]
+                target_interval = 1.0 / 30.0
+                last_card_html = None
+                
+                while getattr(engine, "running", False):
+                    t_frame_start = time.time()
+                    annotated, raw_rgb, info = engine.get_annotated_frame(target_fps=30.0)
                     
-                cap = cv2.VideoCapture(0)
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                
-                frame_idx = 0
-                t0 = time.time()
-                cached_age_cat = None
-                
-                try:
-                    while True:
-                        ret, frame = cap.read()
-                        if not ret:
-                            status_placeholder.error("Could not capture frame from camera.")
-                            break
-                            
-                        frame_idx += 1
-                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    if annotated is not None:
+                        video_placeholder.image(annotated, caption="Live Front Camera Video (30 FPS | ArcFace Optical Tracking)", width="stretch")
                         
-                        # Fast downscale for real-time MTCNN tracking
-                        h_f, w_f = frame_rgb.shape[:2]
-                        scale = 400.0 / float(w_f) if w_f > 400 else 1.0
-                        small_rgb = cv2.resize(frame_rgb, (400, int(h_f * scale))) if scale < 1.0 else frame_rgb
+                        is_spoof = info.get("is_spoof", False)
+                        match_score = info.get("match_score")
+                        is_match = info.get("is_match")
                         
-                        live_face, small_bbox = detect_and_crop_face(small_rgb)
-                        
-                        live_bbox = None
-                        if small_bbox is not None:
-                            sx, sy, sw, sh = small_bbox
-                            live_bbox = (int(sx / scale), int(sy / scale), int(sw / scale), int(sh / scale))
-                            
-                        match_score = None
-                        is_match = None
-                        if id_emb is not None and live_face is not None:
-                            live_emb = extract_arcface_embedding(live_face)
-                            if live_emb is not None:
-                                match_score = compute_similarity_from_embeddings(id_emb, live_emb)
-                                is_match = match_score >= 0.65
-                                
-                        is_spoof, spoof_score, spoof_reason = (False, 0.0, None)
-                        if live_face is not None:
-                            is_spoof, spoof_score, spoof_reason = detect_photo_spoof(frame_rgb, live_face)
-                            
-                        if frame_idx % 8 == 1 and live_face is not None:
-                            try:
-                                det = estimate_detailed_age_from_face(live_face)
-                                cached_age_cat = det.get("category", "")
-                            except Exception:
-                                pass
-                                
-                        fps = frame_idx / max(0.001, time.time() - t0)
-                        
-                        annotated = annotate_live_frame(
-                            frame_rgb,
-                            live_bbox=live_bbox,
-                            match_score=match_score,
-                            is_match=is_match,
-                            is_spoof=is_spoof,
-                            spoof_reason=spoof_reason,
-                            age_category=cached_age_cat,
-                            fps=fps
-                        )
-                        
-                        video_placeholder.image(annotated, caption="Live Front Camera Video Feed (ArcFace Real-Time)", width="stretch")
-                        
+                        card_html = None
                         if is_spoof:
-                            status_placeholder.markdown("""
+                            score_html = ""
+                            if match_score is not None:
+                                score_color = "#22c55e" if is_match else "#ef4444"
+                                score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
+                                score_html = f"<div style='margin-top:6px; font-size:12px; color:#fca5a5;'>{score_tag}: {match_score:.1%}</div>"
+                            card_html = f"""
                             <div style="background:#450a0a; border:1px solid #ef4444; border-radius:10px; padding:10px; margin-top:6px;">
                                 <b style="color:#f87171;">🛑 YOU ARE SHOWING A MOBILE SCREEN</b><br>
                                 <span style="color:#fca5a5; font-size:12px;">Photo/Screen Spoof Detected by MiniFASNet!</span>
+                                {score_html}
                             </div>
-                            """, unsafe_allow_html=True)
+                            """
                         elif match_score is not None:
                             color = "#22c55e" if is_match else "#ef4444"
                             tag = "✅ BIOMETRICS MATCH" if is_match else "❌ BIOMETRIC MISMATCH"
-                            status_placeholder.markdown(f"""
+                            card_html = f"""
                             <div style="background:#181818; border:1px solid #262626; border-radius:10px; padding:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
                                 <div>
                                     <span style="font-weight:700; color:{color};">{tag}</span><br>
@@ -679,18 +642,27 @@ def user_dashboard():
                                 </div>
                                 <div style="font-size:22px; font-weight:800; color:{color};">{match_score:.1%}</div>
                             </div>
-                            """, unsafe_allow_html=True)
+                            """
                         else:
-                            status_placeholder.caption("Face detected. Upload an ID Card on the left to cross-match.")
-                            
-                        st.session_state["latest_live_frame"] = frame_rgb
-                        live_image_np = frame_rgb
-                        
-                        time.sleep(0.02)
-                finally:
-                    cap.release()
-                    
+                            card_html = "<div style='color:#8e8e8e; font-size:12px; padding:6px 0;'>Face detected. Upload an ID Card on the left to cross-match.</div>"
+
+                        if card_html != last_card_html:
+                            status_placeholder.markdown(card_html, unsafe_allow_html=True)
+                            last_card_html = card_html
+
+                        st.session_state["latest_live_frame"] = raw_rgb
+
+                    dt = time.time() - t_frame_start
+                    sleep_time = max(0.005, target_interval - dt)
+                    time.sleep(sleep_time)
             else:
+                if "vision_engine" in st.session_state:
+                    try:
+                        st.session_state["vision_engine"].stop()
+                    except Exception:
+                        pass
+                    del st.session_state["vision_engine"]
+
                 if live_image_np is not None:
                     video_placeholder.image(live_image_np, caption="Frozen Live Camera Snapshot", width="stretch")
                 else:

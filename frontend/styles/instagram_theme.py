@@ -554,18 +554,14 @@ def inject_instagram_styles():
 
 def render_instagram_logo(subtitle: str = "SafeAd AI"):
     """Renders the iconic Instagram script logo with SafeAd badge."""
-    html = f"""
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:0 4px;">
-        <div>
-            <span class="ig-logo">Instagram</span>
-            <span class="ig-logo-badge">{subtitle}</span>
-        </div>
-        <div style="display:flex; gap:16px; align-items:center; font-size:22px; color:#ffffff;">
-            <span style="cursor:pointer;" title="Notifications">❤️</span>
-            <span style="cursor:pointer;" title="Direct Messages">💬</span>
-        </div>
-    </div>
-    """
+    html = (
+        f'<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:0 4px;">'
+        f'<div><span class="ig-logo">Instagram</span><span class="ig-logo-badge">{subtitle}</span></div>'
+        f'<div style="display:flex; gap:16px; align-items:center; font-size:22px; color:#ffffff;">'
+        f'<span style="cursor:pointer;" title="Notifications">❤️</span>'
+        f'<span style="cursor:pointer;" title="Direct Messages">💬</span>'
+        f'</div></div>'
+    )
     st.markdown(html, unsafe_allow_html=True)
 
 def render_stories_bar():
@@ -583,13 +579,13 @@ def render_stories_bar():
     html = '<div class="stories-container">'
     for s in stories:
         seen_cls = "" if s.get("is_user") or s["name"] == "safead.ai" else "seen"
-        html += f"""
-        <div class="story-item">
-            <div class="story-ring {seen_cls}">
-                <div class="story-avatar">{s['avatar']}</div>
-            </div>
-            <div class="story-name">{s['name']}</div>
-        </div>
-        """
+        html += (
+            f'<div class="story-item">'
+            f'<div class="story-ring {seen_cls}">'
+            f'<div class="story-avatar">{s["avatar"]}</div>'
+            f'</div>'
+            f'<div class="story-name">{s["name"]}</div>'
+            f'</div>'
+        )
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
