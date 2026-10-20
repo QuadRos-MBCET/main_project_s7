@@ -32,12 +32,32 @@ try:
     _FACE_AGE_PIPELINE = FaceAgePipeline()
     HAS_PIPELINE = True
 except Exception:
-    _FACE_AGE_PIPELINE = None
-    HAS_PIPELINE = False
+    try:
+        import sys
+        from pathlib import Path
+        _base_dir = Path(__file__).resolve().parent.parent
+        if str(_base_dir) not in sys.path:
+            sys.path.insert(0, str(_base_dir))
+        try:
+            import ai
+            _ai_core = str(_base_dir / "ai")
+            if hasattr(ai, "__path__") and _ai_core not in ai.__path__:
+                ai.__path__.insert(0, _ai_core)
+        except Exception:
+            pass
+        from ai.face_age.face_age_pipeline import FaceAgePipeline
+        from PIL import Image
+        _FACE_AGE_PIPELINE = FaceAgePipeline()
+        HAS_PIPELINE = True
+    except Exception:
+        _FACE_AGE_PIPELINE = None
+        HAS_PIPELINE = False
 
 try:
+    import torch
+    torch.set_num_threads(1)
     from facenet_pytorch import MTCNN
-    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True, min_face_size=15, factor=0.70, thresholds=[0.5, 0.5, 0.6], device='cpu')
+    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True)
 except Exception:
     _MTCNN_DETECTOR = None
 
@@ -48,7 +68,7 @@ except Exception:
 
 def detect_and_crop_face(image_np: np.ndarray) -> tuple:
     if image_np is None or image_np.size == 0:
-        return None, None
+        return np.zeros((128, 128, 3), dtype=np.uint8), None
 
     # Ensure 3-channel RGB layout
     if len(image_np.shape) == 2:
@@ -60,29 +80,18 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
 
     h_img, w_img = image_np.shape[:2]
 
-    # If image is already a cropped face patch (e.g. 112x112 or 128x128)
-    if h_img <= 180 and w_img <= 180 and abs(h_img - w_img) < 30:
-        return cv2.resize(image_np, (128, 128)), (0, 0, w_img, h_img)
-
-    # Pass 1: MTCNN on full image (scale to max 1000px so small ID faces stay sharp)
+    # Pass 1: MTCNN Deep Multi-Task Cascaded CNN (Robust for ID cards and live captures)
     if _MTCNN_DETECTOR is not None:
         try:
-            max_d = max(h_img, w_img)
-            scale = 1000.0 / float(max_d) if max_d > 1000 else 1.0
-            det_img = cv2.resize(image_np, (int(w_img * scale), int(h_img * scale))) if scale < 1.0 else image_np
-
-            pil_img = Image.fromarray(det_img)
-            boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
-            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
-                b = boxes[0]
-                x1 = int(b[0] / scale)
-                y1 = int(b[1] / scale)
-                x2 = int(b[2] / scale)
-                y2 = int(b[3] / scale)
+            with torch.inference_mode():
+                pil_img = Image.fromarray(image_np)
+                boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
+            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.50:
+                x1, y1, x2, y2 = [int(b) for b in boxes[0]]
                 w = max(1, x2 - x1)
                 h = max(1, y2 - y1)
-                mx = int(w * 0.12)
-                my = int(h * 0.12)
+                mx = int(w * 0.10)
+                my = int(h * 0.10)
                 cx1 = max(0, x1 - mx)
                 cy1 = max(0, y1 - my)
                 cx2 = min(w_img, x2 + mx)
@@ -93,64 +102,42 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         except Exception:
             pass
 
-    # Pass 2: Left 60% ROI for ID cards (Aadhaar, DL, Passport, Student ID photos are on left)
-    if _MTCNN_DETECTOR is not None and w_img > 100:
+    if HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
         try:
-            left_roi = image_np[:, :int(w_img * 0.60)]
-            lh, lw = left_roi.shape[:2]
-            scale_l = 800.0 / float(max(lh, lw)) if max(lh, lw) > 800 else 1.0
-            det_l = cv2.resize(left_roi, (int(lw * scale_l), int(lh * scale_l))) if scale_l < 1.0 else left_roi
-            boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(det_l))
-            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
-                b = boxes[0]
-                x1 = int(b[0] / scale_l)
-                y1 = int(b[1] / scale_l)
-                x2 = int(b[2] / scale_l)
-                y2 = int(b[3] / scale_l)
+            _FACE_AGE_PIPELINE._initialize_models()
+            pil_img = Image.fromarray(image_np)
+            faces = _FACE_AGE_PIPELINE.detector.detect_faces(pil_img)
+            if faces:
+                main_face = max(faces, key=lambda f: f["detection_confidence"])
+                x1, y1, x2, y2 = main_face["bbox"]
                 w = max(1, x2 - x1)
                 h = max(1, y2 - y1)
-                mx = int(w * 0.12)
-                my = int(h * 0.12)
-                face_crop = left_roi[max(0, y1 - my):min(lh, y2 + my), max(0, x1 - mx):min(lw, x2 + mx)]
-                if face_crop.size > 0:
-                    return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
+                face_crop = np.array(main_face["face_crop"])
+                return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
         except Exception:
             pass
 
-    # Pass 3: Rotations (90 CW, 180, 90 CCW) for vertical / sideways cards
-    if _MTCNN_DETECTOR is not None and max(h_img, w_img) > 100:
-        for rot in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]:
-            try:
-                rot_img = cv2.rotate(image_np, rot)
-                rh, rw = rot_img.shape[:2]
-                scale = 800.0 / float(max(rh, rw)) if max(rh, rw) > 800 else 1.0
-                small_rot = cv2.resize(rot_img, (int(rw * scale), int(rh * scale))) if scale < 1.0 else rot_img
-                boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rot))
-                if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
-                    b = boxes[0]
-                    rx1 = int(b[0] / scale)
-                    ry1 = int(b[1] / scale)
-                    rx2 = int(b[2] / scale)
-                    ry2 = int(b[3] / scale)
-                    rw_b = max(1, rx2 - rx1)
-                    rh_b = max(1, ry2 - ry1)
-                    face_crop = rot_img[max(0, ry1):min(rh, ry2), max(0, rx1):min(rw, rx2)]
-                    if face_crop.size > 0:
-                        return cv2.resize(face_crop, (128, 128)), (rx1, ry1, rw_b, rh_b)
-            except Exception:
-                pass
+    if face_cascade is not None:
+        try:
+            gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            if len(faces) == 0:
+                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(20, 20))
+            if len(faces) > 0:
+                x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+                cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
+                return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
+        except Exception:
+            pass
 
-    # Pass 4: ID Card Left Portrait Area Fallback (Aadhaar / ID Card structure)
-    if w_img > 100 and h_img > 80:
-        lx1 = int(0.03 * w_img)
-        ly1 = int(0.12 * h_img)
-        lx2 = int(0.42 * w_img)
-        ly2 = int(0.68 * h_img)
-        id_fallback_crop = image_np[ly1:ly2, lx1:lx2]
-        if id_fallback_crop.size > 0:
-            return cv2.resize(id_fallback_crop, (128, 128)), (lx1, ly1, lx2 - lx1, ly2 - ly1)
+    # Default center box fallback
+    w = int(w_img * 0.4)
+    h = int(w_img * 0.5)
+    x = int((w_img - w) / 2)
+    y = int((h_img - h) / 2)
+    cropped_face = image_np[max(0, y):min(h_img, y+h), max(0, x):min(w_img, x+w)]
+    return cv2.resize(cropped_face, (128, 128)), (x, y, w, h)
 
-    return None, None
 
 def extract_facial_features(cropped_face: np.ndarray, bbox: tuple) -> np.ndarray:
     if bbox is not None:
@@ -199,17 +186,14 @@ def _train_static_face_classifier():
 
 face_age_clf = _train_static_face_classifier()
 
-try:
-    from website.fasnet import get_fasnet_predictor
-    HAS_FASNET = True
-except Exception:
-    try:
-        from fasnet import get_fasnet_predictor
-        HAS_FASNET = True
-    except Exception:
-        HAS_FASNET = False
-
 def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, face_bbox: tuple = None) -> tuple[bool, float, str]:
+    """
+    Detects whether the captured face image is a photograph/screen display (photo spoof)
+    or a real live face.
+    
+    Returns:
+        (is_spoof: bool, spoof_score: float, reason: str)
+    """
     if image_np is None:
         return False, 0.0, "No image"
 
@@ -224,156 +208,77 @@ def detect_photo_spoof(image_np: np.ndarray, cropped_face: np.ndarray = None, fa
     reasons = []
     h_img, w_img = image_np.shape[:2]
 
-    # 1. State-of-the-Art Deep Learning Anti-Spoofing Neural Model (MiniFASNet Dual-Scale Ensemble)
-    p_screen = 0.0
-    p_live = 1.0
-    fas_evaluated = False
-    if HAS_FASNET and face_bbox is not None:
-        try:
-            fas_predictor = get_fasnet_predictor()
-            if getattr(fas_predictor, "loaded", False):
-                fas_res = fas_predictor.predict(image_np, face_bbox)
-                p_screen = fas_res.get("p_screen", 0.0)
-                p_live = fas_res.get("p_live", 1.0)
-                fas_evaluated = True
-        except Exception:
-            fas_evaluated = False
-
-    # 2. 4-Sided Rectangular Screen / Printed Card Bezel Analysis in Outer Frame
-    top_lines = 0
-    bottom_lines = 0
-    left_lines = 0
-    right_lines = 0
-    total_bezel_lines = 0
-    enclosed_quadrants = 0
-
+    # 1. Localized Screen / Printed Photo Border Detection in Face ROI
+    # Genuine live humans have natural soft shoulders/neck contours. Photo/screen attacks
+    # exhibit sharp rectangular bezel or paper border lines immediately framing the face.
+    roi_lines_count = 0
     if face_bbox is not None:
         x, y, w, h = face_bbox
-        pad_x = int(0.45 * w)
-        pad_y = int(0.45 * h)
+        pad_x = int(0.35 * w)
+        pad_y = int(0.35 * h)
         x1, y1 = max(0, x - pad_x), max(0, y - pad_y)
         x2, y2 = min(w_img, x + w + pad_x), min(h_img, y + h + pad_y)
         roi = image_np[y1:y2, x1:x2]
-
         if roi.size > 0:
             gray_roi = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
-            rx, ry = x - x1, y - y1
-
-            # Mask out inner face center (inner 80%) so eyes, glasses, lips, and collars aren't counted as bezels
-            masked_gray = gray_roi.copy()
-            inner_pad_x = int(0.10 * w)
-            inner_pad_y = int(0.10 * h)
-            mx1, my1 = min(roi.shape[1], rx + inner_pad_x), min(roi.shape[0], ry + inner_pad_y)
-            mx2, my2 = max(0, rx + w - inner_pad_x), max(0, ry + h - inner_pad_y)
-            if mx2 > mx1 and my2 > my1:
-                masked_gray[my1:my2, mx1:mx2] = 128
-
-            edges = cv2.Canny(masked_gray, 50, 150)
-            min_len = int(min(w, h) * 0.40)
-            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=10)
-
+            edges = cv2.Canny(gray_roi, 50, 150)
+            min_len = int(min(w, h) * 0.45)
+            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=40, minLineLength=min_len, maxLineGap=12)
             if lines is not None:
                 for line in lines:
                     flat = np.ravel(line)
                     if len(flat) >= 4:
                         lx1, ly1, lx2, ly2 = flat[:4]
                         ang = np.abs(np.arctan2(ly2 - ly1, lx2 - lx1) * 180 / np.pi)
-                        mid_x = (lx1 + lx2) / 2.0
-                        mid_y = (ly1 + ly2) / 2.0
+                        if ang < 12 or ang > 78:
+                            roi_lines_count += 1
 
-                        # Horizontal line (top or bottom border)
-                        if ang < 15:
-                            if mid_y < ry:
-                                top_lines += 1
-                            elif mid_y > ry + h:
-                                bottom_lines += 1
-                        # Vertical line (left or right border)
-                        elif ang > 75:
-                            if mid_x < rx:
-                                left_lines += 1
-                            elif mid_x > rx + w:
-                                right_lines += 1
+    if roi_lines_count >= 30:
+        score_indicators.append(0.60)
+        reasons.append(f"Screen / photo rectangular bezel frame detected ({roi_lines_count} border lines)")
+    elif roi_lines_count >= 16:
+        score_indicators.append(0.35)
+        reasons.append(f"Physical photo / display edge boundary detected ({roi_lines_count} lines)")
 
-                total_bezel_lines = top_lines + bottom_lines + left_lines + right_lines
-                enclosed_quadrants = sum(1 for q in [top_lines, bottom_lines, left_lines, right_lines] if q >= 2)
-
-    # 3. Straight Lines Inside Face (Phone Navigation/UI Bars, Screen Borders)
-    inner_h_lines = 0
-    inner_long_h_lines = 0
-    inner_v_lines = 0
-    if cropped_face is not None and cropped_face.size > 0:
-        ch, cw = cropped_face.shape[:2]
-        m_x = max(8, int(cw * 0.08))
-        m_y = max(8, int(ch * 0.08))
-        inner = cropped_face[m_y:ch-m_y, m_x:cw-m_x]
-        ich, icw = inner.shape[:2]
-        gray_inner = cv2.cvtColor(inner, cv2.COLOR_RGB2GRAY)
-        edges_inner = cv2.Canny(gray_inner, 30, 100)
-        lines_inner = cv2.HoughLinesP(edges_inner, 1, np.pi/180, threshold=25, minLineLength=int(icw * 0.28), maxLineGap=6)
-        if lines_inner is not None:
-            for l in lines_inner:
-                flat = np.ravel(l)
-                if len(flat) >= 4:
-                    x1, y1, x2, y2 = flat[:4]
-                    ang = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
-                    length = np.hypot(x2 - x1, y2 - y1)
-                    if ang < 10:
-                        inner_h_lines += 1
-                        if length > icw * 0.50:
-                            inner_long_h_lines += 1
-                    elif ang > 80:
-                        inner_v_lines += 1
-
-    # 4. Screen Glass Specular Reflection & Glare (Absolute & Adaptive)
-    has_screen_glare = False
+    # 2. Face Skin Specular Glare (Glass / Plastic Screen Reflections on Face)
     if cropped_face is not None and cropped_face.size > 0:
         hsv_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2HSV)
         vf, sf = hsv_face[:, :, 2], hsv_face[:, :, 1]
-        v_max = int(np.max(vf))
-        spec_absolute = float(np.mean((vf > 250) & (sf < 20)))
-        spec_adaptive = float(np.mean((vf > max(160, 0.88 * v_max)) & (sf < 45)))
-        if spec_absolute > 0.08:
-            has_screen_glare = True
-        elif spec_absolute > 0.04 and (inner_long_h_lines >= 1 or inner_v_lines >= 2):
-            has_screen_glare = True
+        specular_face_ratio = float(np.mean((vf > 250) & (sf < 20)))
+        
+        if specular_face_ratio > 0.08:
+            score_indicators.append(0.35)
+            reasons.append("Severe screen glass specular reflection on face")
+        elif specular_face_ratio > 0.04 and roi_lines_count >= 10:
+            score_indicators.append(0.25)
+            reasons.append("Display surface glare reflection")
 
-    # 5. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moire)
-    has_screen_texture = False
-    if cropped_face is not None and cropped_face.size > 0:
+        # 3. High-Frequency Texture & Pixel Grid Aliasing (Laplacian & Moiré)
         gray_face = cv2.cvtColor(cropped_face, cv2.COLOR_RGB2GRAY)
         lap_var = float(cv2.Laplacian(gray_face, cv2.CV_64F).var())
-        if lap_var > 1400.0:
-            has_screen_texture = True
+        
+        # Digital screens captured up close exhibit intense pixel grid contrast (laplacian > 1200)
+        if lap_var > 1200.0:
+            score_indicators.append(0.35)
+            reasons.append(f"High-frequency screen pixel grid / display aliasing (laplacian: {lap_var:.0f})")
 
-    # 6. Authoritative Decision Synthesis:
-    is_spoof = False
-    spoof_score = 0.0
-    if fas_evaluated:
-        if p_screen >= 0.65:
-            is_spoof = True
-            spoof_score = p_screen
-            reasons.append(f"MiniFASNet SOTA neural model detected digital screen replay ({p_screen:.1%})")
-        elif p_screen >= 0.48 and enclosed_quadrants >= 3 and total_bezel_lines >= 18 and has_screen_glare:
-            is_spoof = True
-            spoof_score = p_screen + 0.15
-            reasons.append(f"MiniFASNet screen replay ({p_screen:.1%}) corroborated by screen bezel/glare")
-        else:
-            # Genuine live human verified
-            is_spoof = False
-            spoof_score = p_screen
-    else:
-        # Fallback without neural net: require complete 4-sided enclosing bezel frame + glare
-        if enclosed_quadrants == 4 and total_bezel_lines >= 20 and has_screen_glare:
-            is_spoof = True
-            spoof_score = 0.75
-            reasons.append(f"Enclosing 4-sided screen bezel frame detected ({total_bezel_lines} border lines)")
-        elif inner_long_h_lines >= 2 and inner_v_lines >= 3 and has_screen_glare:
-            is_spoof = True
-            spoof_score = 0.65
-            reasons.append("Smartphone screen UI border detected")
+        # 2D FFT Moiré pattern analysis
+        f = np.fft.fft2(gray_face)
+        fshift = np.fft.fftshift(f)
+        mag = 20 * np.log(np.abs(fshift) + 1e-6)
+        fh, fw = gray_face.shape
+        cy, cx = fh // 2, fw // 2
+        high_freq_ratio = float(np.mean(mag[:max(1, cy // 2), :max(1, cx // 2)]) / (np.mean(mag) + 1e-6))
+        if high_freq_ratio > 1.25 or (high_freq_ratio > 0.88 and lap_var > 800):
+            score_indicators.append(0.20)
+            reasons.append("Screen rescan Moiré frequency pattern detected")
 
-    reason_str = "; ".join(reasons) if reasons else ("Live face verified" if not is_spoof else "YOU ARE SHOWING A MOBILE SCREEN")
-    return is_spoof, round(min(1.0, spoof_score), 3), reason_str
+    total_spoof_score = float(np.sum(score_indicators))
+    is_spoof = total_spoof_score >= 0.50
+    reason_str = "; ".join(reasons) if reasons else "Live face verified"
+    
+    return is_spoof, round(min(1.0, total_spoof_score), 3), reason_str
+
 
 def detect_facial_hair(cropped_face: np.ndarray) -> bool:
     """
@@ -435,6 +340,7 @@ def estimate_detailed_age_from_face(image_np: np.ndarray) -> dict:
 
                 return {
                     "age_range": category,
+                    "fine_age_range": age_range,
                     "normalized_group": norm_group,
                     "confidence": float(conf),
                     "category": category,
@@ -496,6 +402,7 @@ import datetime
 try:
     import timm
     import torch
+    torch.backends.mkldnn.enabled = False
     torch.set_num_threads(1)
     import torch.nn.functional as F
     # Pretrained ArcFace ViT MS1MV3 (Additive Angular Margin Loss, s=64, m=0.50, 512-D embeddings)
@@ -513,18 +420,6 @@ try:
 except Exception:
     _FACENET_EMBEDDER = None
     HAS_FACENET = False
-
-def calibrate_arcface_cosine(cosine_sim: float) -> float:
-    """
-    Calibrates raw 512-D ArcFace (MS1MV3) hypersphere cosine similarity to [0.0, 1.0] confidence score:
-    - Impostors / Different people: raw cosine <= 0.24 -> score <= 30.0%
-    - Joseph Benedict ID vs Sooraj Live (cosine ~ 0.170) -> score ~ 12.4% (MISMATCH)
-    - Decision threshold for match: cosine >= 0.32 -> score >= 50.0%
-    - Same identity: cosine >= 0.36 -> score >= 60.0%
-    - High-confidence match: cosine >= 0.50 -> score >= 95.0%
-    """
-    score = (float(cosine_sim) - 0.12) / 0.40
-    return float(np.clip(score, 0.0, 1.0))
 
 def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float:
     """
@@ -570,7 +465,12 @@ def compute_face_similarity(face1_np: np.ndarray, face2_np: np.ndarray) -> float
 
             # Calculate 512-D Cosine Similarity on Hypersphere
             cosine_sim = float(np.dot(e1, e2))
-            calibrated_score = calibrate_arcface_cosine(cosine_sim)
+
+            # Calibrate ArcFace cosine score to [0.0, 1.0] confidence:
+            # - Same identity: cosine >= 0.35 -> confidence >= 68.8%
+            # - Impostor: cosine <= 0.25 -> confidence <= 56.3%
+            # Decision threshold >= 65% corresponds to cosine >= 0.32
+            calibrated_score = float(np.clip((cosine_sim + 0.20) / 0.80, 0.0, 1.0))
             return round(calibrated_score, 4)
         except Exception:
             pass
@@ -666,7 +566,7 @@ def compute_similarity_from_embeddings(emb1: np.ndarray, emb2: np.ndarray) -> fl
     if emb1 is None or emb2 is None:
         return 0.0
     cosine_sim = float(np.dot(emb1, emb2))
-    calibrated_score = calibrate_arcface_cosine(cosine_sim)
+    calibrated_score = float(np.clip((cosine_sim + 0.20) / 0.80, 0.0, 1.0))
     return round(calibrated_score, 4)
 
 def annotate_live_frame(
@@ -705,10 +605,10 @@ def annotate_live_frame(
                 badge_text = "SPOOF DETECTED"
         elif match_score is not None:
             if is_match:
-                box_color = (34, 197, 94) # Neon Emerald
+                box_color = (34, 197, 94) # Green
                 badge_text = f"VERIFIED MATCH: {match_score:.1%}"
             else:
-                box_color = (239, 68, 68) # Vivid Crimson Mismatch
+                box_color = (239, 68, 68) # Red
                 badge_text = f"MISMATCH: {match_score:.1%}"
         else:
             box_color = (56, 189, 248) # Sky blue
@@ -717,47 +617,30 @@ def annotate_live_frame(
         if age_category:
             badge_text += f" | {age_category}"
 
-        # Draw main face box with 3px width
-        cv2.rectangle(annotated, (x, y), (x2, y2), box_color, 3)
-
-        # Draw Corner Brackets for high-tech AR appearance
-        c_len = max(10, min(24, int(min(w, h) * 0.20)))
-        t_corner = 4
-        # Top-left
-        cv2.line(annotated, (x, y), (x + c_len, y), box_color, t_corner)
-        cv2.line(annotated, (x, y), (x, y + c_len), box_color, t_corner)
-        # Top-right
-        cv2.line(annotated, (x2, y), (x2 - c_len, y), box_color, t_corner)
-        cv2.line(annotated, (x2, y), (x2, y + c_len), box_color, t_corner)
-        # Bottom-left
-        cv2.line(annotated, (x, y2), (x + c_len, y2), box_color, t_corner)
-        cv2.line(annotated, (x, y2), (x, y2 - c_len), box_color, t_corner)
-        # Bottom-right
-        cv2.line(annotated, (x2, y2), (x2 - c_len, y2), box_color, t_corner)
-        cv2.line(annotated, (x2, y2), (x2, y2 - c_len), box_color, t_corner)
-
+        # Draw main face box
+        cv2.rectangle(annotated, (x, y), (x2, y2), box_color, 2)
+        
         # Draw upper badge
         (tw, th), _ = cv2.getTextSize(badge_text, cv2.FONT_HERSHEY_SIMPLEX, 0.50, 2)
-        badge_y1 = max(38, y - 26)
-        cv2.rectangle(annotated, (x, badge_y1), (min(w_img - 1, x + tw + 16), badge_y1 + 24), box_color, -1)
-        cv2.putText(annotated, badge_text, (x + 8, badge_y1 + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2, cv2.LINE_AA)
+        badge_y1 = max(38, y - 24)
+        cv2.rectangle(annotated, (x, badge_y1), (min(w_img - 1, x + tw + 14), badge_y1 + 22), box_color, -1)
+        cv2.putText(annotated, badge_text, (x + 6, badge_y1 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 2, cv2.LINE_AA)
 
         # Draw lower warning banner if spoof detected
         if is_spoof:
-            sub_text = "YOU ARE SHOWING A MOBILE SCREEN"
-            (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 2)
+            sub_text = "YOU ARE A SCREEN"
+            (stw, sth), _ = cv2.getTextSize(sub_text, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
             sub_y1 = min(h_img - 24, y2 + 4)
-            cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 14), sub_y1 + 22), (185, 28, 28), -1)
-            cv2.putText(annotated, sub_text, (x + 7, sub_y1 + 16), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.rectangle(annotated, (x, sub_y1), (min(w_img - 1, x + stw + 12), sub_y1 + 20), (185, 28, 28), -1)
+            cv2.putText(annotated, sub_text, (x + 6, sub_y1 + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
 
     return annotated
 
 class Realtime30FPSVisionEngine:
     """
     High-performance 30 FPS decoupled asynchronous vision engine:
-    - Thread 1: Hardware DirectShow Camera Reader + Fast MTCNN Face Tracker (~12ms).
-                Updates latest_bbox on EVERY FRAME so bounding box moves instantaneously with face movement.
-    - Thread 2: Asynchronous AI Worker (ArcFace MS1MV3 Hypersphere Embeddings, Anti-Spoofing PAD, Age analysis).
+    - Thread 1: Hardware DirectShow Camera Reader (captures at full hardware frame rate).
+    - Thread 2: Asynchronous AI Worker (MTCNN Face Localization, ArcFace MS1MV3 Hypersphere Embeddings, Anti-Spoofing PAD).
     - Display Loop: Renders at locked 30 FPS (33.3ms interval) with zero latency or stutter.
     """
     def __init__(self, id_image_np=None, target_fps=30.0):
@@ -778,35 +661,14 @@ class Realtime30FPSVisionEngine:
         self.latest_raw_frame = None
         self.ai_busy = False
 
-        # Dedicated private fast tracker for 30 FPS camera loop
-        self.tracker = None
-        if MTCNN is not None:
-            try:
-                self.tracker = MTCNN(
-                    keep_all=False,
-                    select_largest=True,
-                    min_face_size=36,
-                    factor=0.75,
-                    thresholds=[0.4, 0.5, 0.5],
-                    device='cpu'
-                )
-            except Exception:
-                self.tracker = _MTCNN_DETECTOR
-        else:
-            self.tracker = _MTCNN_DETECTOR
-
-        # Live smoothed bounding box
-        self.latest_bbox = None
-        self.face_miss_count = 0
-
         # Precompute ID Card embedding once
         self.id_emb = None
         if id_image_np is not None:
             id_face, _ = detect_and_crop_face(id_image_np)
-            if id_face is not None:
-                self.id_emb = extract_arcface_embedding(id_face)
+            self.id_emb = extract_arcface_embedding(id_face)
 
         # Shared latest AI results
+        self.latest_bbox = None
         self.latest_match_score = None
         self.latest_is_match = None
         self.latest_is_spoof = False
@@ -814,18 +676,18 @@ class Realtime30FPSVisionEngine:
         self.latest_age_cat = None
         self.cached_live_face = None
 
-        # Start Camera Capture & Face Tracking Thread (Thread 1)
+        # Start Camera Capture Thread
         self.cam_thread = threading.Thread(target=self._camera_worker, daemon=True)
         self.cam_thread.start()
 
-        # Start AI Worker Thread (Thread 2)
+        # Start AI Worker Thread
         self.ai_thread = threading.Thread(target=self._ai_worker, daemon=True)
         self.ai_thread.start()
 
     def update_id_image(self, id_image_np):
         if id_image_np is not None:
             id_face, _ = detect_and_crop_face(id_image_np)
-            emb = extract_arcface_embedding(id_face) if id_face is not None else None
+            emb = extract_arcface_embedding(id_face)
             with self.lock:
                 self.id_emb = emb
         else:
@@ -841,116 +703,78 @@ class Realtime30FPSVisionEngine:
                 if not self.running:
                     break
                 if ret and frame is not None:
-                    h, w = frame.shape[:2]
-                    scale = 400.0 / float(w) if w > 400 else 1.0
-                    small_h = int(h * scale)
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    small_rgb = cv2.resize(rgb, (int(w * scale), small_h)) if scale < 1.0 else rgb
+                    with self.lock:
+                        self.latest_raw_frame = frame
+                else:
+                    time.sleep(0.02)
+            except Exception:
+                break
 
-                    detected_bbox = None
-                    detector = self.tracker or _MTCNN_DETECTOR
-                    if detector is not None:
+    def _ai_worker(self):
+        frame_counter = 0
+        while self.running:
+            frame_to_process = None
+            with self.lock:
+                if self.latest_raw_frame is not None and not self.ai_busy:
+                    frame_to_process = self.latest_raw_frame.copy()
+                    self.ai_busy = True
+
+            if frame_to_process is not None:
+                try:
+                    with torch.inference_mode():
+                        frame_counter += 1
+                        rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
+                        h, w = rgb.shape[:2]
+                        scale = 400.0 / float(w) if w > 400 else 1.0
+                        small_rgb = cv2.resize(rgb, (400, int(h * scale))) if scale < 1.0 else rgb
+
+                        live_face, small_bbox = detect_and_crop_face(small_rgb)
+
+                    bbox = None
+                    if small_bbox is not None:
+                        sx, sy, sw, sh = small_bbox
+                        bbox = (int(sx / scale), int(sy / scale), int(sw / scale), int(sh / scale))
+
+                    match_score = None
+                    is_match = None
+                    with self.lock:
+                        id_emb = self.id_emb
+
+                    if id_emb is not None and live_face is not None:
+                        live_emb = extract_arcface_embedding(live_face)
+                        if live_emb is not None:
+                            match_score = compute_similarity_from_embeddings(id_emb, live_emb)
+                            is_match = match_score >= 0.65
+
+                    is_spoof, _, spoof_reason = (False, 0.0, None)
+                    if live_face is not None:
+                        is_spoof, _, spoof_reason = detect_photo_spoof(rgb, live_face, bbox)
+
+                    # Update age estimate periodically
+                    age_cat = None
+                    if frame_counter % 6 == 1 and live_face is not None:
                         try:
-                            boxes, probs = detector.detect(Image.fromarray(small_rgb))
-                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] is not None and probs[0] > 0.30:
-                                b = boxes[0]
-                                sx1, sy1, sx2, sy2 = b
-                                orig_x = max(0, int(sx1 / scale))
-                                orig_y = max(0, int(sy1 / scale))
-                                orig_w = min(w - orig_x, int((sx2 - sx1) / scale))
-                                orig_h = min(h - orig_y, int((sy2 - sy1) / scale))
-                                if orig_w > 20 and orig_h > 20:
-                                    detected_bbox = (orig_x, orig_y, orig_w, orig_h)
+                            det = estimate_detailed_age_from_face(live_face)
+                            age_cat = det.get("category", "")
                         except Exception:
                             pass
 
                     with self.lock:
-                        self.latest_raw_frame = frame
-                        if detected_bbox is not None:
-                            if self.latest_bbox is None:
-                                self.latest_bbox = detected_bbox
-                            else:
-                                alpha = 0.65
-                                px, py, pw, ph = self.latest_bbox
-                                nx, ny, nw, nh = detected_bbox
-                                self.latest_bbox = (
-                                    int(px * (1 - alpha) + nx * alpha),
-                                    int(py * (1 - alpha) + ny * alpha),
-                                    int(pw * (1 - alpha) + nw * alpha),
-                                    int(ph * (1 - alpha) + nh * alpha)
-                                )
-                            self.face_miss_count = 0
-                        else:
-                            self.face_miss_count += 1
-                            # Hold bounding box for up to 15 frames (~0.5s) if momentary occlusion
-                            if self.face_miss_count > 15:
-                                self.latest_bbox = None
-                else:
-                    time.sleep(0.01)
-            except Exception:
-                time.sleep(0.01)
-
-    def _ai_worker(self):
-        while self.running:
-            frame_to_process = None
-            bbox_to_process = None
-            with self.lock:
-                if self.latest_raw_frame is not None and not self.ai_busy and self.latest_bbox is not None:
-                    frame_to_process = self.latest_raw_frame.copy()
-                    bbox_to_process = self.latest_bbox
-                    self.ai_busy = True
-
-            if frame_to_process is not None and bbox_to_process is not None:
-                try:
-                    rgb = cv2.cvtColor(frame_to_process, cv2.COLOR_BGR2RGB)
-                    x, y, w, h = bbox_to_process
-                    h_img, w_img = rgb.shape[:2]
-                    
-                    pad_x = int(0.10 * w)
-                    pad_y = int(0.10 * h)
-                    cx1 = max(0, x - pad_x)
-                    cy1 = max(0, y - pad_y)
-                    cx2 = min(w_img, x + w + pad_x)
-                    cy2 = min(h_img, y + h + pad_y)
-                    live_crop = rgb[cy1:cy2, cx1:cx2]
-
-                    if live_crop.size > 0:
-                        live_face = cv2.resize(live_crop, (128, 128))
-
-                        # 1. ArcFace Similarity Matching
-                        match_score = None
-                        is_match = None
-                        with self.lock:
-                            id_emb = self.id_emb
-
-                        if id_emb is not None:
-                            live_emb = extract_arcface_embedding(live_face)
-                            if live_emb is not None:
-                                match_score = compute_similarity_from_embeddings(id_emb, live_emb)
-                                is_match = match_score >= 0.50
-
-                        # 2. Anti-Spoofing PAD
-                        is_spoof, spoof_score, spoof_reason = detect_photo_spoof(rgb, live_face, bbox_to_process)
-
-                        # 3. Adult Feature Detection
-                        has_hair = detect_facial_hair(live_face)
-                        age_cat = "18 and above" if has_hair else None
-
-                        with self.lock:
-                            self.latest_match_score = match_score
-                            self.latest_is_match = is_match
-                            self.latest_is_spoof = is_spoof
-                            self.latest_spoof_reason = spoof_reason
-                            self.cached_live_face = live_face
-                            if age_cat is not None:
-                                self.latest_age_cat = age_cat
+                        self.latest_bbox = bbox
+                        self.latest_match_score = match_score
+                        self.latest_is_match = is_match
+                        self.latest_is_spoof = is_spoof
+                        self.latest_spoof_reason = spoof_reason
+                        self.cached_live_face = live_face
+                        if age_cat is not None:
+                            self.latest_age_cat = age_cat
                 except Exception:
                     pass
                 finally:
                     with self.lock:
                         self.ai_busy = False
             else:
-                time.sleep(0.04)
+                time.sleep(0.01)
 
     def get_annotated_frame(self, target_fps=30.0):
         with self.lock:
@@ -1032,11 +856,10 @@ def process_pdf_id_document(pdf_bytes: bytes) -> tuple:
         return id_image_np, text.strip()
     except Exception as e:
         return None, f"PDF Extraction Error: {e}"
-
-
-def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None) -> tuple:
+def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None, pdf_text: str = None, id_face_np: np.ndarray = None) -> tuple:
     """
     Extracts Date of Birth (DOB) and computes actual age from ID Card image or PDF document using EasyOCR & Regex.
+    If OCR cannot detect an explicit text DOB, it leverages deep facial age estimation on the ID card photo.
     Returns (dob_str, calculated_age, age_category, full_ocr_log).
     """
     current_year = datetime.datetime.now().year
@@ -1063,7 +886,16 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         cleaned = re.sub(r'[|\\/]+', '/', raw_text or "")
         cleaned = _fix_ocr_digits(re.sub(r'[\s]+', ' ', cleaned))
 
-        dob_label_pat = r'(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Birth|Born)\s*[:\-\s]*\s*'
+        dob_label_pat = (
+            r'(?:'
+            r'DOB|D\.?O\.?B\.?|'
+            r'Date\s+of\s+Birth|Birth\s+Date|'
+            r'Year\s+of\s+Birth|Birth\s+Year|YOB|Y\.?O\.?B\.?|'
+            r'DOB\s*/\s*(?:Year\s+of\s+Birth|Age)|Date\s+of\s+Birth\s*/\s*Age|'
+            r'Birth|Born|'
+            r'जन्म\s*(?:तिथि|तारीख|वर्ष)?|ജനന\s*(?:തീയതി|വർഷം)?'
+            r')\s*[:\-\s/]*\s*'
+        )
         months = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
 
         # PASS 1A: Explicit DOB label followed by DD/MM/YYYY (delimiters: / - . : or space)
@@ -1071,7 +903,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         if m1:
             d, m, y_str = int(m1.group(1)), int(m1.group(2)), m1.group(3)
             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 1B: Explicit DOB label followed by textual month (e.g. 15-AUG-2004, 15 Aug 2004)
@@ -1082,22 +914,30 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             m = month_map.get(m_str, 1)
             y_str = m2.group(3)
             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                 return f"{d:02d}/{m:02d}/{y}", y
 
-        # PASS 1C: Explicit DOB label followed by Year (e.g. DOB: 2004 or Year of Birth: 2004)
+        # PASS 1C: Explicit DOB / Year of Birth label followed by Year (e.g. Year of Birth: 1948 or DOB: 1952)
         m3 = re.search(dob_label_pat + r'(\d{4})\b', cleaned, re.IGNORECASE)
         if m3:
             y = int(m3.group(1))
-            if 1920 <= y <= current_year - 5:
+            if 1910 <= y <= current_year - 5:
                 return f"Year {y}", y
+
+        # PASS 1D: Explicit Age field (e.g. Voter ID / EPIC card: "Age: 68", "Age: 72 Years")
+        m_age = re.search(r'\b(?:Age|Age\s+as\s+on[^:\d]*)\s*[:\-\s]*\s*(\d{1,2})\s*(?:yrs|years|yr)?\b', cleaned, re.IGNORECASE)
+        if m_age:
+            age_val = int(m_age.group(1))
+            if 5 <= age_val <= 110:
+                implied_year = current_year - age_val
+                return f"Age {age_val} (Est. {implied_year})", implied_year
 
         # PASS 2: Adjacent OCR boxes (Label on Box i, Date on Box i+1 or i+2)
         if text_lines:
             for i, line in enumerate(text_lines):
                 line_clean = _fix_ocr_digits(line.strip())
-                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)\b', line_clean, re.IGNORECASE):
-                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
+                if re.search(r'\b(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Year\s+of\s+Birth|Birth\s+Year|YOB|Age)\b', line_clean, re.IGNORECASE):
+                    rem = re.sub(r'^.*?(?:DOB|D\.?O\.?B\.?|Date\s+of\s+Birth|Birth\s+Date|Year\s+of\s+Birth|Birth\s+Year|YOB|Age)[:\s\-]*', '', line_clean, flags=re.IGNORECASE).strip()
                     candidates = [rem]
                     if i + 1 < len(text_lines):
                         candidates.append(_fix_ocr_digits(text_lines[i + 1].strip()))
@@ -1110,12 +950,12 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
                         if mc:
                             d, m, y_str = int(mc.group(1)), int(mc.group(2)), mc.group(3)
                             y = int(y_str) if len(y_str) == 4 else (2000 + int(y_str) if int(y_str) <= (current_year % 100) else 1900 + int(y_str))
-                            if 1 <= d <= 31 and 1 <= m <= 12 and 1920 <= y <= current_year:
+                            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year:
                                 return f"{d:02d}/{m:02d}/{y}", y
                         my = re.search(r'\b(19\d{2}|20[0-2]\d)\b', cand)
                         if my:
                             y = int(my.group(1))
-                            if 1920 <= y <= current_year - 5:
+                            if 1910 <= y <= current_year - 5:
                                 return f"Year {y}", y
 
         # PASS 3: General Standalone Dates (DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY)
@@ -1123,7 +963,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         for d_s, m_s, y_s in p_num:
             d, m = int(d_s), int(m_s)
             y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year - 5:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 3B: Standalone Textual Month: 15-AUG-2004, 15 Aug 2004
@@ -1132,7 +972,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             d = int(d_s)
             m = month_map.get(m_s[:3].lower(), 1)
             y = int(y_s) if len(y_s) == 4 else (2000 + int(y_s) if int(y_s) <= (current_year % 100) else 1900 + int(y_s))
-            if 1 <= d <= 31 and 1 <= m <= 12 and 1950 <= y <= current_year - 5:
+            if 1 <= d <= 31 and 1 <= m <= 12 and 1910 <= y <= current_year - 5:
                 return f"{d:02d}/{m:02d}/{y}", y
 
         # PASS 4: College ID Academic Batch: e.g. Batch: 2022-2026 or 2021-2025
@@ -1140,7 +980,7 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         if batch_match:
             start_year = int(batch_match.group(1))
             implied_birth_year = start_year - 18
-            if 1950 <= implied_birth_year <= current_year:
+            if 1910 <= implied_birth_year <= current_year:
                 return f"Batch {start_year} (Est. {implied_birth_year})", implied_birth_year
 
         # Standalone College Batch Span: e.g. 2022 - 2026 or 2021-2025
@@ -1162,11 +1002,11 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
             implied_birth_year = adm_year - 18
             return f"Roll No Adm {adm_year} (Est. {implied_birth_year})", implied_birth_year
 
-        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1970 - 2012]
-        all_years = re.findall(r'\b(19[7-9]\d|20[0-1]\d)\b', cleaned)
+        # PASS 6: Any standalone 4-digit year in valid student/adult birth range [1920 - 2020]
+        all_years = re.findall(r'\b(19[2-9]\d|20[0-2]\d)\b', cleaned)
         for y_str in all_years:
             y = int(y_str)
-            if 1970 <= y <= current_year - 12:
+            if 1920 <= y <= current_year - 10:
                 return f"Year {y}", y
 
         return None, None
@@ -1244,18 +1084,71 @@ def extract_dob_and_age_from_id(id_image_np: np.ndarray, manual_dob: str = None,
         except Exception as e:
             full_ocr_log += f" | OCR Error: {e}"
 
+    calc_age = None
+    cat = None
+
+    # Step 4: Facial Age Estimation Fallback from ID Card Photo
+    # If OCR could not find an explicit printed DOB on the ID, infer age from the ID card face!
     if not dob_str:
-        birth_year = current_year - 20
+        face_to_analyze = id_face_np
+        if face_to_analyze is None and id_image_np is not None:
+            face_to_analyze, _ = detect_and_crop_face(id_image_np)
+
+        if face_to_analyze is not None and face_to_analyze.size > 0:
+            try:
+                detailed_age = estimate_detailed_age_from_face(face_to_analyze)
+                pred_range = detailed_age.get("fine_age_range")
+                pipe_res = detailed_age.get("pipeline_result")
+                if not pred_range and pipe_res and pipe_res.get("faces"):
+                    pred_range = pipe_res["faces"][0]["age_estimation"].get("age_range")
+
+                range_to_est_age = {
+                    "0-2": 1,
+                    "3-9": 6,
+                    "10-19": 15,
+                    "20-29": 25,
+                    "30-39": 35,
+                    "40-49": 45,
+                    "50-59": 55,
+                    "60-69": 65,
+                    "70+": 75,
+                }
+                if pred_range and pred_range in range_to_est_age:
+                    calc_age = range_to_est_age[pred_range]
+                    birth_year = current_year - calc_age
+                    dob_str = f"Estimated from Face (~{calc_age} yrs, YOB {birth_year})"
+                    cat = detailed_age.get("category", "18 and above")
+                    full_ocr_log += f" | ID Face Age Model: {pred_range} (~{calc_age} yrs)"
+                else:
+                    cat = detailed_age.get("category", "18 and above")
+                    if cat == "Less than 14":
+                        calc_age = 10
+                    elif cat == "14 to 17":
+                        calc_age = 16
+                    else:
+                        calc_age = 40
+                    birth_year = current_year - calc_age
+                    dob_str = f"Estimated from Face (~{calc_age} yrs, YOB {birth_year})"
+                    full_ocr_log += f" | ID Face Category: {cat}"
+            except Exception as ex:
+                full_ocr_log += f" | ID Face Age Estimation Error: {ex}"
+
+    # Absolute fallback if neither OCR nor face detection could infer age
+    if not dob_str:
+        birth_year = current_year - 25
         dob_str = f"Estimated YOB {birth_year}"
-
-    calc_age = max(1, current_year - birth_year)
-
-    if calc_age < 14:
-        cat = "Less than 14"
-    elif 14 <= calc_age <= 17:
-        cat = "14 to 17"
-    else:
+        calc_age = 25
         cat = "18 and above"
+    else:
+        if calc_age is None:
+            calc_age = max(1, current_year - birth_year)
+        if cat is None:
+            if calc_age < 14:
+                cat = "Less than 14"
+            elif 14 <= calc_age <= 17:
+                cat = "14 to 17"
+            else:
+                cat = "18 and above"
 
     return dob_str, calc_age, cat, full_ocr_log
 
@@ -1264,86 +1157,41 @@ def verify_id_card_and_live_face(id_image_np: np.ndarray, live_image_np: np.ndar
     """
     Performs complete ID Verification:
     1. Detects face on ID card (image or rendered PDF) and cropped live face.
-    2. Runs Anti-Spoof Liveness check on live face (MiniFASNet).
-    3. Computes Face Similarity (ID Face vs Live Face using ArcFace MS1MV3).
+    2. Runs Anti-Spoof Liveness check on live face.
+    3. Computes Face Similarity (ID Face vs Live Face using FaceNet).
     4. Extracts DOB & Age from ID Card (Image or PDF text).
     5. Cross-matches ID DOB Age vs Live ViT Facial Age Prediction.
     """
     id_face, id_bbox = detect_and_crop_face(id_image_np)
     live_face, live_bbox = detect_and_crop_face(live_image_np)
 
-    if id_face is None:
-        return {
-            "status": "FAILED_NO_ID_FACE",
-            "message": "⚠️ No clear portrait photo detected on uploaded ID card. Please ensure the photo on your ID is clearly visible and uncropped.",
-            "face_similarity": 0.0,
-            "face_match": False,
-            "is_spoof": False,
-            "id_face": None,
-            "live_face": live_face,
-            "id_dob_str": None,
-            "id_age": None,
-            "id_age_category": "Pending",
-            "live_age_category": "Pending",
-            "spoof_reason": "No face on ID"
-        }
-
-    if live_face is None:
-        return {
-            "status": "FAILED_NO_LIVE_FACE",
-            "message": "⚠️ No face detected in the live camera frame. Please look directly at the camera.",
-            "face_similarity": 0.0,
-            "face_match": False,
-            "is_spoof": False,
-            "id_face": id_face,
-            "live_face": None,
-            "id_dob_str": None,
-            "id_age": None,
-            "id_age_category": "Pending",
-            "live_age_category": "Pending",
-            "spoof_reason": "No live face"
-        }
-
     # 1. Anti-Spoofing check on live face
     is_spoof, spoof_score, spoof_reason = detect_photo_spoof(live_image_np, live_face, live_bbox)
 
-    # 2. Deep ArcFace Biometric Similarity (50% threshold for cross-domain matching)
+    # 2. Deep ArcFace Biometric Similarity
     face_sim_score = compute_face_similarity(id_face, live_face)
-    face_match = face_sim_score >= 0.50
+    face_match = face_sim_score >= 0.65  # Require >= 65% similarity threshold
 
     # 3. DOB & Age from ID (Image + PDF text)
-    dob_res = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text)
-    if len(dob_res) == 4:
-        dob_str, id_age, id_age_cat, ocr_log = dob_res
-    else:
-        dob_str, id_age, id_age_cat = dob_res
-        ocr_log = ""
+    dob_str, id_age, id_age_cat, ocr_log = extract_dob_and_age_from_id(id_image_np, manual_dob, pdf_text, id_face_np=id_face)
 
     # 4. Facial ViT Age Prediction
     detailed_live = estimate_detailed_age_from_face(live_image_np)
-    live_age_cat = detailed_live.get("category", "18 and above")
+    live_age_cat = detailed_live["category"]
 
-    # 5. KYC Age Consistency:
-    # Official ID DOB is authoritative. Only flag mismatch if an extreme conflict exists
-    # (e.g. ID says adult 40+ but live face is child under 14 with high confidence).
-    # Normal youthfulness (18-22 looking 14-17) is accepted as verified adult!
-    if id_age_cat == "18 and above" and live_age_cat == "Less than 14" and detailed_live.get("confidence", 0) > 0.85:
-        dob_age_match = False
-    elif id_age_cat == "Less than 14" and (live_age_cat == "18 and above" or detect_facial_hair(live_face)):
-        dob_age_match = False
-    else:
-        dob_age_match = True
+    # 5. DOB vs Live Age Category Match
+    dob_age_match = (id_age_cat == live_age_cat)
 
     # Overall Status
     if is_spoof:
         status = "FAILED_SPOOF"
-        message = "🛑 YOU ARE SHOWING A MOBILE SCREEN"
+        message = "YOU ARE A SCREEN"
     elif not face_match:
         status = "FAILED_FACE_MISMATCH"
-        message = f"❌ ID Face Mismatch! Similarity score is {face_sim_score:.1%} (Live face does not match ID photo)."
+        message = f"❌ ID Face Mismatch! Similarity score is only {face_sim_score:.1%} (Live face does not match ID photo)."
     elif not dob_age_match:
         status = "FAILED_DOB_MISMATCH"
-        message = f"⚠️ Extreme Age Discrepancy! ID Card DOB indicates '{id_age_cat}' ({id_age} yrs), but live facial scan detected a child '{live_age_cat}'."
+        message = f"⚠️ DOB Mismatch Alert! ID Card DOB indicates '{id_age_cat}' ({id_age} yrs), but live facial scan predicts '{live_age_cat}'."
     else:
         status = "VERIFIED_SUCCESS"
         message = f"✅ Identity & Age Verified! Face match: {face_sim_score:.1%}. ID DOB: {dob_str} ({id_age_cat})."

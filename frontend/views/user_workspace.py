@@ -563,7 +563,7 @@ def user_dashboard():
         # ---------------------------------------------------------------------
         with c_live:
             st.markdown("#### 2. Live Front Camera & Liveness Verification")
-            st.caption("Real-time ArcFace face tracking + MiniFASNet dual presentation attack detection")
+            st.caption("Real-time ArcFace face tracking + Anti-Spoof Liveness Detection")
             
             def _on_freeze_click():
                 if "latest_live_frame" in st.session_state and st.session_state["latest_live_frame"] is not None:
@@ -629,11 +629,12 @@ def user_dashboard():
                                 score_color = "#22c55e" if is_match else "#ef4444"
                                 score_tag = "✅ ArcFace Match" if is_match else "❌ ArcFace Mismatch"
                                 score_html = f"<div style='margin-top:6px; font-size:12px; color:#fca5a5;'>{score_tag}: {match_score:.1%}</div>"
+                            spoof_detail = info.get("spoof_reason", "Screen/Photo Presentation Attack")
                             card_html = f"""
                             <div style="background:#450a0a; border:1px solid #ef4444; border-radius:10px; padding:10px; margin-top:6px;">
-                                <b style="color:#f87171;">🛑 YOU ARE SHOWING A MOBILE SCREEN</b><br>
-                                <span style="color:#fca5a5; font-size:12px;">Photo/Screen Spoof Detected by MiniFASNet!</span>
-                                {score_html}
+                                <b style="color:#f87171;">🛑 YOU ARE A SCREEN</b><br>
+                                <span style="color:#fca5a5; font-size:12px;">Photo/Screen Spoof Detected! ({spoof_detail})</span>
+                                {score_html.strip() if score_html else ""}
                             </div>
                             """
                         elif match_score is not None:
@@ -718,7 +719,7 @@ def user_dashboard():
                 st.markdown(f"""
                 <div class="metric-card" style="background:#181818; border:1px solid #262626; border-radius:12px; padding:12px; text-align:center;">
                     <div class="metric-val" style="font-size:18px; font-weight:700; color:{color};">{anti_spoof_tag}</div>
-                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">MiniFASNet Liveness</div>
+                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">Liveness Check</div>
                 </div>
                 """, unsafe_allow_html=True)
             with c_r3:
@@ -783,12 +784,12 @@ def user_dashboard():
                 with col_act2:
                     st.info(f"Verified Policy Bracket: `{norm}` ({cat}) | ID DOB: **{res.get('id_dob_str')}**")
             elif res.get("is_spoof"):
-                st.markdown("""
+                st.markdown(f"""
                 <div style="background:#450a0a; border:1px solid #ef4444; border-radius:12px; padding:18px; margin-top:16px; margin-bottom:18px;">
                     <h3 style="color:#f87171; margin:0 0 6px 0;">
-                        🛑 Presentation Attack Blocked: YOU ARE SHOWING A MOBILE SCREEN
+                        🛑 Presentation Attack Blocked: YOU ARE A SCREEN
                     </h3>
-                    <p style="color:#fca5a5; margin:0; font-size:13px;">MiniFASNet dual-scale neural liveness detector identified digital screen replay artifacts. Please present a real live person.</p>
+                    <p style="color:#fca5a5; margin:0; font-size:13px;">Photo/Screen Spoof Detected! ({res.get('spoof_reason')}). Please present a real live person.</p>
                 </div>
                 """, unsafe_allow_html=True)
             elif not res.get("face_match"):
@@ -797,7 +798,7 @@ def user_dashboard():
                     <h3 style="color:#f87171; margin:0 0 6px 0;">
                         ❌ Biometric Mismatch: ID Card & Live User Do Not Match!
                     </h3>
-                    <p style="color:#fca5a5; margin:0; font-size:13px;">ArcFace MS1MV3 biometric similarity confidence is <b>{res.get('face_similarity', 0.0):.1%}</b> (Threshold: &ge; 50.0%). The live user in front of the camera is a different individual than the person on the uploaded ID card. Verification rejected.</p>
+                    <p style="color:#fca5a5; margin:0; font-size:13px;">ArcFace MS1MV3 biometric similarity confidence is <b>{res.get('face_similarity', 0.0):.1%}</b> (Threshold: &ge; 65.0%). The live user in front of the camera is a different individual than the person on the uploaded ID card. Verification rejected.</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
