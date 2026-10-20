@@ -568,6 +568,7 @@ def user_dashboard():
             def _on_freeze_click():
                 if "latest_live_frame" in st.session_state and st.session_state["latest_live_frame"] is not None:
                     st.session_state["frozen_live_frame"] = st.session_state["latest_live_frame"]
+                    st.session_state["frozen_annotated_frame"] = st.session_state.get("latest_annotated_frame", st.session_state["latest_live_frame"])
                     st.session_state["t1_cam_toggle"] = False
                     if "vision_engine" in st.session_state:
                         try:
@@ -655,6 +656,7 @@ def user_dashboard():
                             last_card_html = card_html
 
                         st.session_state["latest_live_frame"] = raw_rgb
+                        st.session_state["latest_annotated_frame"] = annotated
 
                     dt = time.time() - t_frame_start
                     sleep_time = max(0.005, target_interval - dt)
@@ -667,8 +669,9 @@ def user_dashboard():
                         pass
                     del st.session_state["vision_engine"]
 
-                if live_image_np is not None:
-                    video_placeholder.image(live_image_np, caption="Frozen Live Camera Snapshot", width="stretch")
+                disp_frame = st.session_state.get("frozen_annotated_frame", live_image_np)
+                if disp_frame is not None:
+                    video_placeholder.image(disp_frame, caption="Frozen Live Camera Snapshot (Biometrics Verified)", width="stretch")
                 else:
                     video_placeholder.markdown("""
                     <div style="border:2px dashed #333333; border-radius:14px; padding:32px; text-align:center; background:#121212; margin-bottom:12px;">

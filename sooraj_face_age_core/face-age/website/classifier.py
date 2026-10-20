@@ -37,7 +37,7 @@ except Exception:
 
 try:
     from facenet_pytorch import MTCNN
-    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True, min_face_size=35, factor=0.75, thresholds=[0.6, 0.7, 0.8], device='cpu')
+    _MTCNN_DETECTOR = MTCNN(keep_all=False, select_largest=True, min_face_size=15, factor=0.70, thresholds=[0.5, 0.5, 0.6], device='cpu')
 except Exception:
     _MTCNN_DETECTOR = None
 
@@ -61,23 +61,19 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
     h_img, w_img = image_np.shape[:2]
 
     # If image is already a cropped face patch (e.g. 112x112 or 128x128)
-    if h_img <= 160 and w_img <= 160 and h_img == w_img:
+    if h_img <= 180 and w_img <= 180 and abs(h_img - w_img) < 30:
         return cv2.resize(image_np, (128, 128)), (0, 0, w_img, h_img)
 
-    # Pass 1: MTCNN with safe downscaling (scales large ID images to max 640px for 20ms execution)
+    # Pass 1: MTCNN on full image (scale to max 1000px so small ID faces stay sharp)
     if _MTCNN_DETECTOR is not None:
         try:
             max_d = max(h_img, w_img)
-            if max_d > 640:
-                scale = 640.0 / float(max_d)
-                det_img = cv2.resize(image_np, (int(w_img * scale), int(h_img * scale)))
-            else:
-                scale = 1.0
-                det_img = image_np
+            scale = 1000.0 / float(max_d) if max_d > 1000 else 1.0
+            det_img = cv2.resize(image_np, (int(w_img * scale), int(h_img * scale))) if scale < 1.0 else image_np
 
             pil_img = Image.fromarray(det_img)
             boxes, probs = _MTCNN_DETECTOR.detect(pil_img)
-            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
                 b = boxes[0]
                 x1 = int(b[0] / scale)
                 y1 = int(b[1] / scale)
@@ -97,16 +93,40 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
         except Exception:
             pass
 
-    # Pass 2: Rotations if ID card photo was taken sideways / upside down
+    # Pass 2: Left 60% ROI for ID cards (Aadhaar, DL, Passport, Student ID photos are on left)
+    if _MTCNN_DETECTOR is not None and w_img > 100:
+        try:
+            left_roi = image_np[:, :int(w_img * 0.60)]
+            lh, lw = left_roi.shape[:2]
+            scale_l = 800.0 / float(max(lh, lw)) if max(lh, lw) > 800 else 1.0
+            det_l = cv2.resize(left_roi, (int(lw * scale_l), int(lh * scale_l))) if scale_l < 1.0 else left_roi
+            boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(det_l))
+            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
+                b = boxes[0]
+                x1 = int(b[0] / scale_l)
+                y1 = int(b[1] / scale_l)
+                x2 = int(b[2] / scale_l)
+                y2 = int(b[3] / scale_l)
+                w = max(1, x2 - x1)
+                h = max(1, y2 - y1)
+                mx = int(w * 0.12)
+                my = int(h * 0.12)
+                face_crop = left_roi[max(0, y1 - my):min(lh, y2 + my), max(0, x1 - mx):min(lw, x2 + mx)]
+                if face_crop.size > 0:
+                    return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
+        except Exception:
+            pass
+
+    # Pass 3: Rotations (90 CW, 180, 90 CCW) for vertical / sideways cards
     if _MTCNN_DETECTOR is not None and max(h_img, w_img) > 100:
         for rot in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]:
             try:
                 rot_img = cv2.rotate(image_np, rot)
                 rh, rw = rot_img.shape[:2]
-                scale = 640.0 / float(max(rh, rw)) if max(rh, rw) > 640 else 1.0
+                scale = 800.0 / float(max(rh, rw)) if max(rh, rw) > 800 else 1.0
                 small_rot = cv2.resize(rot_img, (int(rw * scale), int(rh * scale))) if scale < 1.0 else rot_img
                 boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rot))
-                if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+                if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
                     b = boxes[0]
                     rx1 = int(b[0] / scale)
                     ry1 = int(b[1] / scale)
@@ -120,24 +140,17 @@ def detect_and_crop_face(image_np: np.ndarray) -> tuple:
             except Exception:
                 pass
 
-    # Pass 3: FaceAgePipeline detector fallback
-    if HAS_PIPELINE and _FACE_AGE_PIPELINE is not None:
-        try:
-            _FACE_AGE_PIPELINE._initialize_models()
-            pil_img = Image.fromarray(image_np)
-            faces = _FACE_AGE_PIPELINE.detector.detect_faces(pil_img)
-            if faces:
-                main_face = max(faces, key=lambda f: f["detection_confidence"])
-                x1, y1, x2, y2 = main_face["bbox"]
-                w = max(1, x2 - x1)
-                h = max(1, y2 - y1)
-                face_crop = np.array(main_face["face_crop"])
-                return cv2.resize(face_crop, (128, 128)), (x1, y1, w, h)
-        except Exception:
-            pass
+    # Pass 4: ID Card Left Portrait Area Fallback (Aadhaar / ID Card structure)
+    if w_img > 100 and h_img > 80:
+        lx1 = int(0.03 * w_img)
+        ly1 = int(0.12 * h_img)
+        lx2 = int(0.42 * w_img)
+        ly2 = int(0.68 * h_img)
+        id_fallback_crop = image_np[ly1:ly2, lx1:lx2]
+        if id_fallback_crop.size > 0:
+            return cv2.resize(id_fallback_crop, (128, 128)), (lx1, ly1, lx2 - lx1, ly2 - ly1)
 
     return None, None
-
 
 def extract_facial_features(cropped_face: np.ndarray, bbox: tuple) -> np.ndarray:
     if bbox is not None:
@@ -789,23 +802,23 @@ class Realtime30FPSVisionEngine:
                     break
                 if ret and frame is not None:
                     h, w = frame.shape[:2]
-                    scale = 320.0 / float(w)
+                    scale = 480.0 / float(w) if w > 480 else 1.0
                     small_h = int(h * scale)
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    small_rgb = cv2.resize(rgb, (320, small_h))
+                    small_rgb = cv2.resize(rgb, (480, small_h)) if scale < 1.0 else rgb
 
                     detected_bbox = None
                     if _MTCNN_DETECTOR is not None:
                         try:
                             boxes, probs = _MTCNN_DETECTOR.detect(Image.fromarray(small_rgb))
-                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.40:
+                            if boxes is not None and len(boxes) > 0 and probs is not None and probs[0] > 0.35:
                                 b = boxes[0]
                                 sx1, sy1, sx2, sy2 = b
                                 orig_x = max(0, int(sx1 / scale))
                                 orig_y = max(0, int(sy1 / scale))
                                 orig_w = min(w - orig_x, int((sx2 - sx1) / scale))
                                 orig_h = min(h - orig_y, int((sy2 - sy1) / scale))
-                                if orig_w > 20 and orig_h > 20:
+                                if orig_w > 18 and orig_h > 18:
                                     detected_bbox = (orig_x, orig_y, orig_w, orig_h)
                         except Exception:
                             pass
@@ -816,7 +829,7 @@ class Realtime30FPSVisionEngine:
                             if self.latest_bbox is None:
                                 self.latest_bbox = detected_bbox
                             else:
-                                alpha = 0.70
+                                alpha = 0.75
                                 px, py, pw, ph = self.latest_bbox
                                 nx, ny, nw, nh = detected_bbox
                                 self.latest_bbox = (
@@ -828,7 +841,8 @@ class Realtime30FPSVisionEngine:
                             self.face_miss_count = 0
                         else:
                             self.face_miss_count += 1
-                            if self.face_miss_count > 6:
+                            # Hold bounding box with inertia for up to 40 frames (~1.3s) before dropping
+                            if self.face_miss_count > 40:
                                 self.latest_bbox = None
                 else:
                     time.sleep(0.01)
