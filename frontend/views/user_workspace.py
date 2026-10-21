@@ -27,10 +27,13 @@ if face_age_dir not in sys.path:
     sys.path.insert(0, face_age_dir)
 
 import importlib.util
-spec = importlib.util.spec_from_file_location("sooraj_classifier", os.path.join(face_age_dir, "website", "classifier.py"))
-sooraj_classifier = importlib.util.module_from_spec(spec)
-sys.modules["sooraj_classifier"] = sooraj_classifier
-spec.loader.exec_module(sooraj_classifier)
+if "sooraj_classifier" in sys.modules:
+    sooraj_classifier = sys.modules["sooraj_classifier"]
+else:
+    spec = importlib.util.spec_from_file_location("sooraj_classifier", os.path.join(face_age_dir, "website", "classifier.py"))
+    sooraj_classifier = importlib.util.module_from_spec(spec)
+    sys.modules["sooraj_classifier"] = sooraj_classifier
+    spec.loader.exec_module(sooraj_classifier)
 
 estimate_age_from_face = sooraj_classifier.estimate_age_from_face
 estimate_detailed_age_from_face = sooraj_classifier.estimate_detailed_age_from_face
@@ -46,6 +49,81 @@ Realtime30FPSVisionEngine = sooraj_classifier.Realtime30FPSVisionEngine
 
 from frontend.services.safead_client import SafeAdClient
 from frontend.styles.instagram_theme import render_instagram_logo, render_stories_bar
+import sqlite3
+
+def render_html(html_str: str):
+    """Safely renders HTML without Markdown interpreting indented lines as code blocks."""
+    cleaned = "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
+    st.markdown(cleaned, unsafe_allow_html=True)
+
+# Persistent User Database for Account Registrations
+USER_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../safead_users.db"))
+
+def init_user_storage():
+    """Initializes persistent SQLite storage for registered users."""
+    try:
+        conn = sqlite3.connect(USER_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS registered_users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                age_category TEXT NOT NULL,
+                norm_group TEXT NOT NULL,
+                is_verified INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            INSERT OR IGNORE INTO registered_users (username, password, age_category, norm_group, is_verified)
+            VALUES ('sourav', 'sourav', '18 and above', 'AGE_18_PLUS', 1)
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error initializing user storage: {e}")
+
+def load_all_users() -> dict:
+    init_user_storage()
+    users = {
+        "sourav": {
+            "password": "sourav",
+            "category": "18 and above",
+            "norm": "AGE_18_PLUS",
+            "is_verified": True
+        }
+    }
+    try:
+        conn = sqlite3.connect(USER_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT username, password, age_category, norm_group, is_verified FROM registered_users")
+        rows = cur.fetchall()
+        conn.close()
+        for r in rows:
+            users[r[0]] = {
+                "password": r[1],
+                "category": r[2],
+                "norm": r[3],
+                "is_verified": bool(r[4])
+            }
+    except Exception as e:
+        print(f"Error loading users: {e}")
+    return users
+
+def save_new_user(username: str, password: str, category: str, norm: str):
+    init_user_storage()
+    try:
+        conn = sqlite3.connect(USER_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT OR REPLACE INTO registered_users (username, password, age_category, norm_group, is_verified)
+            VALUES (?, ?, ?, ?, 1)
+        """, (username, password, category, norm))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error saving user: {e}")
+
 
 # =============================================================================
 # REELS CATALOG: ORGANIC VIDEOS & BRAND OWNER ADS
@@ -196,6 +274,67 @@ def is_ad_allowed_for_age(classification: str, user_cat: str) -> bool:
         return classification in ["SAFE_FOR_ALL", "APPROVED", "SAFE_14_PLUS", "SAFE_18_PLUS"]
 
 
+
+# =============================================================================
+# DATASET HUB CONTENT LOADER (Age-Gated Reels & Photos)
+# =============================================================================
+@st.cache_data(show_spinner=False)
+def load_dataset_hub_content():
+    """Loads approved, authentic images and reels from safead-dataset-hub manifest."""
+    hub_root = os.path.abspath(os.path.join(BASE_DIR, ".."))
+    manifest_path = os.path.join(hub_root, "app_content", "content_manifest.json")
+    
+    if not os.path.exists(manifest_path):
+        return {"images": [], "reels": []}
+    
+    try:
+        import json
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Error loading content manifest: {e}")
+        return {"images": [], "reels": []}
+        
+    images = []
+    reels = []
+    
+    for item in data.get("content_items", []):
+        media_rel = item.get("media_path", "")
+        full_path = os.path.abspath(os.path.join(hub_root, media_rel))
+        
+        if not os.path.exists(full_path):
+            continue
+            
+        entry = {
+            "id": item["content_id"],
+            "type": "sponsored",
+            "creator": item.get("source_name", "SafeAd Archive"),
+            "creator_avatar": "📺" if item["content_type"] == "reel" else "📸",
+            "is_verified": True,
+            "sponsored_label": f"SafeAd AI • Verified {item['age_category']}",
+            "safety_policy": item["age_category"],
+            "title": item.get("title", ""),
+            "caption": item.get("caption", ""),
+            "cta_text": "Watch Reel ↗" if item["content_type"] == "reel" else "View Creative ↗",
+            "audio": "Vintage Commercial Soundtrack • SafeAd Vault 🎵",
+            "likes": 12000 + (abs(hash(item["content_id"])) % 45000),
+            "comments_count": 80 + (abs(hash(item["content_id"])) % 350),
+            "shares_count": 1400 + (abs(hash(item["content_id"])) % 5000),
+            "media_path": full_path,
+            "video_path": full_path,
+            "content_type": item["content_type"],
+            "comments": [
+                {"user": "safead_compliance", "text": f"✅ Verified safe for {item['age_category']} demographic.", "time": "2h", "likes": 42}
+            ]
+        }
+        
+        if item["content_type"] == "reel":
+            reels.append(entry)
+        else:
+            images.append(entry)
+            
+    return {"images": images, "reels": reels}
+
 def build_curated_reels(user_cat: str, user_norm: str) -> list:
     """
     Builds the reels catalog dynamically:
@@ -205,7 +344,7 @@ def build_curated_reels(user_cat: str, user_norm: str) -> list:
     """
     curated = []
     
-    # 1. Process default reels
+    # 1. Process default organic reels (all ages)
     for r in DEFAULT_REELS:
         if r["type"] == "organic":
             curated.append(r)
@@ -213,6 +352,13 @@ def build_curated_reels(user_cat: str, user_norm: str) -> list:
             pol = r.get("safety_policy", "SAFE_FOR_ALL")
             if is_ad_allowed_for_age(pol, user_cat):
                 curated.append(r)
+
+    # 2. Load and inject authentic reels from safead-dataset-hub matching user's age category
+    hub_data = load_dataset_hub_content()
+    for reel in hub_data["reels"]:
+        pol = reel.get("safety_policy", "SAFE_FOR_ALL")
+        if is_ad_allowed_for_age(pol, user_cat):
+            curated.append(reel)
 
     # 2. Add Brand Owner Ads uploaded in Brand Owner portal (global_ads)
     global_ads = st.session_state.get("global_ads", [])
@@ -311,16 +457,11 @@ def build_curated_reels(user_cat: str, user_norm: str) -> list:
 # MAIN USER DASHBOARD CONTROLLER
 # =============================================================================
 def user_dashboard():
-    # 1. Global User Database with Default Developer Testing Account (sourav/sourav)
+    # 1. Global User Database with Persistent Storage
+    db_users = load_all_users()
     if "user_db" not in st.session_state:
-        st.session_state["user_db"] = {
-            "sourav": {
-                "password": "sourav",
-                "category": "18 and above",
-                "norm": "AGE_18_PLUS",
-                "is_verified": True
-            }
-        }
+        st.session_state["user_db"] = {}
+    st.session_state["user_db"].update(db_users)
 
     # 2. User Authentication State: 'LOGIN', 'SIGNUP', or 'AUTHENTICATED'
     if "user_auth_state" not in st.session_state:
@@ -380,6 +521,7 @@ def user_dashboard():
             st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
             if st.button("Log In", key="btn_login_submit", type="primary", use_container_width=True):
+                st.session_state["user_db"].update(load_all_users())
                 db = st.session_state.get("user_db", {})
                 if login_user in db and db[login_user].get("password") == login_pass:
                     user_data = db[login_user]
@@ -433,24 +575,13 @@ def user_dashboard():
             </div>
         """, unsafe_allow_html=True)
 
-        col_reg1, col_reg2, col_reg3, col_reg4 = st.columns([1.5, 1.5, 1.5, 1.2])
+        col_reg1, col_reg2, col_reg3 = st.columns([1.5, 1.5, 1.5])
         with col_reg1:
             new_username = st.text_input("New Username", key="reg_username_input", placeholder="Choose username")
         with col_reg2:
             new_password = st.text_input("Password", type="password", key="reg_password_input", placeholder="Create password")
         with col_reg3:
             confirm_password = st.text_input("Confirm Password", type="password", key="reg_confirm_password", placeholder="Confirm password")
-        with col_reg4:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            if st.button("Sign IN", key="btn_back_to_signin", use_container_width=True, help="Already have an account? Return to Sign In"):
-                if "vision_engine" in st.session_state:
-                    try:
-                        st.session_state["vision_engine"].stop()
-                    except Exception:
-                        pass
-                    del st.session_state["vision_engine"]
-                st.session_state["user_auth_state"] = "LOGIN"
-                st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -737,6 +868,9 @@ def user_dashboard():
                 elif cat == "14 to 17":
                     norm = "AGE_14_TO_17"
 
+                # Save new user to persistent database
+                save_new_user(new_username, new_password, cat, norm)
+
                 if "user_db" not in st.session_state:
                     st.session_state["user_db"] = {}
 
@@ -754,6 +888,22 @@ def user_dashboard():
                 st.session_state["user_subtab"] = "feed"
                 st.success(f"🎉 Account created & verified for @{new_username}! Redirecting to Instagram...")
                 st.rerun()
+
+        # Sign-In Navigation moved to bottom of registration page
+        render_html("""
+        <div style="text-align:center; padding:18px 0 8px 0; border-top:1px solid #262626; margin-top:24px;">
+            <span style="color:#a8a8a8; font-size:13px;">Already have an account? </span>
+        </div>
+        """)
+        if st.button("🔑 Already Have an Account? Return to Sign In", key="btn_back_to_signin_bottom", use_container_width=True):
+            if "vision_engine" in st.session_state:
+                try:
+                    st.session_state["vision_engine"].stop()
+                except Exception:
+                    pass
+                del st.session_state["vision_engine"]
+            st.session_state["user_auth_state"] = "LOGIN"
+            st.rerun()
 
         return
 
@@ -868,6 +1018,50 @@ def user_dashboard():
                 <div style="font-size:11px; color:#8e8e8e;">View all 4,120 comments • 2 hours ago</div>
             </div>
             """, unsafe_allow_html=True)
+
+            # Dataset Hub Age-Filtered Approved Photos Feed
+            hub_photos = load_dataset_hub_content()["images"]
+            age_appropriate_photos = [img for img in hub_photos if is_ad_allowed_for_age(img["safety_policy"], user_cat)]
+            
+            for p_idx, photo in enumerate(age_appropriate_photos[:12]):
+                pol = photo.get("safety_policy", "SAFE_FOR_ALL")
+                render_html(f"""
+                <div style="background:#121212; border:1px solid #262626; border-radius:14px; margin-bottom:20px;">
+                    <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#0095f6,#38bdf8); padding:1.5px; display:flex; align-items:center; justify-content:center;">
+                                <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:14px;">
+                                    📸
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:13px; font-weight:700; color:#ffffff;">@{photo['id']} <span style="color:#0095f6;">✓</span></div>
+                                <div style="font-size:11px; color:#38bdf8;">🛡️ SafeAd Verified • Policy: {pol} (Approved for {user_cat})</div>
+                            </div>
+                        </div>
+                        <div style="font-size:11px; background:rgba(0,149,246,0.15); border:1px solid rgba(0,149,246,0.3); color:#38bdf8; padding:2px 8px; border-radius:4px;">
+                            {pol}
+                        </div>
+                    </div>
+                </div>
+                """)
+                if os.path.exists(photo["media_path"]):
+                    st.image(photo["media_path"], use_container_width=True)
+                render_html(f"""
+                <div style="background:#121212; border:1px solid #262626; border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="display:flex; gap:14px; font-size:20px;">
+                            <span>❤️</span> <span>💬</span> <span>✈️</span>
+                        </div>
+                        <span style="font-size:12px; font-weight:700; color:#38bdf8;">{photo.get('cta_text', 'View Product ↗')}</span>
+                    </div>
+                    <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:4px;">{format_count(photo.get('likes', 14000))} likes</div>
+                    <div style="font-size:13px; color:#e2e8f0; margin-bottom:4px;">
+                        <b>@{photo['id']}</b> {photo.get('title', '')} — {photo.get('caption', '')}
+                    </div>
+                    <div style="font-size:11px; color:#8e8e8e;">SafeAd AI Verified Creative • Source: {photo.get('creator')}</div>
+                </div>
+                """)
 
             # Post 2: Age-Appropriate Brand Owner Sponsored Ad
             # If Brand Owner has ads in global_ads, display the top approved ad
@@ -1008,7 +1202,7 @@ def user_dashboard():
         with c_reel:
             # Header Bar
             badge_icon = "✓" if current_reel.get("is_verified") else ""
-            st.markdown(f"""
+            render_html(f"""
             <div style="background:#121212; border:1px solid #262626; border-radius:16px 16px 0 0; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
@@ -1030,7 +1224,7 @@ def user_dashboard():
                     {idx + 1} / {total_reels}
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             # Video Player
             video_file = current_reel.get("video_path")
@@ -1051,7 +1245,7 @@ def user_dashboard():
                 </div>
                 """
 
-            st.markdown(f"""
+            render_html(f"""
             <div style="background:#121212; border:1px solid #262626; border-top:none; padding:14px 16px; border-radius:0 0 16px 16px;">
                 {sponsored_html}
                 <div style="font-size:14px; font-weight:700; color:#ffffff; margin-bottom:4px;">
@@ -1065,7 +1259,7 @@ def user_dashboard():
                     <span>{current_reel.get('audio', 'Original Sound')}</span>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             # -----------------------------------------------------------------
             # REELS INTERACTIVE ACTION BAR
