@@ -72,7 +72,13 @@ else:
         # Display Current Active Profile
         role_label = role.replace('_', ' ').title()
         role_icon = "📱" if role == "USER" else ("🏢" if role == "ADVERTISEMENT_OWNER" else "🛡️")
-        user_name = st.session_state.get("logged_in_username") or ("social_user" if role == "USER" else role.lower())
+        if role == "USER":
+            if st.session_state.get("user_auth_state") == "AUTHENTICATED":
+                user_name = st.session_state.get("logged_in_username", "sourav")
+            else:
+                user_name = "guest_user"
+        else:
+            user_name = role.lower()
         
         st.markdown(f"""
         <div style="display:flex; align-items:center; gap:10px; background:#181818; border:1px solid #262626; border-radius:10px; padding:10px 12px; margin-bottom:16px;">
@@ -90,13 +96,22 @@ else:
         
         st.caption("Navigation")
         if role == "USER":
-            view = st.session_state.get("user_page_view", "feed")
-            if st.button("🎥 Explore Reels Feed", key="sb_reels", use_container_width=True, type="primary" if view == "feed" else "secondary"):
-                st.session_state["user_page_view"] = "feed"
-                st.rerun()
-            if st.button("🛡️ Get Verified (Blue Badge)", key="sb_verify", use_container_width=True, type="primary" if view == "verification" else "secondary"):
-                st.session_state["user_page_view"] = "verification"
-                st.rerun()
+            if st.session_state.get("user_auth_state") == "AUTHENTICATED":
+                subtab = st.session_state.get("user_subtab", "feed")
+                if st.button("🏠 Instagram Home", key="sb_home", use_container_width=True, type="primary" if subtab == "feed" else "secondary"):
+                    st.session_state["user_subtab"] = "feed"
+                    st.rerun()
+                if st.button("🎥 Explore Reels Feed", key="sb_reels", use_container_width=True, type="primary" if subtab == "reels" else "secondary"):
+                    st.session_state["user_subtab"] = "reels"
+                    st.rerun()
+            else:
+                auth_state = st.session_state.get("user_auth_state", "LOGIN")
+                if st.button("🔑 Log In", key="sb_login_nav", use_container_width=True, type="primary" if auth_state == "LOGIN" else "secondary"):
+                    st.session_state["user_auth_state"] = "LOGIN"
+                    st.rerun()
+                if st.button("📝 Register / Sign Up", key="sb_signup_nav", use_container_width=True, type="primary" if auth_state == "SIGNUP" else "secondary"):
+                    st.session_state["user_auth_state"] = "SIGNUP"
+                    st.rerun()
                 
         st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
         if st.button("🚪 Switch Account / Logout", key="sb_logout", use_container_width=True):
@@ -106,6 +121,8 @@ else:
                 except Exception:
                     pass
                 del st.session_state["vision_engine"]
+            st.session_state["user_auth_state"] = "LOGIN"
+            st.session_state["logged_in_username"] = None
             st.session_state["role"] = None
             st.rerun()
             
