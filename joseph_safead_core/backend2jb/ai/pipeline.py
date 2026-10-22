@@ -43,6 +43,8 @@ from models.ad_risk_analyzer import AdRiskAnalyzer
 from models.fusion.safead_assessment import SafeAdAssessment
 from models.fusion.safead_fusion import SafeAdFusion
 
+from models.experimental_detectors import EnhancedAlcoholDetector, KineticViolenceDecoupler
+
 # Singleton instances for lazy invocation
 visual_detector = VisualSafetyDetector()
 nsfw_detector = SafeAdNSFWDetector()
@@ -53,14 +55,25 @@ text_safety_detector = SafeAdTextSafetyDetector()
 ad_risk_analyzer = AdRiskAnalyzer()
 fusion_engine = SafeAdFusion()
 
+# Experimental detector singletons (active ONLY when explicitly selected)
+experimental_alcohol_detector = EnhancedAlcoholDetector()
+experimental_violence_decoupler = KineticViolenceDecoupler()
+
 def run_safead_inference(
     file_path: str,
     title: str = "",
-    caption: str = ""
+    caption: str = "",
+    pipeline_mode: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Executes the complete end-to-end SafeAd AI multimodal advertisement moderation pipeline.
     Synthesizes evidence into Central SafeAdAssessment Matrix before SafeAdFusion decision.
+
+    Selectable configurations via pipeline_mode parameter or SAFEAD_PIPELINE_MODE env var:
+    - 'production' (default): 100% frozen production baseline.
+    - 'candidate_b' / 'experimental_alcohol': Baseline + EnhancedAlcoholDetector.
+    - 'candidate_c' / 'experimental_violence': Baseline + Safeguarded KineticViolenceDecoupler.
+    - 'candidate_d' / 'experimental_all': Baseline + Both Repaired Detectors.
     """
     start_total_time = time.time()
     stage_timings = {}
@@ -155,6 +168,48 @@ def run_safead_inference(
         caption=caption,
         text_safety_output=ocr_text_safety
     )
+
+    # Resolve active pipeline configuration mode
+    active_mode = (pipeline_mode or os.getenv("SAFEAD_PIPELINE_MODE", "production")).lower().strip()
+
+    # Experimental Detector 1: EnhancedAlcoholDetector (Candidate B / D)
+    alcohol_audit = None
+    if active_mode in ["candidate_b", "candidate_d", "experimental_alcohol", "experimental_all"]:
+        alcohol_audit = experimental_alcohol_detector.evaluate_alcohol(
+            ocr_text=ocr_text_combined,
+            speech_transcript=audio_res.get("transcript", ""),
+            visual_objects=ocr_res.get("detected_objects", [])
+        )
+        if alcohol_audit["alcohol_detected"]:
+            ad_risk_output["explicit_content_score"] = max(
+                ad_risk_output.get("explicit_content_score", 0.0),
+                alcohol_audit["score"]
+            )
+            ad_risk_output.setdefault("rule_based_evidence", []).extend(alcohol_audit.get("reasons", []))
+            if isinstance(ocr_text_safety, dict):
+                ocr_text_safety["alcohol"] = alcohol_audit["score"]
+
+    # Experimental Detector 2: Safeguarded KineticViolenceDecoupler (Candidate C / D)
+    violence_audit = None
+    route_to_hitl = False
+    hitl_reasons = []
+    if active_mode in ["candidate_c", "candidate_d", "experimental_violence", "experimental_all"] and media_type == "video":
+        segments = violence_res.get("sampled_segments", [])
+        raw_mot = 25.0 if violence_res.get("violence_score", 0.0) >= 0.20 else 5.0
+        vis_viol_flag = "Violence" in visual_res.get("detected_categories", [])
+        violence_audit = experimental_violence_decoupler.evaluate_video_action(
+            sampled_segments=segments,
+            raw_motion_diff=raw_mot,
+            text_context=f"{ocr_text_combined} {audio_res.get('transcript', '')}",
+            visual_violence_flag=vis_viol_flag
+        )
+        violence_res["violence_score"] = violence_audit["violence_score"]
+        if violence_audit["requires_human_review"]:
+            route_to_hitl = True
+            hitl_reasons.extend(violence_audit["policy_reasons"])
+        elif not violence_audit["violence_detected"] and not vis_viol_flag:
+            visual_res["violence"] = min(visual_res.get("violence", 0.0), 0.18)
+
     stage_timings["step7_ad_risk_analysis"] = round(time.time() - step7_ad_risk_start, 4)
 
     # STEP 8: Construct Central SafeAdAssessment Matrix
@@ -208,7 +263,26 @@ def run_safead_inference(
 
     # STEP 9: Multimodal Safety Evidence Fusion (SafeAdFusion)
     step9_start = time.time()
-    fusion_output = fusion_engine.combine_assessment(assessment)
+    if route_to_hitl:
+        # Fail-Safe Asymmetry: Low-confidence/conflicting violence routes to HITL and WITHHOLDS publication
+        fusion_output = {
+            "classification": "REQUIRES_HUMAN_REVIEW",
+            "display_label": "Requires Human Review",
+            "risk_score": 60.0,
+            "confidence": 0.45,
+            "publication_action": "HUMAN_REVIEW",
+            "action": "ROUTE_TO_HUMAN_REVIEW",
+            "action_badge": "HOLD FOR AUDIT — HUMAN REVIEW",
+            "publishable": False,
+            "age_restriction": None,
+            "policy_stage": "FAIL_SAFE_VIOLENCE_DECOUPLING",
+            "policy_reasons": hitl_reasons,
+            "explanation": f"Ambiguous detector evidence routed to human safety officer review: {'; '.join(hitl_reasons)}. Publication strictly withheld.",
+            "detected_categories": ["Detector Ambiguity / Human Review Required"],
+            "evidence": {"policy_reasons": hitl_reasons}
+        }
+    else:
+        fusion_output = fusion_engine.combine_assessment(assessment)
     stage_timings["step9_fusion"] = round(time.time() - step9_start, 4)
 
     total_processing_time = round(time.time() - start_total_time, 4)
@@ -219,6 +293,11 @@ def run_safead_inference(
     fusion_output["extracted_ocr"] = ocr_res.get("ocr_text", "")
     fusion_output["audio_transcript"] = audio_res.get("transcript", "")
     fusion_output["audio_available"] = audio_res.get("audio_available", False)
+    fusion_output["pipeline_mode"] = active_mode
+    fusion_output["experimental_audit"] = {
+        "alcohol": alcohol_audit,
+        "violence": violence_audit
+    }
 
     model_manager.clear_gpu_memory()
 

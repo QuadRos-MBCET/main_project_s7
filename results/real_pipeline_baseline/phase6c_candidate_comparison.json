@@ -1,0 +1,382 @@
+{
+  "Candidate_A": {
+    "name": "Frozen Phase 5B Baseline",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 62,
+      "accuracy": 0.3196,
+      "accuracy_covered": 0.3196,
+      "coverage": 1.0,
+      "hitl_count": 0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2317,
+      "pfar": 0.8,
+      "pfar_num": 8,
+      "pfar_den": 10,
+      "ugvr": 0.6239,
+      "ugvr_num": 68,
+      "ugvr_den": 109,
+      "frr": 0.087,
+      "frr_num": 16,
+      "frr_den": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_num": 20,
+      "over_restriction_den": 75,
+      "prohibited_exposure_rate": 0.0412,
+      "prohibited_exposure_num": 8,
+      "prohibited_exposure_den": 194,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4068,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.18,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4974,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2143,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Candidate_B": {
+    "name": "Baseline + EnhancedAlcoholDetector",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 65,
+      "accuracy": 0.3351,
+      "accuracy_covered": 0.3351,
+      "coverage": 1.0,
+      "hitl_count": 0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2491,
+      "pfar": 0.8,
+      "pfar_num": 8,
+      "pfar_den": 10,
+      "ugvr": 0.5963,
+      "ugvr_num": 65,
+      "ugvr_den": 109,
+      "frr": 0.087,
+      "frr_num": 16,
+      "frr_den": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_num": 20,
+      "over_restriction_den": 75,
+      "prohibited_exposure_rate": 0.0412,
+      "prohibited_exposure_num": 8,
+      "prohibited_exposure_den": 194,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.3529,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4174,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.2264,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.5053,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2759,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 14,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 12,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Candidate_C": {
+    "name": "Baseline + Safeguarded Violence Decoupler",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 57,
+      "accuracy": 0.2938,
+      "accuracy_covered": 0.3167,
+      "coverage": 0.9278,
+      "hitl_count": 14,
+      "hitl_rate": 0.0722,
+      "macro_f1": 0.1862,
+      "pfar": 0.8,
+      "pfar_num": 8,
+      "pfar_den": 10,
+      "ugvr": 0.6147,
+      "ugvr_num": 67,
+      "ugvr_den": 109,
+      "frr": 0.038,
+      "frr_num": 7,
+      "frr_den": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_num": 20,
+      "over_restriction_den": 75,
+      "prohibited_exposure_rate": 0.0444,
+      "prohibited_exposure_num": 8,
+      "prohibited_exposure_den": 180,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.6133,
+        "SAFE_14_PLUS": 0.0267,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4,
+        "SAFE_14_PLUS": 0.2857,
+        "SAFE_18_PLUS": 0.1765,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4842,
+        "SAFE_14_PLUS": 0.0488,
+        "SAFE_18_PLUS": 0.2118,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 46,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 4
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 47,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 21,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 3
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 5
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 2
+        }
+      }
+    }
+  },
+  "Candidate_D": {
+    "name": "Baseline + Both Improvements (Alcohol + Safeguarded Violence)",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 60,
+      "accuracy": 0.3093,
+      "accuracy_covered": 0.3333,
+      "coverage": 0.9278,
+      "hitl_count": 14,
+      "hitl_rate": 0.0722,
+      "macro_f1": 0.2034,
+      "pfar": 0.8,
+      "pfar_num": 8,
+      "pfar_den": 10,
+      "ugvr": 0.5872,
+      "ugvr_num": 64,
+      "ugvr_den": 109,
+      "frr": 0.038,
+      "frr_num": 7,
+      "frr_den": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_num": 20,
+      "over_restriction_den": 75,
+      "prohibited_exposure_rate": 0.0444,
+      "prohibited_exposure_num": 8,
+      "prohibited_exposure_den": 180,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.6133,
+        "SAFE_14_PLUS": 0.0267,
+        "SAFE_18_PLUS": 0.3529,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4107,
+        "SAFE_14_PLUS": 0.2857,
+        "SAFE_18_PLUS": 0.2222,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.492,
+        "SAFE_14_PLUS": 0.0488,
+        "SAFE_18_PLUS": 0.2727,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 46,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 4
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 47,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 21,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 3
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 14,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 12,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 5
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 2
+        }
+      }
+    }
+  },
+  "Candidate_D_HITL": {
+    "name": "Candidate D + Policy-First HITL Ambiguity Routing",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 55,
+      "accuracy": 0.2835,
+      "accuracy_covered": 0.3161,
+      "coverage": 0.8969,
+      "hitl_count": 20,
+      "hitl_rate": 0.1031,
+      "macro_f1": 0.2086,
+      "pfar": 0.8,
+      "pfar_num": 8,
+      "pfar_den": 10,
+      "ugvr": 0.5321,
+      "ugvr_num": 58,
+      "ugvr_den": 109,
+      "frr": 0.0924,
+      "frr_num": 17,
+      "frr_den": 184,
+      "over_restriction_rate": 0.28,
+      "over_restriction_num": 21,
+      "over_restriction_den": 75,
+      "prohibited_exposure_rate": 0.046,
+      "prohibited_exposure_num": 8,
+      "prohibited_exposure_den": 174,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.5333,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.3529,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4167,
+        "SAFE_14_PLUS": 0.2,
+        "SAFE_18_PLUS": 0.2609,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4678,
+        "SAFE_14_PLUS": 0.0667,
+        "SAFE_18_PLUS": 0.3,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 40,
+          "SAFE_14_PLUS": 6,
+          "SAFE_18_PLUS": 15,
+          "UNSAFE_FOR_ALL": 8,
+          "REQUIRES_HUMAN_REVIEW": 6
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 44,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 15,
+          "UNSAFE_FOR_ALL": 8,
+          "REQUIRES_HUMAN_REVIEW": 5
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 9,
+          "SAFE_14_PLUS": 5,
+          "SAFE_18_PLUS": 12,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 7
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 3,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 4,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 2
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "summary": {
+    "Baseline (Keyword Rules)": {
+      "tp": 2,
+      "fp": 2,
+      "fn": 3,
+      "tn": 7,
+      "precision": 0.5,
+      "recall": 0.4,
+      "f1": 0.4444,
+      "avg_latency_ms": 232.02
+    },
+    "DeBERTa-v3-base (Zero-Shot)": {
+      "tp": 0,
+      "fp": 2,
+      "fn": 5,
+      "tn": 7,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "avg_latency_ms": 7363.74
+    },
+    "Experimental Domain Classifier": {
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "tn": 9,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "avg_latency_ms": 93.49
+    }
+  },
+  "per_sample": [
+    {
+      "id": "REAL_UFA_01",
+      "type": "scam_marketing",
+      "gt_prohibited": true,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": true,
+      "exp_violations": [
+        "financial_scam"
+      ]
+    },
+    {
+      "id": "REAL_UFA_02",
+      "type": "advance_fee_fraud",
+      "gt_prohibited": true,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": true,
+      "exp_violations": [
+        "advance_fee_phishing"
+      ]
+    },
+    {
+      "id": "REAL_UFA_03",
+      "type": "quack_cure",
+      "gt_prohibited": true,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": true,
+      "exp_violations": [
+        "quack_health_claim"
+      ]
+    },
+    {
+      "id": "REAL_UFA_04",
+      "type": "crypto_scam",
+      "gt_prohibited": true,
+      "pred_baseline": true,
+      "pred_deberta": false,
+      "pred_experimental": true,
+      "exp_violations": [
+        "financial_scam"
+      ]
+    },
+    {
+      "id": "REAL_SFA_01",
+      "type": "cereal_commercial",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "REAL_SFA_02",
+      "type": "cereal_commercial",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": true,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "REAL_S14P_01",
+      "type": "automotive_commercial",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "REAL_S14P_02",
+      "type": "sports_automotive",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": true,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "REAL_S18P_01",
+      "type": "beer_commercial",
+      "gt_prohibited": false,
+      "pred_baseline": true,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "REAL_S18P_02",
+      "type": "beer_print_ad",
+      "gt_prohibited": false,
+      "pred_baseline": true,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "EDGE_EMPTY_01",
+      "type": "empty_input",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "EDGE_NOISY_OCR_01",
+      "type": "noisy_ocr",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    },
+    {
+      "id": "EDGE_MULTILINGUAL_01",
+      "type": "multilingual_violence",
+      "gt_prohibited": true,
+      "pred_baseline": true,
+      "pred_deberta": false,
+      "pred_experimental": true,
+      "exp_violations": [
+        "multilingual_violence"
+      ]
+    },
+    {
+      "id": "AMBIGUITY_01",
+      "type": "unverifiable_claim",
+      "gt_prohibited": false,
+      "pred_baseline": false,
+      "pred_deberta": false,
+      "pred_experimental": false,
+      "exp_violations": []
+    }
+  ]
+}

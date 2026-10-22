@@ -1,0 +1,2455 @@
+{
+  "systems": {
+    "System_A": {
+      "name": "Current Prod Fusion + Keyword Rules",
+      "metrics": {
+        "sample_count": 194,
+        "accuracy": 0.3196,
+        "accuracy_covered": 0.3196,
+        "coverage": 1.0,
+        "hitl_rate": 0.0,
+        "macro_f1": 0.2317,
+        "pfar": 0.8,
+        "ugvr": 0.6239,
+        "frr": 0.087,
+        "over_restriction_rate": 0.2667,
+        "recalls": {
+          "SAFE_FOR_ALL": 0.64,
+          "SAFE_14_PLUS": 0.04,
+          "SAFE_18_PLUS": 0.2647,
+          "UNSAFE_FOR_ALL": 0.2
+        },
+        "precisions": {
+          "SAFE_FOR_ALL": 0.4068,
+          "SAFE_14_PLUS": 0.375,
+          "SAFE_18_PLUS": 0.18,
+          "UNSAFE_FOR_ALL": 0.1111
+        },
+        "f1_scores": {
+          "SAFE_FOR_ALL": 0.4974,
+          "SAFE_14_PLUS": 0.0723,
+          "SAFE_18_PLUS": 0.2143,
+          "UNSAFE_FOR_ALL": 0.1429
+        },
+        "confusion_matrix": {
+          "SAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 48,
+            "SAFE_14_PLUS": 2,
+            "SAFE_18_PLUS": 18,
+            "UNSAFE_FOR_ALL": 7,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_14_PLUS": {
+            "SAFE_FOR_ALL": 48,
+            "SAFE_14_PLUS": 3,
+            "SAFE_18_PLUS": 20,
+            "UNSAFE_FOR_ALL": 4,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_18_PLUS": {
+            "SAFE_FOR_ALL": 17,
+            "SAFE_14_PLUS": 3,
+            "SAFE_18_PLUS": 9,
+            "UNSAFE_FOR_ALL": 5,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "UNSAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 5,
+            "SAFE_14_PLUS": 0,
+            "SAFE_18_PLUS": 3,
+            "UNSAFE_FOR_ALL": 2,
+            "REQUIRES_HUMAN_REVIEW": 0
+          }
+        }
+      }
+    },
+    "System_B": {
+      "name": "Current Prod Fusion + Repaired Detectors",
+      "metrics": {
+        "sample_count": 194,
+        "accuracy": 0.3196,
+        "accuracy_covered": 0.3196,
+        "coverage": 1.0,
+        "hitl_rate": 0.0,
+        "macro_f1": 0.2317,
+        "pfar": 0.8,
+        "ugvr": 0.6239,
+        "frr": 0.087,
+        "over_restriction_rate": 0.2667,
+        "recalls": {
+          "SAFE_FOR_ALL": 0.64,
+          "SAFE_14_PLUS": 0.04,
+          "SAFE_18_PLUS": 0.2647,
+          "UNSAFE_FOR_ALL": 0.2
+        },
+        "precisions": {
+          "SAFE_FOR_ALL": 0.4068,
+          "SAFE_14_PLUS": 0.375,
+          "SAFE_18_PLUS": 0.18,
+          "UNSAFE_FOR_ALL": 0.1111
+        },
+        "f1_scores": {
+          "SAFE_FOR_ALL": 0.4974,
+          "SAFE_14_PLUS": 0.0723,
+          "SAFE_18_PLUS": 0.2143,
+          "UNSAFE_FOR_ALL": 0.1429
+        },
+        "confusion_matrix": {
+          "SAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 48,
+            "SAFE_14_PLUS": 2,
+            "SAFE_18_PLUS": 18,
+            "UNSAFE_FOR_ALL": 7,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_14_PLUS": {
+            "SAFE_FOR_ALL": 48,
+            "SAFE_14_PLUS": 3,
+            "SAFE_18_PLUS": 20,
+            "UNSAFE_FOR_ALL": 4,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_18_PLUS": {
+            "SAFE_FOR_ALL": 17,
+            "SAFE_14_PLUS": 3,
+            "SAFE_18_PLUS": 9,
+            "UNSAFE_FOR_ALL": 5,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "UNSAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 5,
+            "SAFE_14_PLUS": 0,
+            "SAFE_18_PLUS": 3,
+            "UNSAFE_FOR_ALL": 2,
+            "REQUIRES_HUMAN_REVIEW": 0
+          }
+        }
+      }
+    },
+    "System_C": {
+      "name": "Policy-First Fusion + Keyword Rules",
+      "metrics": {
+        "sample_count": 194,
+        "accuracy": 0.3144,
+        "accuracy_covered": 0.3144,
+        "coverage": 1.0,
+        "hitl_rate": 0.0,
+        "macro_f1": 0.2606,
+        "pfar": 0.8,
+        "ugvr": 0.5229,
+        "frr": 0.1413,
+        "over_restriction_rate": 0.3733,
+        "recalls": {
+          "SAFE_FOR_ALL": 0.4933,
+          "SAFE_14_PLUS": 0.1467,
+          "SAFE_18_PLUS": 0.3235,
+          "UNSAFE_FOR_ALL": 0.2
+        },
+        "precisions": {
+          "SAFE_FOR_ALL": 0.4157,
+          "SAFE_14_PLUS": 0.3333,
+          "SAFE_18_PLUS": 0.25,
+          "UNSAFE_FOR_ALL": 0.0714
+        },
+        "f1_scores": {
+          "SAFE_FOR_ALL": 0.4512,
+          "SAFE_14_PLUS": 0.2037,
+          "SAFE_18_PLUS": 0.2821,
+          "UNSAFE_FOR_ALL": 0.1053
+        },
+        "confusion_matrix": {
+          "SAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 37,
+            "SAFE_14_PLUS": 13,
+            "SAFE_18_PLUS": 15,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_14_PLUS": {
+            "SAFE_FOR_ALL": 40,
+            "SAFE_14_PLUS": 11,
+            "SAFE_18_PLUS": 14,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_18_PLUS": {
+            "SAFE_FOR_ALL": 9,
+            "SAFE_14_PLUS": 8,
+            "SAFE_18_PLUS": 11,
+            "UNSAFE_FOR_ALL": 6,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "UNSAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 3,
+            "SAFE_14_PLUS": 1,
+            "SAFE_18_PLUS": 4,
+            "UNSAFE_FOR_ALL": 2,
+            "REQUIRES_HUMAN_REVIEW": 0
+          }
+        }
+      }
+    },
+    "System_D1": {
+      "name": "Policy-First + Domain Text (No HITL)",
+      "metrics": {
+        "sample_count": 194,
+        "accuracy": 0.3144,
+        "accuracy_covered": 0.3144,
+        "coverage": 1.0,
+        "hitl_rate": 0.0,
+        "macro_f1": 0.2606,
+        "pfar": 0.8,
+        "ugvr": 0.5229,
+        "frr": 0.1413,
+        "over_restriction_rate": 0.3733,
+        "recalls": {
+          "SAFE_FOR_ALL": 0.4933,
+          "SAFE_14_PLUS": 0.1467,
+          "SAFE_18_PLUS": 0.3235,
+          "UNSAFE_FOR_ALL": 0.2
+        },
+        "precisions": {
+          "SAFE_FOR_ALL": 0.4157,
+          "SAFE_14_PLUS": 0.3333,
+          "SAFE_18_PLUS": 0.25,
+          "UNSAFE_FOR_ALL": 0.0714
+        },
+        "f1_scores": {
+          "SAFE_FOR_ALL": 0.4512,
+          "SAFE_14_PLUS": 0.2037,
+          "SAFE_18_PLUS": 0.2821,
+          "UNSAFE_FOR_ALL": 0.1053
+        },
+        "confusion_matrix": {
+          "SAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 37,
+            "SAFE_14_PLUS": 13,
+            "SAFE_18_PLUS": 15,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_14_PLUS": {
+            "SAFE_FOR_ALL": 40,
+            "SAFE_14_PLUS": 11,
+            "SAFE_18_PLUS": 14,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "SAFE_18_PLUS": {
+            "SAFE_FOR_ALL": 9,
+            "SAFE_14_PLUS": 8,
+            "SAFE_18_PLUS": 11,
+            "UNSAFE_FOR_ALL": 6,
+            "REQUIRES_HUMAN_REVIEW": 0
+          },
+          "UNSAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 3,
+            "SAFE_14_PLUS": 1,
+            "SAFE_18_PLUS": 4,
+            "UNSAFE_FOR_ALL": 2,
+            "REQUIRES_HUMAN_REVIEW": 0
+          }
+        }
+      }
+    },
+    "System_D2": {
+      "name": "Policy-First + Domain Text (With HITL)",
+      "metrics": {
+        "sample_count": 194,
+        "accuracy": 0.299,
+        "accuracy_covered": 0.3102,
+        "coverage": 0.9639,
+        "hitl_rate": 0.0361,
+        "macro_f1": 0.2492,
+        "pfar": 0.8,
+        "ugvr": 0.5046,
+        "frr": 0.1413,
+        "over_restriction_rate": 0.3467,
+        "recalls": {
+          "SAFE_FOR_ALL": 0.4933,
+          "SAFE_14_PLUS": 0.1067,
+          "SAFE_18_PLUS": 0.3235,
+          "UNSAFE_FOR_ALL": 0.2
+        },
+        "precisions": {
+          "SAFE_FOR_ALL": 0.4157,
+          "SAFE_14_PLUS": 0.3077,
+          "SAFE_18_PLUS": 0.25,
+          "UNSAFE_FOR_ALL": 0.0714
+        },
+        "f1_scores": {
+          "SAFE_FOR_ALL": 0.4512,
+          "SAFE_14_PLUS": 0.1584,
+          "SAFE_18_PLUS": 0.2821,
+          "UNSAFE_FOR_ALL": 0.1053
+        },
+        "confusion_matrix": {
+          "SAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 37,
+            "SAFE_14_PLUS": 11,
+            "SAFE_18_PLUS": 15,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 2
+          },
+          "SAFE_14_PLUS": {
+            "SAFE_FOR_ALL": 40,
+            "SAFE_14_PLUS": 8,
+            "SAFE_18_PLUS": 14,
+            "UNSAFE_FOR_ALL": 10,
+            "REQUIRES_HUMAN_REVIEW": 3
+          },
+          "SAFE_18_PLUS": {
+            "SAFE_FOR_ALL": 9,
+            "SAFE_14_PLUS": 6,
+            "SAFE_18_PLUS": 11,
+            "UNSAFE_FOR_ALL": 6,
+            "REQUIRES_HUMAN_REVIEW": 2
+          },
+          "UNSAFE_FOR_ALL": {
+            "SAFE_FOR_ALL": 3,
+            "SAFE_14_PLUS": 1,
+            "SAFE_18_PLUS": 4,
+            "UNSAFE_FOR_ALL": 2,
+            "REQUIRES_HUMAN_REVIEW": 0
+          }
+        }
+      }
+    }
+  },
+  "paired": [
+    {
+      "sample_id": "SAFEAD_S14P_IMG_004",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "3# TE Th"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_001",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "The ENERGY FoOD GEAM OF WHEAT EEDIUMNHLE"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_007",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_002",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_009",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_003",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "A A 4 A Ceetngk BrfaEE A ["
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_007",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_008",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_012",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_014",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_015",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_016",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "'997*2.44"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_017",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_018",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_020",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_021",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_022",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "4 NINTENDBDS"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_024",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "LNCE Lnce 6o00"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_025",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "1 8 Center Circle 0 Ena 'Radius- FoulLine _ Radius 0 Basket "
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_026",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "\"WqDio} Sppipp"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_027",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "NAKUPUJTE U OdborniKU VE SpECiALIZOVANYCH DRODEJNACH Sportov"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_028",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_030",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "SebhlI Wauna 1"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_031",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "1"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_032",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "WAD"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_033",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "1 1 \"h HOe mic 'spray body 100"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_037",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_038",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Dl-line 018 JACKLINKS TASTY JAcKuNKS LEL MEAT KXL Bifi SNAcu"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_039",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_040",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Premier SSiON IMPR"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_041",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "na _A( AKA ROFESSONAL MPKZS1"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_042",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_044",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "3 5 9 9"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_045",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_046",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_047",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "QROD)"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_048",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "2 3"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_049",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_051",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Wii W"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_052",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_053",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Logitedh"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_054",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "LA Kacne GAMEBOY E NDNANCE"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_055",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_056",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_058",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "AIly Peals"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_059",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_060",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_061",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_063",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "LOWCAZORE GHTORNDE BLUE SPORTSIOIE VicTus 45 ml (50 82 2E 60"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_066",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_067",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_068",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "PH {lipI 5804903, [333 ~GRACiAS MERCEdES 'VIda ~SosA"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_069",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_071",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_072",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_073",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_074",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "4 I BFIVE TEN"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_IMG_075",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_001",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "DE Soto PLYMOUTH 24043"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_003",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Duttorlos not Includod DARE Ikik DEVIL ele mkk"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_007",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "4486"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_008",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "AC powere 31245 (5 TT7"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_009",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "7Epo HBARLLUbA"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_010",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "QuFEC"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_012",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Da Ping CQ 4NG Aja DUMPINA Plymeco; ~io now"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_013",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_014",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_015",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Dodge"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_016",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "AA 338 cu: 400= In, Quadrajen caburaion OUr FRON {DCABI ACTO"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_018",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_019",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Torao Fora Tonnko 1968 PRD has bettred"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_020",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "cuatte Foamy Uil Gillelte oamy Vouu"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_021",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "MIL ~GLNUINE TORGRE[C CoWEldE 9i/ogz UCL ouseho Yol ouseha H"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_022",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "4e SERVILE QMDuY SoTo si S[ yMdu y1ou RrMDuY OE RnvY Ritdby "
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_023",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "627264 STOP (e APPROVED SERVICE GOtO ryMdd"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_024",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Wouldnt you renlly rather have Buick?"
+    },
+    {
+      "sample_id": "SAFEAD_S14P_VID_025",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "SPECIAL Dodge cuntsler"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_001",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "1 F2} 5 J1 0 1 1 5 H 1 ; 1 1 ( 1"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_002",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "EUGENE 0 KeEfE, PRES\" } MANAGER (eo TPRONT? LIMITED. 1 TE OK"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_006",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "4i 6T Bitter PALE Ale cilly SUiTABLE For imopICAL CLIMATES U"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_007",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Drink Satisfying RED BALND 4 D | 0 d418 [ 3 _ 1 aa8"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_019",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "trade MArk: 0 $ FASHION WHISKEY: DISTILLED BY THE BELLE OF R"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_031",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "COGNAC 1 JACOUET 3 1 (Bocthet"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_035",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "EXTRA-SUPERIEURE J. EDOUARD PERNOT SOCIETE ANONYME MONTBELIA"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_037",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "LES VENDANGES OE 1898 nal4 Aajieai (uet0t %unlit IJu 16 . IL"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_044",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "PAUL MASSON, Successor to LEFRANC & MASSON, SAI JOSE, CAL. A"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_045",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "HU"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_062",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "POLIEY Pal Va BALLET de Jean LORRAIN Musique & Louis GANNE A"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_067",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "June; 1923 cAfter tobacco is fully aged and cured _ cAfter t"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_070",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "CRAVEN \"A\" Will not affect your throat Co"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_071",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "lusurance eovering ane VPP MILAN PiPe CO Pipe Of Briar So Ra"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_IMG_074",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Busim < Ss"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_001",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Hanais) Ete xed in Uie Lunrd Ie EU 00 MILLER HEENMRE DRAF Br"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_002",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Wew DRAUGHT BITTLR SMI New Mv BITTER MoN- Sc^ SF SM No DITTE"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_003",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "MENI OF AMERICA MEN TOPToBAccO FILTER ACTION TOPS IN FRIENDL"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_005",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "MMI"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_007",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "1% ALCOHOL 100% TENNENT'S ALSO ON DRAUGHT"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_008",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Va 101 WR Wa VR"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_009",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "true taste"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_010",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "KING KIIG 21 (aureti {Oiestcrfickd"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_012",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "PACKS MORE PLEASURE"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_013",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "\"Veficl"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_014",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_015",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "[SNcothess TASTE (Shoowess The KING that has EVERYTHING ((fl"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_017",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Fg"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_018",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "NE (H uiuu"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_019",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "OLH) (ULI FIITEIS Maun Post rading Poti ((M anli FiLTEIS"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_020",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Wa Play Ball Vr The makers of Old Gold CIGARETTES Prsex Dire"
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_022",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Nev DRAUGHT SMh No BITTE NoN- SFNSE SMI New BIT NoN SM DITT "
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_024",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "KrT Giike) Jiltcrs LS LuCKY STRIKE MEARS FINE ToBACCO UMTED "
+    },
+    {
+      "sample_id": "SAFEAD_S18P_VID_025",
+      "true_label": "SAFE_18_PLUS",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "LuCKY STRIKE 'ITS TOASTED' ItS TOASTED It! LS LsHmrt Gua9)"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_002",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "ZolCk3 GARDOL wWtth COLGATE CREAM GARDOL DENTAL with CREAM D"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_003",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "3 G 3 1 1 J"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_005",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Clics @ Niki da Costa Fotografie"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_006",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_009",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_010",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Sajvev"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_011",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "KBALL JcT"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_016",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Dosilet\""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_017",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_018",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Breville"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_019",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "MTS HGUF Z4HOuR sin Cord to ULIA ICral = Huat"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_020",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Salida LMielono demra ASyet FuruppER Ven D HFFICULTORES"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_022",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_023",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "'8 8 $ 3 X 5 8 8 < 1e Oe DENNER Lacke Werkzeuge Flottenstral"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_024",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Excellence uhd [Mrtetica Yourt in Nutrition ( Ho^d nfand Uni"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_025",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_026",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "nutela 4diN RGI nytella"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_028",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "HO Or HEINZL SPRING VEGETABLE SouP Coloun PrEodrMAT\" ARMHCLL"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_029",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_030",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "ABCDE FGHIJK LMNOP QRSTU VWXYZ AAO"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_032",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_033",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_034",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "CutLE GLuE, SALAD FKSI DAYS EER 1 THE COFEEE CLUB: 0 ouslI"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_036",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_14_PLUS",
+      "pred_sys_b": "SAFE_14_PLUS",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "REQUIRES_HUMAN_REVIEW",
+      "domain_violations": [],
+      "ocr_snippet": "Caldlen Fothos & best indoor air puninnz plani T"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_037",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_038",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Colors Different NON Toxic BUILT-IN Fach 64 CRAYONS R6/ Oe P"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_039",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_041",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "TfZ DOLIIASDD TITE IA? SHIP IN ALL IT; ST4czy COAAUAMEUML 9F"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_043",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Jzy}"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_044",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_045",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "CDA 10"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_046",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Fo STEADY   SELLERS, STUPEHDOUS   SALES, SIME   SPECHAL   SP"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_047",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_048",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_050",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_052",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "BERS THE COW CREEK"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_053",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Recycle Recycle Resr ecycie Recycle Mixed Paper Metal; Glabe"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_054",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Dgixbox Cvcloon Post 06 'cyclooneu 085 27 33 273 G (cyclood"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_055",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_056",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "0 M EN FHITE )LORED 4E] COLOREDE LOM EN BX LHITE 'GOLORED;"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_058",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "DANGEF NO TRESPASS Deaena (od TRi \"\""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_063",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_064",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "~Xenvq s0 Se equj Sit \u20ac E $ TaAUOr Ei {0 PS 2qun clf FIE ele"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_065",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_066",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "IlJ"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_067",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_068",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_069",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Hamilton Beach pROr"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_070",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_071",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_072",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "544"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_073",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_074",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_IMG_075",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_001",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "FROSTED FAKES FLAKES nsue Enes"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_002",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Basrin Boinar Coke Nattothl [20 Bai nrolne Natiotll 120"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_003",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "cumaminicatiuns WANTED\" Tor RuStLINC WANTED Nor Roebery Post"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_004",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_006",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "ADVaa TIIE MANUPACTURING Co: UNIVACI Keninatun Hibn UNIVACIA"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_008",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Kalloggs RICE KRISPIES Relloygs"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_009",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_010",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "48 teo Lipton 'bags TwO BAGS OF FLAVOR IN ONE QF Hzw Urur Up"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_011",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "CRAPE Nus"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_014",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Uss booTS"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_016",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "GENERAL FORGET FLATS FOraR BLOWQUT PROV DJION Qunct Qutwvu u"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_017",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Tt FU About 53.82 Wcck After Down Poyment"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_018",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "L_ ALLIHS"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_019",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "area restricted Qut LIINE"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_020",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "@Ch \"Cat] \"CaGt] 6o nbltt DUUMHOU (GcGk 16U hllmoln (ill MNO"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_021",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "BAYER IBAVERL BAYERL WoRIzS' WONDERS"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_022",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "let yourself glow Halo"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_024",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "RIF"
+    },
+    {
+      "sample_id": "SAFEAD_SFA_VID_025",
+      "true_label": "SAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Vit 4I 10m r0m Ona9 rox|"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_021",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "21.43 legitmarketingacademy com EXPERTA  +~ Free Video Revea"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_026",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "Enter STAMP DESIGN CQNPETITTON W suid A FRURA 6 hitp;//linyu"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_027",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_14_PLUS",
+      "pred_sys_d1": "SAFE_14_PLUS",
+      "pred_sys_d2": "SAFE_14_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "Wikipedia, the free encyc https:, wikipedia org /wiki/ Main_"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_034",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "EEtt Hear JCDAnjel anenannrdtant 227*1 3et5r\" Lnet: Gt"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_035",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "THE ARCHTECT AND EVGINEER 159 APESOaeeFjd Steam Heating a an"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_054",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d1": "SAFE_FOR_ALL",
+      "pred_sys_d2": "SAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": "PARRSLTFETTTEEZTo thouhic \"ie tor- ofhe extraordinary #edici"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_IMG_068",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": "IC 10 JOpf- zahlr die Gtudtkin] Cambun4d,Oqale mei i Camhuna"
+    },
+    {
+      "sample_id": "SAFEAD_UFA_VID_001",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_UFA_VID_002",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "SAFE_18_PLUS",
+      "pred_sys_b": "SAFE_18_PLUS",
+      "pred_sys_c": "SAFE_18_PLUS",
+      "pred_sys_d1": "SAFE_18_PLUS",
+      "pred_sys_d2": "SAFE_18_PLUS",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    },
+    {
+      "sample_id": "SAFEAD_UFA_VID_003",
+      "true_label": "UNSAFE_FOR_ALL",
+      "pred_sys_a": "UNSAFE_FOR_ALL",
+      "pred_sys_b": "UNSAFE_FOR_ALL",
+      "pred_sys_c": "UNSAFE_FOR_ALL",
+      "pred_sys_d1": "UNSAFE_FOR_ALL",
+      "pred_sys_d2": "UNSAFE_FOR_ALL",
+      "domain_violations": [],
+      "ocr_snippet": ""
+    }
+  ]
+}

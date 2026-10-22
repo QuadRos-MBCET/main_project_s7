@@ -87,12 +87,23 @@ class SafeAdOCRService:
                 "ocr_confidence": 0.0,
                 "bounding_boxes": [],
                 "language": "N/A",
-                "engine": self._engine_type
+                "engine": self._engine_type,
+                "status": "empty_input"
             }
+
+        # Memory-safe image dimension clamp to prevent CPU OOM allocation in CRAFT detector
+        MAX_OCR_DIMENSION = 1280
+        h, w = img_np.shape[:2]
+        if max(h, w) > MAX_OCR_DIMENSION:
+            scale = MAX_OCR_DIMENSION / float(max(h, w))
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            img_np = cv2.resize(img_np, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         extracted_lines = []
         confidences = []
         bboxes = []
+        ocr_error_msg = None
 
         # 1. EasyOCR Execution
         if self._engine_type == "easyocr" and self._easy_ocr_reader is not None:
@@ -115,6 +126,7 @@ class SafeAdOCRService:
                                     bbox = [[float(pt[0]), float(pt[1])] for pt in bbox if len(pt) >= 2]
                                 bboxes.append(bbox)
             except Exception as e:
+                ocr_error_msg = str(e)
                 print(f"[SafeAdOCRService ERROR] EasyOCR extraction error: {e}")
 
         # 2. PaddleOCR Execution (Fallback if EasyOCR yielded no text or failed)
@@ -136,6 +148,7 @@ class SafeAdOCRService:
                                         confidences.append(conf_val)
                                         bboxes.append(bbox)
             except Exception as e:
+                ocr_error_msg = str(e)
                 print(f"[SafeAdOCRService ERROR] PaddleOCR extraction error: {e}")
 
         # 3. PyTesseract Fallback
@@ -156,18 +169,22 @@ class SafeAdOCRService:
                             tess_data["left"][i], tess_data["top"][i],
                             tess_data["width"][i], tess_data["height"][i]
                         ])
-            except Exception:
-                pass
+            except Exception as e:
+                if self._engine_type == "tesseract":
+                    ocr_error_msg = str(e)
 
         full_text = " ".join(extracted_lines)
         avg_conf = float(np.mean(confidences)) if confidences else 0.0
+
+        status = "success" if full_text else ("error: " + ocr_error_msg if ocr_error_msg else "empty_text")
 
         return {
             "ocr_text": full_text,
             "ocr_confidence": round(avg_conf, 4),
             "bounding_boxes": bboxes[:20],
             "language": "en",
-            "engine": self._engine_type
+            "engine": self._engine_type,
+            "status": status
         }
 
     def extract_from_video_frames(

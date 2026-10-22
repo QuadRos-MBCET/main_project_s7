@@ -1,0 +1,578 @@
+{
+  "Config_A": {
+    "name": "Frozen Baseline",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 62,
+      "accuracy": 0.3196,
+      "accuracy_covered": 0.3196,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2317,
+      "pfar": 0.8,
+      "pfar_numerator": 8,
+      "pfar_denominator": 10,
+      "ugvr": 0.6239,
+      "ugvr_numerator": 68,
+      "ugvr_denominator": 109,
+      "frr": 0.087,
+      "frr_numerator": 16,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_numerator": 20,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4068,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.18,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4974,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2143,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_B": {
+    "name": "Baseline + Alcohol Detector",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 65,
+      "accuracy": 0.3351,
+      "accuracy_covered": 0.3351,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2491,
+      "pfar": 0.8,
+      "pfar_numerator": 8,
+      "pfar_denominator": 10,
+      "ugvr": 0.5963,
+      "ugvr_numerator": 65,
+      "ugvr_denominator": 109,
+      "frr": 0.087,
+      "frr_numerator": 16,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_numerator": 20,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.3529,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4174,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.2264,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.5053,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2759,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 14,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 12,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_C": {
+    "name": "Baseline + Violence Decoupler",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 65,
+      "accuracy": 0.3351,
+      "accuracy_covered": 0.3351,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.198,
+      "pfar": 1.0,
+      "pfar_numerator": 10,
+      "pfar_denominator": 10,
+      "ugvr": 0.6789,
+      "ugvr_numerator": 74,
+      "ugvr_denominator": 109,
+      "frr": 0.0054,
+      "frr_numerator": 1,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.28,
+      "over_restriction_numerator": 21,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.7067,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4109,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.1607,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.5196,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 53,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 19,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 49,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 23,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 22,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 5,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_D": {
+    "name": "Baseline + Apparel Context Gater",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 64,
+      "accuracy": 0.3299,
+      "accuracy_covered": 0.3299,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2401,
+      "pfar": 0.8,
+      "pfar_numerator": 8,
+      "pfar_denominator": 10,
+      "ugvr": 0.6697,
+      "ugvr_numerator": 73,
+      "ugvr_denominator": 109,
+      "frr": 0.087,
+      "frr_numerator": 16,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_numerator": 20,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.1333,
+        "SAFE_18_PLUS": 0.1176,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4068,
+        "SAFE_14_PLUS": 0.3125,
+        "SAFE_18_PLUS": 0.1538,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4974,
+        "SAFE_14_PLUS": 0.1869,
+        "SAFE_18_PLUS": 0.1333,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 12,
+          "SAFE_18_PLUS": 8,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 10,
+          "SAFE_18_PLUS": 13,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 8,
+          "SAFE_18_PLUS": 4,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_E": {
+    "name": "Baseline + Deceptive Ad Detector",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 62,
+      "accuracy": 0.3196,
+      "accuracy_covered": 0.3196,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2317,
+      "pfar": 0.8,
+      "pfar_numerator": 8,
+      "pfar_denominator": 10,
+      "ugvr": 0.6239,
+      "ugvr_numerator": 68,
+      "ugvr_denominator": 109,
+      "frr": 0.087,
+      "frr_numerator": 16,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_numerator": 20,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.2
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4068,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.18,
+        "UNSAFE_FOR_ALL": 0.1111
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4974,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2143,
+        "UNSAFE_FOR_ALL": 0.1429
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 2,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_F": {
+    "name": "Baseline + OCR Enhancement",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 63,
+      "accuracy": 0.3247,
+      "accuracy_covered": 0.3247,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2484,
+      "pfar": 0.7,
+      "pfar_numerator": 7,
+      "pfar_denominator": 10,
+      "ugvr": 0.6239,
+      "ugvr_numerator": 68,
+      "ugvr_denominator": 109,
+      "frr": 0.087,
+      "frr_numerator": 16,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.2667,
+      "over_restriction_numerator": 20,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.64,
+        "SAFE_14_PLUS": 0.04,
+        "SAFE_18_PLUS": 0.2647,
+        "UNSAFE_FOR_ALL": 0.3
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4103,
+        "SAFE_14_PLUS": 0.375,
+        "SAFE_18_PLUS": 0.18,
+        "UNSAFE_FOR_ALL": 0.1579
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.5,
+        "SAFE_14_PLUS": 0.0723,
+        "SAFE_18_PLUS": 0.2143,
+        "UNSAFE_FOR_ALL": 0.2069
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 18,
+          "UNSAFE_FOR_ALL": 7,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 48,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 20,
+          "UNSAFE_FOR_ALL": 4,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 17,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 5,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 4,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 3,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_G": {
+    "name": "Combined Experimental Repairs (Prod Fusion)",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 70,
+      "accuracy": 0.3608,
+      "accuracy_covered": 0.3608,
+      "coverage": 1.0,
+      "hitl_rate": 0.0,
+      "macro_f1": 0.2293,
+      "pfar": 1.0,
+      "pfar_numerator": 10,
+      "pfar_denominator": 10,
+      "ugvr": 0.6972,
+      "ugvr_numerator": 76,
+      "ugvr_denominator": 109,
+      "frr": 0.0054,
+      "frr_numerator": 1,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.28,
+      "over_restriction_numerator": 21,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.7067,
+        "SAFE_14_PLUS": 0.1333,
+        "SAFE_18_PLUS": 0.2059,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4206,
+        "SAFE_14_PLUS": 0.3125,
+        "SAFE_18_PLUS": 0.2,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.5274,
+        "SAFE_14_PLUS": 0.1869,
+        "SAFE_18_PLUS": 0.2029,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 53,
+          "SAFE_14_PLUS": 12,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 49,
+          "SAFE_14_PLUS": 10,
+          "SAFE_18_PLUS": 16,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 19,
+          "SAFE_14_PLUS": 8,
+          "SAFE_18_PLUS": 7,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 5,
+          "SAFE_14_PLUS": 2,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "Config_G_HITL": {
+    "name": "Combined Experimental Repairs (Policy-First HITL)",
+    "metrics": {
+      "sample_count": 194,
+      "correct_count": 59,
+      "accuracy": 0.3041,
+      "accuracy_covered": 0.3242,
+      "coverage": 0.9381,
+      "hitl_rate": 0.0619,
+      "macro_f1": 0.246,
+      "pfar": 0.9,
+      "pfar_numerator": 9,
+      "pfar_denominator": 10,
+      "ugvr": 0.6239,
+      "ugvr_numerator": 68,
+      "ugvr_denominator": 109,
+      "frr": 0.0272,
+      "frr_numerator": 5,
+      "frr_denominator": 184,
+      "over_restriction_rate": 0.3733,
+      "over_restriction_numerator": 28,
+      "over_restriction_denominator": 75,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.5333,
+        "SAFE_14_PLUS": 0.1467,
+        "SAFE_18_PLUS": 0.2059,
+        "UNSAFE_FOR_ALL": 0.1
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.4167,
+        "SAFE_14_PLUS": 0.2292,
+        "SAFE_18_PLUS": 0.2188,
+        "UNSAFE_FOR_ALL": 0.1667
+      },
+      "f1_scores": {
+        "SAFE_FOR_ALL": 0.4678,
+        "SAFE_14_PLUS": 0.1789,
+        "SAFE_18_PLUS": 0.2121,
+        "UNSAFE_FOR_ALL": 0.125
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 40,
+          "SAFE_14_PLUS": 19,
+          "SAFE_18_PLUS": 9,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 6
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 44,
+          "SAFE_14_PLUS": 11,
+          "SAFE_18_PLUS": 13,
+          "UNSAFE_FOR_ALL": 3,
+          "REQUIRES_HUMAN_REVIEW": 4
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 9,
+          "SAFE_14_PLUS": 15,
+          "SAFE_18_PLUS": 7,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 2
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 3,
+          "SAFE_14_PLUS": 3,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  }
+}

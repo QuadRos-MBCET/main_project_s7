@@ -1,0 +1,214 @@
+{
+  "System_A": {
+    "name": "Current Prod Fusion + Keyword Rules",
+    "metrics": {
+      "sample_count": 16,
+      "accuracy": 0.25,
+      "macro_f1": 0.1742,
+      "pfar": 1.0,
+      "ugvr": 0.625,
+      "hitl_rate": 0.0,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.5,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.5,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.2857,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.25,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 2,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 3,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "System_B": {
+    "name": "Current Prod Fusion + DeBERTa Text Safety",
+    "metrics": {
+      "sample_count": 16,
+      "accuracy": 0.25,
+      "macro_f1": 0.1742,
+      "pfar": 1.0,
+      "ugvr": 0.625,
+      "hitl_rate": 0.0,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.5,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.5,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.2857,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.25,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 2,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 3,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 3,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "System_C": {
+    "name": "Policy-First Fusion + Keyword Rules",
+    "metrics": {
+      "sample_count": 16,
+      "accuracy": 0.3125,
+      "macro_f1": 0.3179,
+      "pfar": 0.75,
+      "ugvr": 0.5,
+      "hitl_rate": 0.0,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.25,
+        "SAFE_14_PLUS": 0.25,
+        "SAFE_18_PLUS": 0.5,
+        "UNSAFE_FOR_ALL": 0.25
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.2,
+        "SAFE_14_PLUS": 0.3333,
+        "SAFE_18_PLUS": 0.2857,
+        "UNSAFE_FOR_ALL": 1.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 2,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 1,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  },
+  "System_D": {
+    "name": "Policy-First Fusion + DeBERTa Text Safety",
+    "metrics": {
+      "sample_count": 16,
+      "accuracy": 0.125,
+      "macro_f1": 0.1556,
+      "pfar": 0.75,
+      "ugvr": 0.375,
+      "hitl_rate": 0.375,
+      "recalls": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.25,
+        "UNSAFE_FOR_ALL": 0.25
+      },
+      "precisions": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.2,
+        "UNSAFE_FOR_ALL": 1.0
+      },
+      "confusion_matrix": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 3
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 2,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 1
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 1,
+          "UNSAFE_FOR_ALL": 0,
+          "REQUIRES_HUMAN_REVIEW": 2
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 2,
+          "UNSAFE_FOR_ALL": 1,
+          "REQUIRES_HUMAN_REVIEW": 0
+        }
+      }
+    }
+  }
+}

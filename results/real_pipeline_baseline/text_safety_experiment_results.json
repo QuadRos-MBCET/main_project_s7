@@ -1,0 +1,60 @@
+{
+  "experiment_name": "isolated_text_safety_comparison",
+  "tested_samples_count": 6,
+  "baseline_summary": [
+    {
+      "id": "TEXT_DEV_UFA_01",
+      "expected": "SCAM / DECEPTIVE",
+      "detected": [],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.0
+    },
+    {
+      "id": "TEXT_DEV_UFA_02",
+      "expected": "SCAM / DECEPTIVE",
+      "detected": [],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.0
+    },
+    {
+      "id": "TEXT_DEV_UFA_03",
+      "expected": "PROHIBITED MEDICAL CURE",
+      "detected": [],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.0
+    },
+    {
+      "id": "TEXT_DEV_S18P_01",
+      "expected": "ALCOHOL / 18+",
+      "detected": [
+        "Alcohol/Tobacco"
+      ],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.85
+    },
+    {
+      "id": "TEXT_DEV_S14P_01",
+      "expected": "TEEN ACTION / 14+",
+      "detected": [
+        "Violence"
+      ],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.0
+    },
+    {
+      "id": "TEXT_DEV_SFA_01",
+      "expected": "SAFE_FOR_ALL",
+      "detected": [],
+      "scam_score": 0.0,
+      "deceptive_score": 0.0,
+      "alcohol_score": 0.0
+    }
+  ],
+  "toxic_bert_status": "FAILED: string indices must be integers, not 'str'",
+  "toxic_bert_results": []
+}

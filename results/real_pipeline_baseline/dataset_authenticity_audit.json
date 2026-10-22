@@ -1,0 +1,25 @@
+{
+  "total_catalog_samples": 380,
+  "synthetic_review_cards_count": 118,
+  "original_non_card_media_count": 262,
+  "synthetic_breakdown": {
+    "UNSAFE_FOR_ALL": 67,
+    "SAFE_18_PLUS": 51
+  },
+  "original_breakdown": {
+    "image": {
+      "SAFE_14_PLUS": 75,
+      "SAFE_18_PLUS": 24,
+      "SAFE_FOR_ALL": 75,
+      "UNSAFE_FOR_ALL": 8
+    },
+    "video": {
+      "SAFE_14_PLUS": 25,
+      "SAFE_18_PLUS": 25,
+      "SAFE_FOR_ALL": 25,
+      "UNSAFE_FOR_ALL": 5
+    }
+  },
+  "clean_evaluation_usable_samples": 262,
+  "leakage_uncleanable_samples": 118
+}

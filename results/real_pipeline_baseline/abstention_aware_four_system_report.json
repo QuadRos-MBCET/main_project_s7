@@ -1,0 +1,215 @@
+{
+  "systems": {
+    "System_A": {
+      "total_samples": 1,
+      "automated_decisions_count": 1,
+      "human_review_count": 0,
+      "coverage": 1.0,
+      "review_rate": 0.0,
+      "covered_accuracy": 0.0,
+      "covered_macro_f1": 0.0,
+      "effective_full_accuracy": 0.0,
+      "automated_prohibited_leak_rate": 0.0,
+      "underage_gating_violations_auto": 1.0,
+      "recalls_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix_auto": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        }
+      }
+    },
+    "System_B": {
+      "total_samples": 1,
+      "automated_decisions_count": 1,
+      "human_review_count": 0,
+      "coverage": 1.0,
+      "review_rate": 0.0,
+      "covered_accuracy": 0.0,
+      "covered_macro_f1": 0.0,
+      "effective_full_accuracy": 0.0,
+      "automated_prohibited_leak_rate": 0.0,
+      "underage_gating_violations_auto": 1.0,
+      "recalls_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix_auto": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        }
+      }
+    },
+    "System_C": {
+      "total_samples": 1,
+      "automated_decisions_count": 1,
+      "human_review_count": 0,
+      "coverage": 1.0,
+      "review_rate": 0.0,
+      "covered_accuracy": 0.0,
+      "covered_macro_f1": 0.0,
+      "effective_full_accuracy": 0.0,
+      "automated_prohibited_leak_rate": 0.0,
+      "underage_gating_violations_auto": 1.0,
+      "recalls_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix_auto": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        }
+      }
+    },
+    "System_D": {
+      "total_samples": 1,
+      "automated_decisions_count": 1,
+      "human_review_count": 0,
+      "coverage": 1.0,
+      "review_rate": 0.0,
+      "covered_accuracy": 0.0,
+      "covered_macro_f1": 0.0,
+      "effective_full_accuracy": 0.0,
+      "automated_prohibited_leak_rate": 0.0,
+      "underage_gating_violations_auto": 1.0,
+      "recalls_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "precisions_auto": {
+        "SAFE_FOR_ALL": 0.0,
+        "SAFE_14_PLUS": 0.0,
+        "SAFE_18_PLUS": 0.0,
+        "UNSAFE_FOR_ALL": 0.0
+      },
+      "confusion_matrix_auto": {
+        "SAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_14_PLUS": {
+          "SAFE_FOR_ALL": 1,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "SAFE_18_PLUS": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        },
+        "UNSAFE_FOR_ALL": {
+          "SAFE_FOR_ALL": 0,
+          "SAFE_14_PLUS": 0,
+          "SAFE_18_PLUS": 0,
+          "UNSAFE_FOR_ALL": 0
+        }
+      }
+    }
+  },
+  "sample_level_paired_comparisons": [
+    {
+      "sample_id": "SAFEAD_S14P_IMG_004",
+      "true_label": "SAFE_14_PLUS",
+      "pred_sys_a": "SAFE_FOR_ALL",
+      "pred_sys_b": "SAFE_FOR_ALL",
+      "pred_sys_c": "SAFE_FOR_ALL",
+      "pred_sys_d": "SAFE_FOR_ALL",
+      "ocr_snippet": "3# TE Th"
+    }
+  ]
+}

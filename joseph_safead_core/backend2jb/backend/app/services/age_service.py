@@ -66,36 +66,56 @@ class AgeVerificationService:
         cls,
         dob: date,
         image_input: Any = None,
-        profile_selection: str = "Adult Profile (18+ Oval Face Scan)"
+        profile_selection: str = "Adult Profile (18+ Oval Face Scan)",
+        face_image: Any = None
     ) -> Dict[str, Any]:
         """
         Performs Age-Confidence Analytics for new user verification.
-        Returns complete verified age profile structure.
+        Returns complete verified age profile structure with strict minor protection.
         """
+        active_image = face_image if face_image is not None else image_input
         chronological_age = cls.calculate_chronological_age(dob)
-        estimated_age = cls.estimate_facial_age(image_input, profile_selection)
+        estimated_age = cls.estimate_facial_age(active_image, profile_selection)
         
         age_difference = round(abs(estimated_age - chronological_age), 1)
         
-        # Age Confidence Calculation
-        # High confidence (0.95) if estimated age matches DOB age within 5 years
-        if age_difference <= 5.0:
+        # Priority Fail-Safe: minor discrepancy protection
+        if estimated_age < 14 and chronological_age >= 14:
+            status = "CONFLICT_CHILD_DETECTED"
+            verified_group = AgeGroup.UNDER_14
+            age_confidence = 0.50
+        elif estimated_age < 18 and chronological_age >= 18:
+            status = "CONFLICT_TEEN_DETECTED"
+            verified_group = AgeGroup.AGE_14_TO_17
+            age_confidence = 0.60
+        elif age_difference <= 5.0:
             age_confidence = 0.95
             status = "VERIFIED"
+            if chronological_age < 14:
+                verified_group = AgeGroup.UNDER_14
+            elif chronological_age < 18:
+                verified_group = AgeGroup.AGE_14_TO_17
+            else:
+                verified_group = AgeGroup.AGE_18_PLUS
         elif age_difference <= 10.0:
             age_confidence = 0.75
             status = "VERIFIED"
+            if chronological_age < 14:
+                verified_group = AgeGroup.UNDER_14
+            elif chronological_age < 18:
+                verified_group = AgeGroup.AGE_14_TO_17
+            else:
+                verified_group = AgeGroup.AGE_18_PLUS
         else:
             age_confidence = round(max(0.40, 1.0 - (age_difference / 30.0)), 2)
             status = "CONFLICT_FLAGGED"
-
-        # Determine Final Verified Age Category
-        if chronological_age < 14:
-            verified_group = AgeGroup.UNDER_14
-        elif chronological_age < 18:
-            verified_group = AgeGroup.AGE_14_TO_17
-        else:
-            verified_group = AgeGroup.AGE_18_PLUS
+            # In severe conflicts, restrict to minimum of chrono and estimated
+            if min(chronological_age, estimated_age) < 14:
+                verified_group = AgeGroup.UNDER_14
+            elif min(chronological_age, estimated_age) < 18:
+                verified_group = AgeGroup.AGE_14_TO_17
+            else:
+                verified_group = AgeGroup.AGE_18_PLUS
 
         return {
             "chronological_age": chronological_age,

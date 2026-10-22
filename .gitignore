@@ -35,3 +35,5 @@ website/uploads/
 datasets/
 # Office temp files
 ~$*
+*.pdf
+results/versioned_evaluations/

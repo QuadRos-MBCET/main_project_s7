@@ -45,39 +45,64 @@ class SafeAdTextSafetyDetector:
         self._model = None
         self._pipe = None
         self._is_loaded = False
+        self._status = "UNINITIALIZED"
+        self._active_model_name = "multilingual_keywords"
 
     def load_model(self):
-        """Loads text safety model lazily."""
+        """Loads text safety model lazily with explicit availability checks."""
         if self._is_loaded:
             return self
 
-        print(f"[SafeAdTextSafetyDetector] Loading text safety model '{self.model_id}' on {self.device}...")
-        try:
-            from transformers import AutoTokenizer, AutoModelForCausalLM
+        from models.detector_infrastructure import (
+            check_model_availability,
+            DetectorStatus,
+            is_model_cached_locally
+        )
+
+        can_load_primary, primary_reason = check_model_availability(self.model_id)
+
+        if can_load_primary:
+            print(f"[SafeAdTextSafetyDetector] Loading primary model '{self.model_id}' on {self.device}...")
             try:
+                from transformers import AutoTokenizer, AutoModelForCausalLM
                 self._tokenizer = AutoTokenizer.from_pretrained(self.model_id)
                 self._model = AutoModelForCausalLM.from_pretrained(
                     self.model_id,
                     torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                     device_map="auto" if self.device == "cuda" else None
                 )
+                self._status = DetectorStatus.LOADED_SUCCESS.value
+                self._active_model_name = self.model_id
+                self._is_loaded = True
                 print(f"[SafeAdTextSafetyDetector] Loaded '{self.model_id}' successfully.")
-            except Exception as e1:
-                print(f"[SafeAdTextSafetyDetector WARNING] Llama Guard 3-1B load fallback: {e1}")
+                return self
+            except Exception as e:
+                print(f"[SafeAdTextSafetyDetector WARNING] Primary model load failed: {e}")
+
+        # Primary unavailable or failed: check local toxic-bert fallback without remote network penalty
+        print(f"[SafeAdTextSafetyDetector] Model '{self.model_id}' unavailable ({primary_reason}). Checking local offline fallback...")
+        if is_model_cached_locally("unitary/toxic-bert"):
+            try:
                 from transformers import pipeline
                 device_idx = 0 if (HAS_TORCH and torch.cuda.is_available() and self.device == "cuda") else -1
                 self._pipe = pipeline(
                     "text-classification",
-                    model="mrm8488/distilroberta-finetuned-toxic-content",
+                    model="unitary/toxic-bert",
                     device=device_idx
                 )
-                print(f"[SafeAdTextSafetyDetector] Loaded open text safety classifier fallback.")
+                self._status = DetectorStatus.LOADED_SUCCESS.value
+                self._active_model_name = "unitary/toxic-bert (local cache)"
+                self._is_loaded = True
+                print(f"[SafeAdTextSafetyDetector] Loaded local offline fallback 'unitary/toxic-bert' successfully.")
+                return self
+            except Exception as e2:
+                print(f"[SafeAdTextSafetyDetector WARNING] Local fallback failed: {e2}")
 
-            self._is_loaded = True
-        except Exception as e:
-            print(f"[SafeAdTextSafetyDetector WARNING] Text safety model initialization fallback: {e}")
-            self._is_loaded = True
-
+        # Deterministic heuristic fallback
+        self._status = DetectorStatus.HEURISTIC_FALLBACK.value
+        self._active_model_name = "multilingual_safety_keywords"
+        self._is_loaded = True
+        print(f"[SafeAdTextSafetyDetector] Operating on deterministic heuristic safety keywords.")
         return self
 
     MULTILINGUAL_SAFETY_KEYWORDS = {
@@ -106,6 +131,8 @@ class SafeAdTextSafetyDetector:
         """
         Evaluates a text input (title + caption + OCR text or transcript) and returns normalized safety probabilities per category.
         """
+        from models.detector_infrastructure import DetectorStatus
+
         if not text or not text.strip():
             return {
                 "violent": 0.0,
@@ -117,7 +144,13 @@ class SafeAdTextSafetyDetector:
                 "drugs": 0.0,
                 "misleading": 0.0,
                 "overall_text_risk": 0.0,
-                "detected_categories": []
+                "detected_categories": [],
+                "execution_status": DetectorStatus.MODALITY_ABSENT.value,
+                "model_provenance": {
+                    "model_id": self._active_model_name,
+                    "device": self.device,
+                    "status": DetectorStatus.MODALITY_ABSENT.value
+                }
             }
 
         if not self._is_loaded:
@@ -129,6 +162,7 @@ class SafeAdTextSafetyDetector:
             "gambling": 0.0, "alcohol": 0.0, "drugs": 0.0, "misleading": 0.0
         }
         detected = []
+        exec_status = self._status
 
         # 1. Primary Model Generation / Classification
         if self._model is not None and self._tokenizer is not None and HAS_TORCH:
@@ -149,8 +183,24 @@ class SafeAdTextSafetyDetector:
                     cat_scores["hate"] = 0.90
             except Exception as e:
                 print(f"[SafeAdTextSafetyDetector ERROR] Inference error: {e}")
+                exec_status = DetectorStatus.INFERENCE_FAILED.value
 
-        # 2. Multilingual keyword rule verification
+        # 2. Local toxic-bert classification fallback (if loaded)
+        elif self._pipe is not None:
+            try:
+                # Truncate text to 512 tokens for BERT limit
+                bert_out = self._pipe(text[:512])
+                if bert_out and isinstance(bert_out, list):
+                    label = bert_out[0].get("label", "").lower()
+                    score = float(bert_out[0].get("score", 0.0))
+                    if "toxic" in label and score > 0.65:
+                        cat_scores["hate"] = max(cat_scores["hate"], round(score, 4))
+                        if "Hate Speech" not in detected:
+                            detected.append("Hate Speech")
+            except Exception as e_bert:
+                print(f"[SafeAdTextSafetyDetector WARNING] BERT inference warning: {e_bert}")
+
+        # 3. Multilingual keyword rule verification
         for category, keywords in self.MULTILINGUAL_SAFETY_KEYWORDS.items():
             for kw in keywords:
                 if kw in text_lower:
@@ -172,5 +222,11 @@ class SafeAdTextSafetyDetector:
             "drugs": round(float(cat_scores["drugs"]), 4),
             "misleading": round(float(cat_scores["misleading"]), 4),
             "overall_text_risk": round(float(overall_risk), 4),
-            "detected_categories": detected
+            "detected_categories": detected,
+            "execution_status": exec_status,
+            "model_provenance": {
+                "model_id": self._active_model_name,
+                "device": self.device,
+                "status": exec_status
+            }
         }

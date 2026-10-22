@@ -200,22 +200,38 @@ async def analyze_advertisement(ad_id: int, db: Session = Depends(get_db)):
     return resp_dict
 
 
+from fastapi.responses import FileResponse
+
 @router.get("/user_feed")
-def get_user_feed(user_age_group: str = "AGE_18_PLUS", db: Session = Depends(get_db)):
+def get_user_feed(user_age_group: str = "UNDER_14", db: Session = Depends(get_db)):
     """
     Returns age-filtered advertisements eligible for the specified user age group.
-    UNSAFE_FOR_ALL content is NEVER included.
+    HARD POLICY GATES:
+    - UNSAFE_FOR_ALL content is NEVER included.
+    - REQUIRES_HUMAN_REVIEW content is NEVER included (withheld pending approval).
+    - Status MUST be APPROVE or RESTRICT.
+    - Default/Uncertain age strictly fails closed to UNDER_14.
     """
     try:
-        user_group_enum = AgeGroup(user_age_group)
+        user_group_enum = AgeGroup(user_age_group) if user_age_group else AgeGroup.UNDER_14
     except Exception:
-        user_group_enum = AgeGroup.AGE_18_PLUS
+        user_group_enum = AgeGroup.UNDER_14
         
-    ads = db.query(Advertisement).filter(Advertisement.status != "REJECT").all()
+    # Strictly query only ads whose status is approved or age-restricted (never HUMAN_REVIEW, REJECT, PENDING)
+    ads = db.query(Advertisement).filter(
+        Advertisement.status.in_(["APPROVE", "RESTRICT"])
+    ).all()
     filtered_ads = []
     
     for ad in ads:
-        if ad.moderation_result:
+        if ad.moderation_result and ad.moderation_result.publishable:
+            # Double-layer check: reject any human review or unsafe classification at backend
+            if ad.moderation_result.classification in [
+                SafetyClassification.REQUIRES_HUMAN_REVIEW,
+                SafetyClassification.UNSAFE_FOR_ALL
+            ]:
+                continue
+
             is_allowed = PolicyService.evaluate_user_access(
                 ad.moderation_result.classification,
                 user_group_enum
@@ -232,3 +248,60 @@ def get_user_feed(user_age_group: str = "AGE_18_PLUS", db: Session = Depends(get
                 })
                 
     return filtered_ads
+
+
+@router.get("/{ad_id}/media")
+def get_advertisement_media(
+    ad_id: int,
+    user_age_group: Optional[str] = "UNDER_14",
+    db: Session = Depends(get_db)
+):
+    """
+    Protected media-serving endpoint with backend authorization.
+    Ensures that an advertisement routed to REQUIRES_HUMAN_REVIEW, UNSAFE_FOR_ALL,
+    or unapproved status cannot be served or viewed before human approval.
+    Defaults to fail-closed UNDER_14 if age verification is absent or uncertain.
+    """
+    ad = db.query(Advertisement).filter(Advertisement.id == ad_id).first()
+    if not ad:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+
+    if not ad.moderation_result:
+        raise HTTPException(
+            status_code=403,
+            detail="Publication Withheld: Advertisement has not completed safety moderation."
+        )
+
+    # Check 1: Human-review & Unsafe block
+    if ad.moderation_result.classification in [
+        SafetyClassification.REQUIRES_HUMAN_REVIEW,
+        SafetyClassification.UNSAFE_FOR_ALL
+    ] or ad.status in ["HUMAN_REVIEW", "REJECT", "PENDING"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Publication Withheld: Advertisement is pending human safety review or rejected by safety policy."
+        )
+
+    # Check 2: Publishable flag
+    if not ad.moderation_result.publishable:
+        raise HTTPException(
+            status_code=403,
+            detail="Publication Withheld: Advertisement is marked unpublishable."
+        )
+
+    # Check 3: Age policy authorization (fail-closed to UNDER_14 on uncertainty)
+    try:
+        user_group_enum = AgeGroup(user_age_group) if user_age_group else AgeGroup.UNDER_14
+    except Exception:
+        user_group_enum = AgeGroup.UNDER_14
+
+    if not PolicyService.evaluate_user_access(ad.moderation_result.classification, user_group_enum):
+        raise HTTPException(
+            status_code=403,
+            detail="Access Restricted: Content is restricted for the requesting age tier."
+        )
+
+    if not os.path.exists(ad.file_path):
+        raise HTTPException(status_code=404, detail="Media file not found on disk")
+
+    return FileResponse(ad.file_path)

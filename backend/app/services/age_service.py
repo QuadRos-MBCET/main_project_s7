@@ -40,18 +40,29 @@ class AgeVerificationService:
         else:
             estimated_age = float(chrono_age)
             
-        # Ground-truth verification rule:
-        # Chronological age from DOB is the anchor for registration.
-        verified_age = chrono_age
-        status = "VERIFIED"
-        
-        # Categorize into age group
-        if verified_age < 14:
+        # Fail-Safe Age Discrepancy & Protection Rule:
+        # If facial analysis indicates a minor (< 14 or < 18) but DOB claims adult,
+        # prioritize child safety: flag CONFLICT and default to the more restrictive tier.
+        if estimated_age < 14 and chrono_age >= 14:
+            status = "CONFLICT_CHILD_DETECTED"
             age_group = AgeGroup.UNDER_14
-        elif 14 <= verified_age < 18:
+            verified_age = min(chrono_age, int(estimated_age))
+        elif estimated_age < 18 and chrono_age >= 18:
+            status = "CONFLICT_TEEN_DETECTED"
             age_group = AgeGroup.AGE_14_TO_17
+            verified_age = min(chrono_age, int(estimated_age))
+        elif chrono_age < 14:
+            status = "VERIFIED"
+            age_group = AgeGroup.UNDER_14
+            verified_age = chrono_age
+        elif 14 <= chrono_age < 18:
+            status = "VERIFIED"
+            age_group = AgeGroup.AGE_14_TO_17
+            verified_age = chrono_age
         else:
+            status = "VERIFIED"
             age_group = AgeGroup.AGE_18_PLUS
+            verified_age = chrono_age
             
         return {
             "status": status,

@@ -1,0 +1,19 @@
+{
+  "total_assets_v2": 414,
+  "genuine_benchmark_samples": 296,
+  "quarantined_synthetic_cards": 118,
+  "used_in_prior_model_selection_194": 194,
+  "historical_held_out_candidates_88": 88,
+  "new_v2_scam_supplementary_14": 14,
+  "cross_split_leakage_risks": {
+    "prior_dev_samples_in_v2_test": 16,
+    "historical_held_out_in_v2_train": 71,
+    "historical_held_out_in_v2_val": 8,
+    "historical_held_out_in_v2_test": 9,
+    "new_scam_in_v2_train": 10,
+    "new_scam_in_v2_val": 2,
+    "new_scam_in_v2_test": 2
+  },
+  "non_ad_controls_count": 22,
+  "commercial_ads_count": 392
+}

@@ -36,42 +36,63 @@ class VisualSafetyDetector:
         self.device = device
         self._processor = None
         self._model = None
-        self._pipe = None
+        self._blip_processor = None
+        self._blip_model = None
         self._is_loaded = False
+        self._status = "UNINITIALIZED"
+        self._active_model_name = "visual_heuristics"
 
     def load_model(self):
-        """Lazy loader for Llama Guard 3 Vision / visual safety model."""
+        """Lazy loader for visual safety models with explicit availability checks."""
         if self._is_loaded:
             return self
 
-        print(f"[VisualSafetyDetector] Loading pretrained visual safety model '{self.model_id}' on {self.device}...")
-        try:
-            from transformers import AutoProcessor, MllamaForConditionalGeneration
+        from models.detector_infrastructure import (
+            check_model_availability,
+            DetectorStatus,
+            is_model_cached_locally
+        )
+
+        can_load_primary, primary_reason = check_model_availability(self.model_id)
+
+        if can_load_primary:
+            print(f"[VisualSafetyDetector] Loading primary model '{self.model_id}' on {self.device}...")
             try:
+                from transformers import AutoProcessor, MllamaForConditionalGeneration
                 self._processor = AutoProcessor.from_pretrained(self.model_id)
                 self._model = MllamaForConditionalGeneration.from_pretrained(
                     self.model_id,
                     torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32,
                     device_map="auto" if self.device == "cuda" else None
                 )
+                self._status = DetectorStatus.LOADED_SUCCESS.value
+                self._active_model_name = self.model_id
+                self._is_loaded = True
                 print(f"[VisualSafetyDetector] Loaded '{self.model_id}' successfully.")
-            except Exception as e1:
-                print(f"[VisualSafetyDetector WARNING] Llama Guard 3 Vision primary load fallback: {e1}")
-                # Secondary Hugging Face open visual safety classifier fallback
-                from transformers import pipeline
-                device_idx = 0 if (HAS_TORCH and torch.cuda.is_available() and self.device == "cuda") else -1
-                self._pipe = pipeline(
-                    "image-classification",
-                    model="mrm8488/distilroberta-finetuned-toxic-content",
-                    device=device_idx
-                )
-                print(f"[VisualSafetyDetector] Loaded open visual safety classifier fallback.")
+                return self
+            except Exception as e:
+                print(f"[VisualSafetyDetector WARNING] Primary model load failed: {e}")
 
-            self._is_loaded = True
-        except Exception as e:
-            print(f"[VisualSafetyDetector WARNING] Visual safety model initialization fallback: {e}")
-            self._is_loaded = True
+        # Primary unavailable or failed: check local BLIP image captioning fallback without remote network penalty
+        print(f"[VisualSafetyDetector] Model '{self.model_id}' unavailable ({primary_reason}). Checking local offline fallback...")
+        if is_model_cached_locally("Salesforce/blip-image-captioning-base"):
+            try:
+                from transformers import BlipProcessor, BlipForConditionalGeneration
+                self._blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+                self._blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(self.device)
+                self._status = DetectorStatus.LOADED_SUCCESS.value
+                self._active_model_name = "Salesforce/blip-image-captioning-base (local cache)"
+                self._is_loaded = True
+                print(f"[VisualSafetyDetector] Loaded local offline fallback 'Salesforce/blip-image-captioning-base' successfully.")
+                return self
+            except Exception as e2:
+                print(f"[VisualSafetyDetector WARNING] Local BLIP fallback failed: {e2}")
 
+        # Deterministic heuristic fallback
+        self._status = DetectorStatus.HEURISTIC_FALLBACK.value
+        self._active_model_name = "visual_safety_heuristics"
+        self._is_loaded = True
+        print(f"[VisualSafetyDetector] Operating on visual safety heuristics.")
         return self
 
     def analyze_image(
@@ -145,18 +166,56 @@ class VisualSafetyDetector:
                     "confidence": confidence,
                     "source": "llama_guard_vision",
                     "detected_categories": detected,
-                    "response_text": response.strip()
+                    "response_text": response.strip(),
+                    "execution_status": self._status,
+                    "model_provenance": {
+                        "model_id": self._active_model_name,
+                        "device": self.device,
+                        "status": self._status
+                    }
                 }
             except Exception as e:
                 print(f"[VisualSafetyDetector ERROR] Primary model inference error: {e}")
 
-        # Baseline fallback return when model is in offline fallback mode
+        # 2. Local BLIP Image Captioning Fallback (Semantic Visual Understanding)
+        blip_caption = ""
+        detected_from_blip = []
+        if self._blip_model is not None and self._blip_processor is not None:
+            try:
+                inputs = self._blip_processor(pil_img, return_tensors="pt").to(self.device)
+                with torch.inference_mode():
+                    out = self._blip_model.generate(**inputs, max_new_tokens=30)
+                    blip_caption = self._blip_processor.decode(out[0], skip_special_tokens=True).lower()
+                
+                # Check semantic visual cues
+                for w in ["gun", "weapon", "knife", "rifle", "pistol", "sword", "blood", "fighting"]:
+                    if w in blip_caption and "Violence" not in detected_from_blip:
+                        detected_from_blip.append("Violence")
+                for s in ["bikini", "lingerie", "swimwear", "underwear", "shirtless", "cleavage", "nude"]:
+                    if s in blip_caption and "Sexual Content" not in detected_from_blip:
+                        detected_from_blip.append("Sexual Content")
+                for a in ["beer", "wine", "whiskey", "vodka", "alcohol", "liquor", "champagne"]:
+                    if a in blip_caption and "Alcohol" not in detected_from_blip:
+                        detected_from_blip.append("Alcohol")
+            except Exception as e_blip:
+                print(f"[VisualSafetyDetector WARNING] BLIP captioning error: {e_blip}")
+
+        is_unsafe = ("Violence" in detected_from_blip)
+        confidence = 0.88 if detected_from_blip else 0.85
+
         return {
-            "category": "general_visual",
-            "unsafe": False,
-            "confidence": 0.85,
-            "source": "llama_guard_vision",
-            "detected_categories": []
+            "category": detected_from_blip[0] if detected_from_blip else "general_visual",
+            "unsafe": is_unsafe,
+            "confidence": confidence,
+            "source": self._active_model_name,
+            "detected_categories": detected_from_blip,
+            "visual_description": blip_caption,
+            "execution_status": self._status,
+            "model_provenance": {
+                "model_id": self._active_model_name,
+                "device": self.device,
+                "status": self._status
+            }
         }
 
     def analyze_video_frames(

@@ -1,0 +1,306 @@
+{
+  "metrics": {
+    "total": 30,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0,
+    "fn": 0,
+    "tn": 20,
+    "avg_latency_ms": 0.54
+  },
+  "audit": [
+    {
+      "id": "UNSEEN_SCAM_01",
+      "category": "financial_scam",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "financial_scam"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_SCAM_02",
+      "category": "financial_scam",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "financial_scam"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_CRYPTO_01",
+      "category": "crypto_scam",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "financial_scam"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_PHISH_01",
+      "category": "phishing_fraud",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "advance_fee_phishing"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_PRIZE_01",
+      "category": "prize_scam",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "advance_fee_phishing"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_QUACK_01",
+      "category": "quack_cure",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "quack_health_claim"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_QUACK_02",
+      "category": "quack_cure",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "quack_health_claim"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_QUACK_03",
+      "category": "quack_cure",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "quack_health_claim"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_MULTI_01",
+      "category": "multilingual_violence",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "multilingual_violence"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "UNSEEN_MULTI_02",
+      "category": "multilingual_violence",
+      "gt": true,
+      "pred": true,
+      "correct": true,
+      "violations": [
+        "multilingual_violence"
+      ],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_FINANCE_01",
+      "category": "legitimate_banking",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_FINANCE_02",
+      "category": "legitimate_banking",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_PHARMA_01",
+      "category": "legitimate_health",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 15.38
+    },
+    {
+      "id": "LEGIT_PHARMA_02",
+      "category": "legitimate_health",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_01",
+      "category": "legitimate_fmcg",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_02",
+      "category": "legitimate_fmcg",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_03",
+      "category": "legitimate_retail",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_04",
+      "category": "legitimate_automotive",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_05",
+      "category": "legitimate_travel",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_RETAIL_06",
+      "category": "legitimate_dining",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_ALCOHOL_01",
+      "category": "regulated_alcohol_18p",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "LEGIT_ALCOHOL_02",
+      "category": "regulated_alcohol_18p",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.7
+    },
+    {
+      "id": "EDGE_PUFFERY_01",
+      "category": "commercial_puffery",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_PUFFERY_02",
+      "category": "unverifiable_claim",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_GAMING_01",
+      "category": "gaming_metaphor",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_NOISE_01",
+      "category": "ocr_noise",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_NOISE_02",
+      "category": "ocr_noise",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_EMPTY_01",
+      "category": "empty_input",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_MULTI_SAFE_01",
+      "category": "multilingual_safe",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    },
+    {
+      "id": "EDGE_MULTI_SAFE_02",
+      "category": "multilingual_safe",
+      "gt": false,
+      "pred": false,
+      "correct": true,
+      "violations": [],
+      "latency_ms": 0.0
+    }
+  ]
+}

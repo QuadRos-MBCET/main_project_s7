@@ -1,0 +1,223 @@
+{
+  "benchmark_summary": {
+    "total_samples": 16,
+    "prohibited_positives": 8,
+    "safe_negatives": 8
+  },
+  "baseline_metrics": {
+    "TP": 0,
+    "FP": 0,
+    "FN": 8,
+    "TN": 8,
+    "Precision": 0.0,
+    "Recall": 0.0,
+    "F1": 0.0,
+    "PFAR": 1.0,
+    "FPR": 0.0
+  },
+  "deberta_metrics": {
+    "TP": 5,
+    "FP": 1,
+    "FN": 3,
+    "TN": 7,
+    "Precision": 0.8333,
+    "Recall": 0.625,
+    "F1": 0.7143,
+    "PFAR": 0.375,
+    "FPR": 0.125
+  },
+  "sample_level_evaluations": [
+    {
+      "id": "SCAM_01",
+      "category": "deceptive_financial",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.7205,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.5232,
+      "deberta_legit_score": 0.3919,
+      "deberta_latency": 8.7347
+    },
+    {
+      "id": "SCAM_02",
+      "category": "deceptive_financial",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.6063,
+      "deberta_legit_score": 0.2327,
+      "deberta_latency": 8.6841
+    },
+    {
+      "id": "SCAM_03",
+      "category": "deceptive_financial",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.9205,
+      "deberta_legit_score": 0.0181,
+      "deberta_latency": 7.9815
+    },
+    {
+      "id": "SCAM_04",
+      "category": "deceptive_financial",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.2583,
+      "deberta_legit_score": 0.7154,
+      "deberta_latency": 8.1482
+    },
+    {
+      "id": "LEGIT_FIN_01",
+      "category": "legitimate_financial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.2813,
+      "deberta_legit_score": 0.5076,
+      "deberta_latency": 8.4288
+    },
+    {
+      "id": "LEGIT_FIN_02",
+      "category": "legitimate_financial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.0705,
+      "deberta_legit_score": 0.8662,
+      "deberta_latency": 8.6586
+    },
+    {
+      "id": "LEGIT_FIN_03",
+      "category": "legitimate_financial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.1735,
+      "deberta_legit_score": 0.759,
+      "deberta_latency": 8.4079
+    },
+    {
+      "id": "QUACK_01",
+      "category": "misleading_medical",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.4401,
+      "deberta_legit_score": 0.2479,
+      "deberta_latency": 7.6596
+    },
+    {
+      "id": "QUACK_02",
+      "category": "misleading_medical",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.1534,
+      "deberta_legit_score": 0.5658,
+      "deberta_latency": 8.8653
+    },
+    {
+      "id": "COMM_01",
+      "category": "ordinary_commercial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.3407,
+      "deberta_legit_score": 0.4044,
+      "deberta_latency": 8.0377
+    },
+    {
+      "id": "COMM_02",
+      "category": "ordinary_commercial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.3968,
+      "deberta_legit_score": 0.3493,
+      "deberta_latency": 7.9089
+    },
+    {
+      "id": "COMM_03",
+      "category": "ordinary_commercial",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.4899,
+      "deberta_legit_score": 0.1777,
+      "deberta_latency": 7.9069
+    },
+    {
+      "id": "ADULT_18P_01",
+      "category": "regulated_alcohol",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.0158,
+      "deberta_legit_score": 0.2006,
+      "deberta_latency": 8.613
+    },
+    {
+      "id": "ADULT_18P_02",
+      "category": "regulated_alcohol",
+      "gt_prohibited": false,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": false,
+      "deberta_prohibited_score": 0.0588,
+      "deberta_legit_score": 0.1573,
+      "deberta_latency": 7.8484
+    },
+    {
+      "id": "PROHIB_DANGEROUS_01",
+      "category": "dangerous_goods",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.5336,
+      "deberta_legit_score": 0.0819,
+      "deberta_latency": 7.8851
+    },
+    {
+      "id": "PROHIB_DANGEROUS_02",
+      "category": "dangerous_goods",
+      "gt_prohibited": true,
+      "baseline_flagged": false,
+      "baseline_scam_score": 0.0,
+      "baseline_latency": 0.0,
+      "deberta_flagged": true,
+      "deberta_prohibited_score": 0.869,
+      "deberta_legit_score": 0.004,
+      "deberta_latency": 8.0656
+    }
+  ]
+}

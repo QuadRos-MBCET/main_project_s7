@@ -1,0 +1,25 @@
+{
+  "frozen_benchmark_count": 194,
+  "v2_total_assets": 414,
+  "v2_primary_benchmark_samples": 296,
+  "v2_quarantined_synthetic_samples": 118,
+  "counts_by_category_all": {
+    "SAFE_FOR_ALL": 170,
+    "SAFE_14_PLUS": 30,
+    "SAFE_18_PLUS": 100,
+    "UNSAFE_FOR_ALL": 114
+  },
+  "counts_by_category_genuine": {
+    "SAFE_FOR_ALL": 170,
+    "SAFE_14_PLUS": 30,
+    "SAFE_18_PLUS": 49,
+    "UNSAFE_FOR_ALL": 47
+  },
+  "label_changes_in_194_dev": 53,
+  "label_changes_in_all_414": 70,
+  "s14p_total_reviewed": 75,
+  "s14p_reclassified_safe_for_all": 48,
+  "s14p_overruled_18p_safe_for_all": 20,
+  "s14p_retained_14_plus": 5,
+  "s14p_overruled_review_safe_for_all": 2
+}

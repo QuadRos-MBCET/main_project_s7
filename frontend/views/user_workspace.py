@@ -270,8 +270,11 @@ def is_ad_allowed_for_age(classification: str, user_cat: str) -> bool:
         return classification in ["SAFE_FOR_ALL", "APPROVED"]
     elif user_cat == "14 to 17":
         return classification in ["SAFE_FOR_ALL", "APPROVED", "SAFE_14_PLUS"]
-    else:  # 18 and above
+    elif user_cat == "18 and above":
         return classification in ["SAFE_FOR_ALL", "APPROVED", "SAFE_14_PLUS", "SAFE_18_PLUS"]
+    else:
+        # Fail-closed default for unauthenticated, uncertain or unverified profiles
+        return classification in ["SAFE_FOR_ALL", "APPROVED"]
 
 
 
@@ -280,11 +283,34 @@ def is_ad_allowed_for_age(classification: str, user_cat: str) -> bool:
 # =============================================================================
 @st.cache_data(show_spinner=False)
 def load_dataset_hub_content():
-    """Loads approved, authentic images and reels from safead-dataset-hub manifest."""
-    hub_root = os.path.abspath(os.path.join(BASE_DIR, ".."))
-    manifest_path = os.path.join(hub_root, "app_content", "content_manifest.json")
+    """
+    Loads approved, authentic images and reels from safead-dataset-hub manifest.
+    Enforces Phase 7B Task 4 Gates:
+    1. Configurable dataset path via SAFEAD_DATASET_HUB_PATH or standard paths.
+    2. Only verified, authorized, and APPROVED samples included.
+    3. UNSAFE_FOR_ALL samples strictly barred.
+    4. Synthetic review cards (800x520) strictly barred.
+    5. Missing media fails safely.
+    """
+    hub_candidates = [
+        os.getenv("SAFEAD_DATASET_HUB_PATH", ""),
+        os.getenv("DATASET_HUB_ROOT", ""),
+        r"C:\Users\hello\Videos\sourav\datasets\safead-dataset-hub",
+        os.path.abspath(os.path.join(BASE_DIR, "..", "safead-dataset-hub")),
+        os.path.abspath(os.path.join(BASE_DIR, ".."))
+    ]
     
-    if not os.path.exists(manifest_path):
+    hub_root = None
+    manifest_path = None
+    for cand in hub_candidates:
+        if cand and os.path.exists(cand):
+            p = os.path.join(cand, "app_content", "content_manifest.json")
+            if os.path.exists(p):
+                hub_root = cand
+                manifest_path = p
+                break
+                
+    if not manifest_path or not hub_root:
         return {"images": [], "reels": []}
     
     try:
@@ -299,11 +325,31 @@ def load_dataset_hub_content():
     reels = []
     
     for item in data.get("content_items", []):
+        age_cat = str(item.get("age_category", "")).upper()
+        mod_status = str(item.get("moderation_status", "")).upper()
+        res = str(item.get("resolution", "")).lower()
+
+        # Gate 1: Prohibited content is strictly excluded
+        if age_cat in ["UNSAFE_FOR_ALL", "REJECT", "PROHIBITED"]:
+            continue
+
+        # Gate 2: Unreviewed or unapproved content is strictly excluded
+        if mod_status != "APPROVED":
+            continue
+
+        # Gate 3: Synthetic review card templates (800x520) strictly barred
+        if res == "800x520" or item.get("is_synthetic") is True:
+            continue
+
+        # Gate 4: Permissible categories only
+        if age_cat not in ["SAFE_FOR_ALL", "SAFE_14_PLUS", "SAFE_18_PLUS"]:
+            continue
+
+        # Gate 5: Safe media path resolution
         media_rel = item.get("media_path", "")
         full_path = os.path.abspath(os.path.join(hub_root, media_rel))
-        
         if not os.path.exists(full_path):
-            continue
+            continue  # Fail-safe: omit missing media
             
         entry = {
             "id": item["content_id"],
@@ -311,12 +357,12 @@ def load_dataset_hub_content():
             "creator": item.get("source_name", "SafeAd Archive"),
             "creator_avatar": "📺" if item["content_type"] == "reel" else "📸",
             "is_verified": True,
-            "sponsored_label": f"SafeAd AI • Verified {item['age_category']}",
-            "safety_policy": item["age_category"],
+            "sponsored_label": f"SafeAd AI • Verified {age_cat}",
+            "safety_policy": age_cat,
             "title": item.get("title", ""),
             "caption": item.get("caption", ""),
             "cta_text": "Watch Reel ↗" if item["content_type"] == "reel" else "View Creative ↗",
-            "audio": "Vintage Commercial Soundtrack • SafeAd Vault 🎵",
+            "audio": "Commercial Soundtrack • SafeAd Vault 🎵",
             "likes": 12000 + (abs(hash(item["content_id"])) % 45000),
             "comments_count": 80 + (abs(hash(item["content_id"])) % 350),
             "shares_count": 1400 + (abs(hash(item["content_id"])) % 5000),
@@ -324,7 +370,7 @@ def load_dataset_hub_content():
             "video_path": full_path,
             "content_type": item["content_type"],
             "comments": [
-                {"user": "safead_compliance", "text": f"✅ Verified safe for {item['age_category']} demographic.", "time": "2h", "likes": 42}
+                {"user": "safead_compliance", "text": f"✅ Verified safe for {age_cat} demographic.", "time": "2h", "likes": 42}
             ]
         }
         
@@ -910,9 +956,9 @@ def user_dashboard():
     # =========================================================================
     # OPTION 3: AUTHENTICATED INSTAGRAM HOMEPAGE & REELS INTERFACE
     # =========================================================================
-    username = st.session_state.get("logged_in_username", "sourav")
-    user_cat = st.session_state.get("verified_age_category", "18 and above")
-    user_norm = st.session_state.get("verified_age_norm", "AGE_18_PLUS")
+    username = st.session_state.get("logged_in_username", "guest_minor")
+    user_cat = st.session_state.get("verified_age_category", "Less than 14")
+    user_norm = st.session_state.get("verified_age_norm", "UNDER_14")
 
     # App Header with User Greeting and Verified Badge
     render_instagram_logo(subtitle="AURA SOCIAL")
