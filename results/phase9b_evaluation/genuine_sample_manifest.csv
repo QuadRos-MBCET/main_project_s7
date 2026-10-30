@@ -1,0 +1,17 @@
+sample_id,file_path,media_type,ground_truth_policy,is_prohibited_ground_truth,ad_category,description,baseline_prediction,baseline_risk_score
+SAFEAD_SFA_IMG_001,sample_ad_media/apples_ad.jpg,image,SAFE_FOR_ALL,False,Grocery / Food & Beverage,Genuine fresh produce grocery advertisement featuring organic apples.,SAFE_FOR_ALL,0.44
+SAFEAD_SFA_IMG_002,joseph_safead_core/backend2jb/datasets/samples/safe_python_ad.jpg,image,SAFE_FOR_ALL,False,Education / EdTech,Online computer programming bootcamp promotional banner.,SAFE_FOR_ALL,0.5
+SAFEAD_SFA_VID_001,sample_ad_media/coding_lessons.mp4,video,SAFE_FOR_ALL,False,Education / Online Learning,Commercial video ad demonstrating code editor and student tutoring.,SAFE_FOR_ALL,1.2
+SAFEAD_SFA_VID_002,backend/uploads/ad_1792870832_nivea.mp4,video,SAFE_FOR_ALL,False,Personal Care / Cosmetics,Commercial cosmetics brand advertisement showing skincare lotion.,SAFE_FOR_ALL,0.85
+SAFEAD_S14P_VID_001,sample_ad_media/geometry_class.mp4,video,SAFE_14_PLUS,False,Secondary Education / STEM,Educational mathematics and geometry lesson advertisement.,SAFE_FOR_ALL,0.91
+SAFEAD_S18P_IMG_001,sample_ad_media/beer_pub.jpg,image,SAFE_18_PLUS,False,Alcohol / Craft Brewery,Commercial brewery promotion advertising craft beer and happy hour.,SAFE_18_PLUS,45.0
+SAFEAD_S18P_IMG_002,sample_ad_media/adult_dating.jpg,image,SAFE_18_PLUS,False,Matchmaking / Adult Dating,Online romantic dating agency promotion for consenting adults.,SAFE_18_PLUS,62.5
+SAFEAD_S18P_IMG_003,sample_ad_media/lucky_draw.jpg,image,SAFE_18_PLUS,False,Sweepstakes / Lottery,Promotional lucky draw raffle offering prize rewards.,SAFE_18_PLUS,48.0
+SAFEAD_S18P_IMG_004,joseph_safead_core/backend2jb/datasets/samples/adult_18plus_ad.jpg,image,SAFE_18_PLUS,False,Mature Content / Media,Age-restricted digital entertainment banner labeled 18+ only.,SAFE_18_PLUS,55.0
+SAFEAD_S18P_IMG_005,joseph_safead_core/backend2jb/datasets/samples/gambling_satta_ad.jpg,image,SAFE_18_PLUS,False,Gambling / Online Betting,Online sports betting and wagering platform banner.,SAFE_18_PLUS,70.0
+SAFEAD_S18P_VID_001,sample_ad_media/casino_ad.mp4,video,SAFE_18_PLUS,False,Gambling / Casino Gaming,Promotional casino video ad featuring roulette wheel and gaming floor.,SAFE_18_PLUS,68.0
+SAFEAD_UFA_IMG_001,joseph_safead_core/backend2jb/datasets/samples/violence_combat_ad.jpg,image,UNSAFE_FOR_ALL,True,Violence / Weapons,Graphic combat imagery promoting violent altercation / knives.,UNSAFE_FOR_ALL,92.0
+SAFEAD_UFA_IMG_002,joseph_safead_core/backend2jb/datasets/samples/scam_paisa_double_ad.jpg,image,UNSAFE_FOR_ALL,True,Deceptive Fraud / Financial Scam,Fraudulent 'paisa double' high-yield investment scheme promising impossible returns.,UNSAFE_FOR_ALL,88.0
+SAFEAD_UFA_VID_001,backend/uploads/ad_1792842155_SAFEAD_UFA_VID_001.mp4,video,UNSAFE_FOR_ALL,True,Interpersonal Physical Violence,Real video of physical public assault and altercation.,UNSAFE_FOR_ALL,90.0
+SAFEAD_UFA_VID_002,backend/uploads/ad_1792841394_SAFEAD_UFA_VID_002.mp4,video,UNSAFE_FOR_ALL,True,Weapons / Dangerous Altercation,Cinematic fight clip with weapons and brutal physical violence.,SAFE_18_PLUS,28.0
+SAFEAD_UFA_VID_003,sample_ad_media/scam_giveaway.mp4,video,UNSAFE_FOR_ALL,True,Deceptive Fraud / Crypto Scam,Deceptive video offering fraudulent cryptocurrency giveaways to defraud users.,SAFE_FOR_ALL,15.0
