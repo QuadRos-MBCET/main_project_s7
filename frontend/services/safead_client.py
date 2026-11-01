@@ -1,7 +1,7 @@
 import requests
 import os
 
-SAFEAD_API_URL = os.getenv("SAFEAD_API_URL", "http://localhost:8002/api/v1")
+SAFEAD_API_URL = os.getenv("SAFEAD_API_URL", "http://127.0.0.1:8002/api/v1")
 
 class SafeAdClient:
     @staticmethod
@@ -14,7 +14,7 @@ class SafeAdClient:
             params = {}
             if colab_url and colab_url.strip():
                 params["colab_url"] = colab_url.strip()
-            r = requests.get(url, params=params, timeout=6)
+            r = requests.get(url, params=params, timeout=35)
             if r.status_code == 200:
                 return r.json(), None
             return None, r.text

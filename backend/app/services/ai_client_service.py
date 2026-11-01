@@ -17,8 +17,8 @@ class AIClientService:
         try:
             res = requests.get(
                 f"{target}/health",
-                headers={"ngrok-skip-browser-warning": "true"},
-                timeout=4.0
+                headers={"ngrok-skip-browser-warning": "69420", "User-Agent": "SafeAd-Backend/1.0"},
+                timeout=30.0
             )
             if res.status_code == 200:
                 data = res.json()
@@ -47,7 +47,7 @@ class AIClientService:
         target = colab_url.strip().rstrip("/")
         mime_type, _ = mimetypes.guess_type(file_path)
         mime_type = mime_type or "application/octet-stream"
-        headers = {"ngrok-skip-browser-warning": "true"}
+        headers = {"ngrok-skip-browser-warning": "69420", "User-Agent": "SafeAd-Backend/1.0"}
 
         with open(file_path, "rb") as f:
             files = {"file": (os.path.basename(file_path), f, mime_type)}

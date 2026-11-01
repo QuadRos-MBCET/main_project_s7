@@ -198,10 +198,10 @@ def owner_dashboard():
                             with st.spinner("Testing Colab GPU connection..."):
                                 check_res = None
                                 err = None
-                                if SafeAdClient:
-                                    check_res, err = SafeAdClient.check_colab_health(colab_input.strip())
-                                elif AIClientService:
+                                if AIClientService:
                                     check_res = AIClientService.test_colab_connection(colab_input.strip())
+                                elif SafeAdClient:
+                                    check_res, err = SafeAdClient.check_colab_health(colab_input.strip())
                                 
                                 if check_res and check_res.get("status") == "online":
                                     st.session_state["colab_status"] = "online"
