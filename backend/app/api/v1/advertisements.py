@@ -14,6 +14,14 @@ router = APIRouter()
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@router.get("/colab_health")
+def check_colab_health(colab_url: Optional[str] = None):
+    """
+    Pings the remote Google Colab GPU tunnel endpoint to verify online status and GPU info.
+    """
+    return AIClientService.test_colab_connection(colab_url)
+
+
 @router.post("/check", response_model=StandardizedModerationResponse)
 async def check_advertisement(
     file: UploadFile = File(...),
@@ -21,6 +29,7 @@ async def check_advertisement(
     caption: Optional[str] = Form(""),
     user_id: int = Form(1),
     pipeline_mode: Optional[str] = Form("learned_rf"),
+    colab_url: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -57,7 +66,7 @@ async def check_advertisement(
     db.refresh(ad)
     
     # Run AI inference
-    ai_results = AIClientService.process_advertisement(file_path, title, caption, pipeline_mode=pipeline_mode)
+    ai_results = AIClientService.process_advertisement(file_path, title, caption, pipeline_mode=pipeline_mode, colab_url=colab_url)
     
     classification_str = ai_results.get("classification", "UNSAFE_FOR_ALL")
     try:
@@ -118,6 +127,7 @@ async def upload_advertisement(
     caption: Optional[str] = Form(""),
     user_id: int = Form(1),
     pipeline_mode: Optional[str] = Form("learned_rf"),
+    colab_url: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -145,7 +155,7 @@ async def upload_advertisement(
     return {"id": ad.id, "title": ad.title, "file_path": ad.file_path, "status": ad.status}
 
 @router.post("/{ad_id}/analyze")
-async def analyze_advertisement(ad_id: int, pipeline_mode: Optional[str] = "learned_rf", db: Session = Depends(get_db)):
+async def analyze_advertisement(ad_id: int, pipeline_mode: Optional[str] = "learned_rf", colab_url: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Step 2 of split ad workflow: executes SafeAd AI multimodal inference and evaluates policy.
     """
@@ -153,7 +163,7 @@ async def analyze_advertisement(ad_id: int, pipeline_mode: Optional[str] = "lear
     if not ad:
         raise HTTPException(status_code=404, detail="Advertisement not found")
         
-    ai_results = AIClientService.process_advertisement(ad.file_path, ad.title, ad.caption, pipeline_mode=pipeline_mode)
+    ai_results = AIClientService.process_advertisement(ad.file_path, ad.title, ad.caption, pipeline_mode=pipeline_mode, colab_url=colab_url)
     classification_str = ai_results.get("classification", "UNSAFE_FOR_ALL")
     try:
         classification_enum = SafetyClassification(classification_str)

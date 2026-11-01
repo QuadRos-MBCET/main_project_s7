@@ -16,6 +16,16 @@ try:
 except ImportError:
     run_safead_inference = None
 
+try:
+    from backend.app.services.ai_client_service import AIClientService
+except ImportError:
+    AIClientService = None
+
+try:
+    from frontend.services.safead_client import SafeAdClient
+except ImportError:
+    SafeAdClient = None
+
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8002/api/v1")
 
 def check_backend_online():
@@ -87,6 +97,13 @@ def owner_dashboard():
             padding: 14px;
             margin-bottom: 10px;
         }
+        .colab-card {
+            border: 1px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
         </style>
     """, unsafe_allow_html=True)
     
@@ -131,9 +148,11 @@ def owner_dashboard():
             
             # PRIVACY REQUIREMENT: Do NOT render media player or image on Brand Owner page
             
-            # Moderation Pipeline Mode Configuration (Phase 8E Learned RF Integration)
+            # Moderation Pipeline Mode Configuration (Including Qwen3-VL & Strategy D)
             st.markdown("#### ⚙️ Moderation Engine Configuration")
             mode_options = [
+                "🛡️ Strategy D: Hierarchical Safety Fusion (Qwen3-VL + Learned RF)",
+                "⚡ Qwen3-VL-8B Multimodal VLM (Google Colab A100)",
                 "Learned Random Forest (Default Experimental)",
                 "Safety-Prioritized Moderation (Learned RF + HITL Uncertainty Gate)",
                 "Candidate B (Enhanced Alcohol Heuristic)",
@@ -143,15 +162,63 @@ def owner_dashboard():
                 "Select Moderation Pipeline Mode",
                 mode_options,
                 index=0,
-                help="Learned Random Forest is the new Phase 8E default experimental fusion engine. Heuristic baseline and Candidate B remain accessible."
+                help="Strategy D combines cloud Qwen3-VL semantic reasoning with 33-dim local Random Forest safety veto. Learned Random Forest runs 100% locally."
             )
             mode_map = {
+                "🛡️ Strategy D: Hierarchical Safety Fusion (Qwen3-VL + Learned RF)": "strategy_d",
+                "⚡ Qwen3-VL-8B Multimodal VLM (Google Colab A100)": "qwen3_vl",
                 "Learned Random Forest (Default Experimental)": "learned_rf",
                 "Safety-Prioritized Moderation (Learned RF + HITL Uncertainty Gate)": "learned_rf_hitl",
                 "Candidate B (Enhanced Alcohol Heuristic)": "candidate_b",
                 "Production Baseline (Frozen Heuristic)": "production",
             }
-            active_pipeline_mode = mode_map.get(selected_mode_label, "learned_rf")
+            active_pipeline_mode = mode_map.get(selected_mode_label, "strategy_d")
+
+            # Google Colab Qwen3-VL Server Configuration Card
+            needs_colab = active_pipeline_mode in ["qwen3_vl", "strategy_d"]
+            with st.expander("⚡ Google Colab Qwen3-VL GPU Server Settings", expanded=needs_colab):
+                st.caption(
+                    "Connects the frontend to an external **NVIDIA A100 / T4 GPU on Google Colab** running "
+                    "`tools/qwen3_vl_colab_server.py`. If Colab is offline, the system safely falls back to local Learned Random Forest."
+                )
+                colab_input = st.text_input(
+                    "Google Colab Public Tunnel URL (ngrok / localtunnel)",
+                    value=st.session_state.get("colab_tunnel_url", os.getenv("COLAB_API_URL", "")),
+                    placeholder="https://xxxx-xx-xx-xx-xx.ngrok-free.app",
+                    help="Run the SafeAd Qwen3-VL notebook in Google Colab, copy the ngrok public tunnel URL, and paste it here."
+                )
+                st.session_state["colab_tunnel_url"] = colab_input.strip()
+
+                col_t1, col_t2 = st.columns([1, 1.8])
+                with col_t1:
+                    if st.button("🔌 Ping Colab Server", use_container_width=True):
+                        if not colab_input.strip():
+                            st.warning("Please provide a Colab URL first.")
+                        else:
+                            with st.spinner("Testing Colab GPU connection..."):
+                                check_res = None
+                                err = None
+                                if SafeAdClient:
+                                    check_res, err = SafeAdClient.check_colab_health(colab_input.strip())
+                                elif AIClientService:
+                                    check_res = AIClientService.test_colab_connection(colab_input.strip())
+                                
+                                if check_res and check_res.get("status") == "online":
+                                    st.session_state["colab_status"] = "online"
+                                    st.session_state["colab_info"] = check_res
+                                else:
+                                    st.session_state["colab_status"] = "offline"
+                                    st.session_state["colab_info"] = err or check_res
+
+                with col_t2:
+                    current_status = st.session_state.get("colab_status", "unknown")
+                    if current_status == "online":
+                        c_info = st.session_state.get("colab_info", {})
+                        st.success(f"🟢 **Connected**: {c_info.get('gpu', 'NVIDIA GPU')} ({c_info.get('model', 'Qwen3-VL-8B')})")
+                    elif current_status == "offline":
+                        st.error("🔴 **Offline / Unreachable** (Graceful Local RF Fallback Active)")
+                    else:
+                        st.info("⚪ Not Verified / Local Fallback Active")
             
             st.markdown("---")
             if st.button("🚀 ANALYZE ADVERTISEMENT", type="primary", use_container_width=True):
@@ -168,7 +235,10 @@ def owner_dashboard():
                     status_text.info("[2/4] Running EasyOCR & Llama Guard Visual Safety...")
                     
                     progress_bar.progress(70)
-                    status_text.info("[3/4] VideoMAE Violence, Falconsai NSFW, & Whisper Speech Transcription...")
+                    if active_pipeline_mode in ["qwen3_vl", "strategy_d"]:
+                        status_text.info("[3/4] Querying Google Colab Qwen3-VL-8B Vision-Language Model...")
+                    else:
+                        status_text.info("[3/4] VideoMAE Violence, Falconsai NSFW, & Whisper Speech Transcription...")
                     
                     progress_bar.progress(90)
                     status_text.info("[4/4] Executing Two-Stage Policy Engine & Ad Risk Analysis...")
@@ -180,6 +250,8 @@ def owner_dashboard():
                         f.write(file_bytes)
                         
                     report = None
+                    effective_colab_url = st.session_state.get("colab_tunnel_url", "").strip()
+
                     if check_backend_online():
                         try:
                             files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type or "video/mp4")}
@@ -189,9 +261,13 @@ def owner_dashboard():
                                 ad_data = resp.json()
                                 st.session_state["current_ad_id"] = ad_data["id"]
                                 
+                                analyze_params = {"pipeline_mode": active_pipeline_mode}
+                                if effective_colab_url:
+                                    analyze_params["colab_url"] = effective_colab_url
+
                                 analyze_resp = requests.post(
                                     f"{BACKEND_URL}/advertisements/{ad_data['id']}/analyze",
-                                    params={"pipeline_mode": active_pipeline_mode},
+                                    params=analyze_params,
                                     timeout=600
                                 )
                                 if analyze_resp.status_code == 200:
@@ -200,7 +276,24 @@ def owner_dashboard():
                             print(f"[Owner Workspace] Backend API call error: {backend_err}")
 
                     if not report:
-                        if run_safead_inference:
+                        # Direct local service fallback
+                        if AIClientService:
+                            try:
+                                report = AIClientService.process_advertisement(
+                                    temp_path,
+                                    ad_title,
+                                    ad_caption,
+                                    pipeline_mode=active_pipeline_mode,
+                                    colab_url=effective_colab_url
+                                )
+                                st.session_state["current_ad_id"] = report.get("ad_id", 101)
+                                st.session_state["last_temp_path"] = temp_path
+                                st.session_state["last_ad_title"] = ad_title
+                                st.session_state["last_ad_caption"] = ad_caption
+                            except Exception as ai_err:
+                                print(f"[Owner Workspace] AIClientService error: {ai_err}")
+
+                        if not report and run_safead_inference:
                             try:
                                 report = run_safead_inference(
                                     temp_path,
@@ -223,9 +316,7 @@ def owner_dashboard():
                                     "detected_categories": ["Processing Interrupted"],
                                     "policy_stage": "Fail-Safe Human Review"
                                 }
-                        else:
-                            st.error("Inference module not found.")
-                        
+
                     progress_bar.progress(100)
                     status_text.success("Analysis Complete!")
                     st.session_state["moderation_report"] = report
@@ -238,11 +329,18 @@ def owner_dashboard():
             
             classification = rep.get("classification", "UNSAFE_FOR_ALL")
             action = rep.get("publication_action", "REJECT")
-            risk_score = rep.get("risk_score", 0.0)
-            confidence = rep.get("confidence", 0.85)
+            risk_score = float(rep.get("risk_score", 0.0) or 0.0)
+            confidence = float(rep.get("confidence", 0.85) or 0.85)
             requires_hitl = rep.get("requires_human_review", False) or action == "HUMAN_REVIEW"
             ad_id = st.session_state.get("current_ad_id", rep.get("ad_id", 1))
-            
+
+            # Display Colab Fallback Notification if triggered
+            if rep.get("colab_fallback"):
+                st.warning(
+                    rep.get("colab_warning") or
+                    "⚠️ Google Colab GPU was offline or unreachable. Automatically executed local Learned Random Forest fallback."
+                )
+
             # Prominent Classification Badge Display
             if classification == "UNSAFE_FOR_ALL" or action == "REJECT":
                 st.markdown("<div class='badge-reject'>UNSAFE FOR ALL — REJECT DO NOT PUBLISH</div>", unsafe_allow_html=True)
@@ -256,22 +354,43 @@ def owner_dashboard():
                 st.markdown("<div class='badge-approve'>SAFE FOR ALL — APPROVED</div>", unsafe_allow_html=True)
                 
             # Engine Stage and Mode indicator
-            is_learned_rf = rep.get("pipeline_mode", "") in ["learned_rf", "learned_rf_hitl", "candidate_e", "candidate_e_hitl"] or "LEARNED" in str(rep.get("policy_stage", ""))
-            mode_badge = rep.get("pipeline_mode", "learned_rf").upper()
+            mode_badge = str(rep.get("pipeline_mode", active_pipeline_mode)).upper()
             st.caption(f"🔧 **Moderation Engine**: `{mode_badge}` | **Policy Stage**: `{rep.get('policy_stage', 'Standard Fusion')}`")
 
-            # Metrics Row — Uncalibrated RF vote shares are explicitly labeled
+            # Metrics Row
             mcol1, mcol2, mcol3 = st.columns(3)
             mcol1.metric("Risk Score", f"{risk_score:.1f} / 100")
-            if is_learned_rf:
+            
+            is_learned_rf = "learned_rf" in str(rep.get("pipeline_mode", "")).lower()
+            if is_learned_rf and not rep.get("pipeline_mode") == "strategy_d":
                 mcol2.metric("RF Vote Share", f"{int(confidence * 100)}% (Uncalibrated)")
             else:
                 mcol2.metric("Confidence", f"{int(confidence * 100)}%")
-            mcol3.metric("Latency", f"{rep.get('total_processing_time_seconds', 0.0):.2f}s")
+            mcol3.metric("Latency", f"{float(rep.get('total_processing_time_seconds', 0.0) or 0.0):.2f}s")
             
-            if is_learned_rf:
+            if is_learned_rf and not rep.get("pipeline_mode") == "strategy_d":
                 st.caption("ℹ️ *Note: Random Forest vote share represents tree ensemble consensus and is not a calibrated posterior probability.*")
-            
+
+            # Strategy D Arbitration Badge
+            if rep.get("fusion_rule_applied"):
+                st.info(f"⚡ **Strategy D Arbitration**: `{rep.get('fusion_rule_applied')}`")
+
+            # Qwen3-VL Vision-Language CoT Reasoning Display
+            vlm_cot = rep.get("vlm_reasoning") or rep.get("reasoning")
+            if vlm_cot and rep.get("pipeline_mode") in ["qwen3_vl", "strategy_d"]:
+                st.markdown("### 🧠 Qwen3-VL Vision-Language Model CoT Reasoning")
+                st.info(f"**VLM Semantic Analysis (Google Colab A100)**:\n\n{vlm_cot}")
+
+            # Random Forest Probability Distribution
+            if rep.get("rf_probabilities"):
+                st.markdown("##### 🌲 Random Forest Feature Distribution")
+                rf_p = rep.get("rf_probabilities", {})
+                p_c1, p_c2, p_c3, p_c4 = st.columns(4)
+                p_c1.metric("Safe For All", f"{float(rf_p.get('SAFE_FOR_ALL', 0.0))*100:.1f}%")
+                p_c2.metric("Safe 14+", f"{float(rf_p.get('SAFE_14_PLUS', 0.0))*100:.1f}%")
+                p_c3.metric("Safe 18+", f"{float(rf_p.get('SAFE_18_PLUS', 0.0))*100:.1f}%")
+                p_c4.metric("Unsafe", f"{float(rf_p.get('UNSAFE_FOR_ALL', 0.0))*100:.1f}%")
+
             st.markdown(f"**Explanation**:\n\n{rep.get('explanation', '')}")
             
             # Central SafeAdAssessment Matrix Summary
@@ -284,11 +403,11 @@ def owner_dashboard():
             with e_col1:
                 st.markdown(f"• **Extracted OCR Text**: *\"{rep.get('extracted_ocr', '') or 'None detected'}\"*")
                 st.markdown(f"• **Visual Safety**: `{'UNSAFE' if matrix.get('visual', {}).get('unsafe') else 'SAFE'}`")
-                st.markdown(f"• **Adult / NSFW Score**: `{matrix.get('visual', {}).get('adult', 0.0):.2f}`")
+                st.markdown(f"• **Adult / NSFW Score**: `{float(matrix.get('visual', {}).get('adult', 0.0)):.2f}`")
             with e_col2:
                 st.markdown(f"• **Audio Speech Transcript**: *\"{rep.get('audio_transcript', '') or 'No audio'}\"*")
-                st.markdown(f"• **Video Kinetic Violence**: `{matrix.get('video', {}).get('violence', 0.0):.2f}`")
-                st.markdown(f"• **Scam / Deceptive Risk**: `{matrix.get('advertisement_risks', {}).get('scam', 0.0):.2f}`")
+                st.markdown(f"• **Video Kinetic Violence**: `{float(matrix.get('video', {}).get('violence', 0.0)):.2f}`")
+                st.markdown(f"• **Scam / Deceptive Risk**: `{float(matrix.get('advertisement_risks', {}).get('scam', 0.0)):.2f}`")
             st.markdown("</div>", unsafe_allow_html=True)
             
             # BRAND OWNER WORKFLOW ACTIONS

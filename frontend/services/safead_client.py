@@ -5,11 +5,30 @@ SAFEAD_API_URL = os.getenv("SAFEAD_API_URL", "http://localhost:8002/api/v1")
 
 class SafeAdClient:
     @staticmethod
-    def moderate_ad(file, title, caption, pipeline_mode: str = "learned_rf"):
+    def check_colab_health(colab_url: str = None):
+        """
+        Pings the Google Colab GPU endpoint via the SafeAd backend to test connectivity and GPU status.
+        """
+        url = f"{SAFEAD_API_URL}/advertisements/colab_health"
+        try:
+            params = {}
+            if colab_url and colab_url.strip():
+                params["colab_url"] = colab_url.strip()
+            r = requests.get(url, params=params, timeout=6)
+            if r.status_code == 200:
+                return r.json(), None
+            return None, r.text
+        except Exception as e:
+            return None, str(e)
+
+    @staticmethod
+    def moderate_ad(file, title, caption, pipeline_mode: str = "learned_rf", colab_url: str = None):
         url = f"{SAFEAD_API_URL}/advertisements/check"
         try:
             files = {"file": (file.name, file.getvalue(), file.type)}
             data = {"title": title, "caption": caption, "user_id": 1, "pipeline_mode": pipeline_mode}
+            if colab_url and colab_url.strip():
+                data["colab_url"] = colab_url.strip()
             r = requests.post(url, files=files, data=data, timeout=600)
             if r.status_code == 200:
                 return r.json(), None
