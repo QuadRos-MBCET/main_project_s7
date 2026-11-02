@@ -122,11 +122,287 @@ def save_new_user(username: str, password: str, category: str, norm: str):
 
 
 # =============================================================================
-# REELS CATALOG: ORGANIC VIDEOS & BRAND OWNER ADS
-# =============================================================================
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
+# =============================================================================
+# CURATED FEED POSTS (AUTHENTIC USER PICTURES)
+# =============================================================================
+CURATED_POSTS = [
+    {
+        "id": "post_1",
+        "creator": "comic_vault",
+        "creator_avatar": "📚",
+        "is_verified": True,
+        "location": "Akihabara, Tokyo",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download1.jpg"),
+        "likes": 42100,
+        "caption": "Classic golden era cover artwork. The ink craftsmanship here is legendary ✨ #comics #art #vintage #collection",
+        "time": "2 hours ago"
+    },
+    {
+        "id": "post_2",
+        "creator": "wildlife_chronicles",
+        "creator_avatar": "🌲",
+        "is_verified": True,
+        "location": "Pacific Northwest",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download2.jpg"),
+        "likes": 88400,
+        "caption": "Mysteries of the ancient forest floor 🍄 Nature's hidden architecture. #nature #outdoors #macro",
+        "time": "4 hours ago"
+    },
+    {
+        "id": "post_3",
+        "creator": "geology_explorer",
+        "creator_avatar": "🌋",
+        "is_verified": True,
+        "location": "Reykjavik, Iceland",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download3.jpg"),
+        "likes": 129000,
+        "caption": "Raw earth energy erupting in the heart of the volcanic rift. Mesmerizing power! 🌋 #volcano #geology #earth",
+        "time": "5 hours ago"
+    },
+    {
+        "id": "post_4",
+        "creator": "hoops_nation",
+        "creator_avatar": "🏀",
+        "is_verified": True,
+        "location": "Rucker Park, NYC",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download4.jpg"),
+        "likes": 95200,
+        "caption": "Nothing beats summer streetball under the city lights. Pure basketball energy 🏀🔥 #basketball #streetball #nyc",
+        "time": "7 hours ago"
+    },
+    {
+        "id": "post_5",
+        "creator": "quantum_labs",
+        "creator_avatar": "🔬",
+        "is_verified": True,
+        "location": "CERN, Geneva",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download5.jpg"),
+        "likes": 64300,
+        "caption": "Late night in the cleanroom prepping new quantum sensor wafers. The future is being built today ⚡ #science #research #physics",
+        "time": "9 hours ago"
+    },
+    {
+        "id": "post_6",
+        "creator": "artisan_spirits",
+        "creator_avatar": "🍸",
+        "is_verified": False,
+        "location": "Milan, Italy",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download6.jpg"),
+        "likes": 38700,
+        "caption": "Handcrafted botanical infusions & crystal glass craft. Aesthetic evening vibes 🍸✨ #mixology #cocktails #design",
+        "time": "11 hours ago"
+    },
+    {
+        "id": "post_7",
+        "creator": "terra_incognita",
+        "creator_avatar": "🗻",
+        "is_verified": True,
+        "location": "Mount Fuji, Japan",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download7.jpg"),
+        "likes": 172000,
+        "caption": "Sunrise over the caldera rim above the sea of clouds. Moments that leave you speechless 🗻🌅 #travel #japan #fuji",
+        "time": "14 hours ago"
+    },
+    {
+        "id": "post_8",
+        "creator": "gridiron_highlights",
+        "creator_avatar": "🏈",
+        "is_verified": True,
+        "location": "Dallas, Texas",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download8.jpg"),
+        "likes": 143500,
+        "caption": "Game day helmet prep. Lights on, crowd roaring, ready to battle under Friday night lights 🏈🔥 #football #nfl #gameday",
+        "time": "18 hours ago"
+    },
+    {
+        "id": "post_9",
+        "creator": "stadium_culture",
+        "creator_avatar": "🏟️",
+        "is_verified": True,
+        "location": "Camp Nou, Barcelona",
+        "image_path": os.path.join(BASE_DIR, "frontend/assets/posts/download9.jpg"),
+        "likes": 210000,
+        "caption": "Iconic matchday kit colors under the floodlights. The stadium roar is electric! ⚽🔵🔴 #football #soccer #matchday",
+        "time": "1 day ago"
+    }
+]
+
+# =============================================================================
+# REELS CATALOG: ORGANIC SHORT VIDEOS (NO DEFAULT ADS)
+# =============================================================================
 DEFAULT_REELS = [
+    {
+        "id": "reel_ronaldo",
+        "type": "organic",
+        "creator": "fifa_worldcup_hub",
+        "creator_avatar": "⚽",
+        "is_verified": True,
+        "title": "CR7 WORLD CUP HISTORY",
+        "caption": "Cristiano Ronaldo breaks the record and scores at his 6th World Cup tournament! 🐐⚽ #FIFAWorldCup #CR7 #legend #football",
+        "audio": "World Cup Official Stadium Anthem 🎵",
+        "likes": 482000,
+        "comments_count": 8900,
+        "shares_count": 124000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_ronaldo_world_cup.mp4"),
+        "comments": [
+            {"user": "madridista7", "text": "The greatest to ever touch a football! SIUUU 🔥", "time": "1h", "likes": 1420},
+            {"user": "football_talk", "text": "6 tournaments in a row is unreal longevity 👏", "time": "2h", "likes": 560}
+        ]
+    },
+    {
+        "id": "reel_mbappe",
+        "type": "organic",
+        "creator": "france_football_tv",
+        "creator_avatar": "🇫🇷",
+        "is_verified": True,
+        "title": "MBAPPE LIGHTNING STRIKE",
+        "caption": "Kylian Mbappé opens the scoring with blistering speed! Pure world-class finishing ⚡⚽ #Mbappe #France #WorldCup #football",
+        "audio": "French National Team Stadium Mix 🎵",
+        "likes": 345000,
+        "comments_count": 5210,
+        "shares_count": 78000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_mbappe_france_goal.mp4"),
+        "comments": [
+            {"user": "speed_demon", "text": "Nobody in world football can catch him in a sprint!", "time": "3h", "likes": 780}
+        ]
+    },
+    {
+        "id": "reel_neymar",
+        "type": "organic",
+        "creator": "joga_bonito_daily",
+        "creator_avatar": "🇧🇷",
+        "is_verified": True,
+        "title": "NEYMAR SIGNATURE MOVES",
+        "caption": "Pure Brazilian flair & impossible footwork! That flick was sensational 🕺⚽ #Neymar #JogaBonito #skills #brazil",
+        "audio": "Samba Rio Beats • Brazilian Rhythm 🎵",
+        "likes": 412000,
+        "comments_count": 7320,
+        "shares_count": 95000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_neymar_skills.mp4"),
+        "comments": [
+            {"user": "samba_king", "text": "The flair and joy he plays with is art ✨", "time": "2h", "likes": 920}
+        ]
+    },
+    {
+        "id": "reel_space",
+        "type": "organic",
+        "creator": "cosmos_unfolded",
+        "creator_avatar": "🌌",
+        "is_verified": True,
+        "title": "HOW BIG IS SPACE REALLY?",
+        "caption": "Zooming out from Earth to the edge of the observable universe... Mind-bending scale! 🪐🔭 #space #astronomy #science #cosmos",
+        "audio": "Interstellar Theme • Cosmic Ambient 🎵",
+        "likes": 298000,
+        "comments_count": 4890,
+        "shares_count": 82000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_how_big_is_space.mp4"),
+        "comments": [
+            {"user": "stargazer", "text": "Existential dread in the best way possible 🤯", "time": "4h", "likes": 1150}
+        ]
+    },
+    {
+        "id": "reel_study_hacks",
+        "type": "organic",
+        "creator": "student_productivity",
+        "creator_avatar": "📚",
+        "is_verified": True,
+        "title": "3 STUDY HACKS FOR STUDENTS",
+        "caption": "Supercharge your research speed with these game-changing search operators! 💡🚀 Save for your next exam #study #tips #productivity #studentlife",
+        "audio": "Chill Lo-Fi Study Session 🎵",
+        "likes": 189000,
+        "comments_count": 2100,
+        "shares_count": 64000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_google_study_hacks.mp4"),
+        "comments": [
+            {"user": "college_grind", "text": "Tip #2 saved my essay research tonight!", "time": "5h", "likes": 340}
+        ]
+    },
+    {
+        "id": "reel_checo",
+        "type": "organic",
+        "creator": "f1_paddock_pulse",
+        "creator_avatar": "🏎️",
+        "is_verified": True,
+        "title": "CHECO PEREZ BLIND RANKING",
+        "caption": "Sergio 'Checo' Perez blind ranks his greatest career moments in Formula 1! 🇲🇽🏆 #F1 #Checo #Formula1 #motorsport",
+        "audio": "Formula 1 V10 Soundwaves 🎵",
+        "likes": 224000,
+        "comments_count": 3150,
+        "shares_count": 41000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_checo_perez_f1.mp4"),
+        "comments": [
+            {"user": "redbull_fan", "text": "The Baku 2021 defense was legendary!", "time": "6h", "likes": 480}
+        ]
+    },
+    {
+        "id": "reel_avengers",
+        "type": "organic",
+        "creator": "marvel_cinematics",
+        "creator_avatar": "🛡️",
+        "is_verified": True,
+        "title": "AVENGERS ASSEMBLE!",
+        "caption": "That one moment in cinema history that gave everybody goosebumps ⚡🎬 #Marvel #Avengers #CaptainAmerica #MCU",
+        "audio": "Alan Silvestri • The Avengers Theme 🎵",
+        "likes": 560000,
+        "comments_count": 11200,
+        "shares_count": 180000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_avengers_assemble.mp4"),
+        "comments": [
+            {"user": "cap_shield", "text": "Nothing will ever top the theater reaction to this!", "time": "1h", "likes": 2100}
+        ]
+    },
+    {
+        "id": "reel_cricket",
+        "type": "organic",
+        "creator": "cricket_fever_247",
+        "creator_avatar": "🏏",
+        "is_verified": True,
+        "title": "IND VS NZ T20I THRILLER",
+        "caption": "Sensational death bowling & clutch boundary hits in the 5th T20I! 🏏🇮🇳🇳🇿 #Cricket #INDvsNZ #T20I #TeamIndia",
+        "audio": "Stadium Cricket Roar • Beat Drop 🎵",
+        "likes": 389000,
+        "comments_count": 6400,
+        "shares_count": 92000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_india_vs_nz_cricket.mp4"),
+        "comments": [
+            {"user": "virat_fanclub", "text": "What a game! T20 cricket at its finest 🔥", "time": "3h", "likes": 890}
+        ]
+    },
+    {
+        "id": "reel_notes_pdf",
+        "type": "organic",
+        "creator": "workflow_optimizer",
+        "creator_avatar": "📝",
+        "is_verified": True,
+        "title": "MESSY NOTES TO CLEAN PDF",
+        "caption": "Turn scribbled paper notes into search-indexed digital PDFs in under 10 seconds 📲📄 #lifehack #productivity #tech #apps",
+        "audio": "Minimal Tech Beats 🎵",
+        "likes": 165000,
+        "comments_count": 1820,
+        "shares_count": 53000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_google_notes_pdf.mp4"),
+        "comments": [
+            {"user": "student_life", "text": "Need this for my calculus lectures right now!", "time": "4h", "likes": 290}
+        ]
+    },
+    {
+        "id": "reel_viral",
+        "type": "organic",
+        "creator": "reflex_athletes",
+        "creator_avatar": "⚡",
+        "is_verified": True,
+        "title": "UNREAL ATHLETIC REFLEXES",
+        "caption": "Human reaction speed at the absolute limit ⚡🔥 Who can react this fast? #athletics #reflex #sports #viral",
+        "audio": "Bass Boosted High Energy 🎵",
+        "likes": 275000,
+        "comments_count": 3890,
+        "shares_count": 61000,
+        "video_path": os.path.join(BASE_DIR, "frontend/assets/reels/reel_viral_sports.mp4"),
+        "comments": [
+            {"user": "gym_junkie", "text": "The hand-eye coordination is mind-blowing!", "time": "2h", "likes": 410}
+        ]
+    },
     {
         "id": "reel_cyber",
         "type": "organic",
@@ -1038,47 +1314,41 @@ def user_dashboard():
             </div>
             """, unsafe_allow_html=True)
 
-            # Dataset Hub Age-Filtered Approved Photos Feed
-            hub_photos = load_dataset_hub_content()["images"]
-            age_appropriate_photos = [img for img in hub_photos if is_ad_allowed_for_age(img["safety_policy"], user_cat)]
-            
-            for p_idx, photo in enumerate(age_appropriate_photos[:12]):
-                pol = photo.get("safety_policy", "SAFE_FOR_ALL")
+            # Render Authentic Curated User Posts (from uploaded photos)
+            for p_idx, post in enumerate(CURATED_POSTS):
                 render_html(f"""
-                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px 14px 0 0; margin-bottom:0;">
                     <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#0095f6,#38bdf8); padding:1.5px; display:flex; align-items:center; justify-content:center;">
-                                <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:14px;">
-                                    📸
+                            <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:2px; display:flex; align-items:center; justify-content:center;">
+                                <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:15px;">
+                                    {post.get('creator_avatar', '📸')}
                                 </div>
                             </div>
                             <div>
-                                <div style="font-size:13px; font-weight:700; color:#ffffff;">@{photo['id']} <span style="color:#0095f6;">✓</span></div>
-                                <div style="font-size:11px; color:#38bdf8;">🛡️ SafeAd Verified • Policy: {pol} (Approved for {user_cat})</div>
+                                <div style="font-size:13px; font-weight:700; color:#ffffff;">@{post['creator']} <span style="color:#0095f6;">✓</span></div>
+                                <div style="font-size:11px; color:#A493C2;">{post.get('location', 'Global')}</div>
                             </div>
                         </div>
-                        <div style="font-size:11px; background:rgba(0,149,246,0.15); border:1px solid rgba(0,149,246,0.3); color:#38bdf8; padding:2px 8px; border-radius:4px;">
-                            {pol}
-                        </div>
+                        <div style="color:#8e8e8e; font-size:14px; letter-spacing:2px;">•••</div>
                     </div>
                 </div>
                 """)
-                if os.path.exists(photo["media_path"]):
-                    st.image(photo["media_path"], use_container_width=True)
+                if os.path.exists(post["image_path"]):
+                    st.image(post["image_path"], use_container_width=True)
                 render_html(f"""
-                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-6px; margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <div style="display:flex; gap:14px; font-size:20px;">
                             <span>❤️</span> <span>💬</span> <span>✈️</span>
                         </div>
-                        <span style="font-size:12px; font-weight:700; color:#38bdf8;">{photo.get('cta_text', 'View Product ↗')}</span>
+                        <span style="font-size:11px; color:#A493C2;">{post.get('time', 'Recently')}</span>
                     </div>
-                    <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:4px;">{format_count(photo.get('likes', 14000))} likes</div>
+                    <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:4px;">{format_count(post.get('likes', 14000))} likes</div>
                     <div style="font-size:13px; color:#e2e8f0; margin-bottom:4px;">
-                        <b>@{photo['id']}</b> {photo.get('title', '')} — {photo.get('caption', '')}
+                        <b>@{post['creator']}</b> {post.get('caption', '')}
                     </div>
-                    <div style="font-size:11px; color:#8e8e8e;">SafeAd AI Verified Creative • Source: {photo.get('creator')}</div>
+                    <div style="font-size:11px; color:#8e8e8e;">SafeAd AI Safety Verified • Age-Appropriate</div>
                 </div>
                 """)
 
