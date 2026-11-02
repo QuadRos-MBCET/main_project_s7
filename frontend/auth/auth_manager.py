@@ -225,17 +225,30 @@ def login_page():
     """)
 
     c1, c2, c3 = st.columns(3, gap="large")
+    current_role = st.session_state.get("role")
+
+    # Dynamic styling helper for cards based on active role
+    def get_card_border(is_active):
+        if is_active:
+            return "border-color: rgba(99, 102, 241, 0.55); box-shadow: 0 0 24px rgba(79, 70, 229, 0.25);"
+        return "border-color: rgba(255, 255, 255, 0.08); box-shadow: none;"
+
+    def get_badge_markup(label, is_active):
+        if is_active:
+            return f'''<span style="font-size:10px; font-weight:700; color:#10B981; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); padding:2px 8px; border-radius:9999px; letter-spacing:0.06em; text-transform:uppercase;">● ACTIVE ({label})</span>'''
+        return f'''<span style="font-size:11px; font-weight:700; color:#818CF8; letter-spacing:0.06em; text-transform:uppercase;">{label}</span>'''
 
     # CARD 1: User / Consumer
     with c1:
+        is_active_1 = (current_role == "USER")
         render_html(f"""
-        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between; {get_card_border(is_active_1)}">
             <div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                     <div style="width:40px; height:40px; border-radius:10px; background:rgba(79,70,229,0.18); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center;">
                         {render_svg_icon("user", size=20, color="#818CF8")}
                     </div>
-                    <span style="font-size:11px; font-weight:700; color:#64748B; letter-spacing:0.06em; text-transform:uppercase;">End-User</span>
+                    {get_badge_markup("End-User", is_active_1)}
                 </div>
                 <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif; margin-bottom: 8px;">
                     User Platform
@@ -260,20 +273,21 @@ def login_page():
             </div>
         </div>
         """)
-        if st.button("Access User Experience", key="btn_user", use_container_width=True):
+        if st.button("Access User Experience", key="btn_user", type="primary", use_container_width=True):
             st.session_state["role"] = "USER"
             st.rerun()
 
     # CARD 2: Advertiser / Brand Owner
     with c2:
+        is_active_2 = (current_role == "ADVERTISEMENT_OWNER")
         render_html(f"""
-        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between; border-color: rgba(99,102,241,0.45); box-shadow: 0 0 24px rgba(79,70,229,0.18);">
+        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between; {get_card_border(is_active_2)}">
             <div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                    <div style="width:40px; height:40px; border-radius:10px; background:rgba(79,70,229,0.25); border:1px solid rgba(99,102,241,0.5); display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(79,70,229,0.4);">
+                    <div style="width:40px; height:40px; border-radius:10px; background:rgba(79,70,229,0.18); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center;">
                         {render_svg_icon("cpu", size=20, color="#818CF8")}
                     </div>
-                    <span style="font-size:11px; font-weight:700; color:#818CF8; letter-spacing:0.06em; text-transform:uppercase;">Primary Suite</span>
+                    {get_badge_markup("Advertiser", is_active_2)}
                 </div>
                 <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif; margin-bottom: 8px;">
                     Advertiser Studio
@@ -304,14 +318,15 @@ def login_page():
 
     # CARD 3: Compliance Admin
     with c3:
+        is_active_3 = (current_role == "ADMIN")
         render_html(f"""
-        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="rf-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between; {get_card_border(is_active_3)}">
             <div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                    <div style="width:40px; height:40px; border-radius:10px; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center;">
-                        {render_svg_icon("shield", size=20, color="#60A5FA")}
+                    <div style="width:40px; height:40px; border-radius:10px; background:rgba(79,70,229,0.18); border:1px solid rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center;">
+                        {render_svg_icon("shield", size=20, color="#818CF8")}
                     </div>
-                    <span style="font-size:11px; font-weight:700; color:#64748B; letter-spacing:0.06em; text-transform:uppercase;">Governance</span>
+                    {get_badge_markup("Governance", is_active_3)}
                 </div>
                 <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif; margin-bottom: 8px;">
                     Compliance Admin
@@ -336,6 +351,6 @@ def login_page():
             </div>
         </div>
         """)
-        if st.button("Launch Admin Desk", key="btn_admin", use_container_width=True):
+        if st.button("Launch Admin Desk", key="btn_admin", type="primary", use_container_width=True):
             st.session_state["role"] = "ADMIN"
             st.rerun()
