@@ -23,7 +23,7 @@ def admin_dashboard():
             Audit campaign uncertainties, adjudicate policy disputes, and monitor compliance logs.
         </p>
     </div>
-    ''', unsafe_allow_html=True)
+    ''')
     
     # Session state for review storage
     if "pending_human_reviews" not in st.session_state:
@@ -76,7 +76,7 @@ def admin_dashboard():
             <div style="font-size:12px; color:#A493C2;">Real-time review stream</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     if "admin_action_msg" in st.session_state and st.session_state["admin_action_msg"]:
         msg = st.session_state["admin_action_msg"]
@@ -100,7 +100,7 @@ def admin_dashboard():
                     There are currently no advertisements awaiting human moderator intervention. AI decision confidence meets or exceeds production policy thresholds.
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
+            ''')
         else:
             st.markdown(f"### Pending Review Queue ({len(pending_cases)} case(s))")
             
@@ -125,7 +125,7 @@ def admin_dashboard():
                         <div class="rf-table-row"><span style="color:#A493C2;">Media Type</span><span style="color:#6C5CE7; font-weight:700;">{c['media_type'].upper()}</span></div>
                         <div class="rf-table-row" style="border-bottom:none;"><span style="color:#A493C2;">Submitted</span><span style="color:#A493C2;">{c.get('submitted_at', '')}</span></div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                     
                     if c.get("file_path") and os.path.exists(c["file_path"]):
                         if c["media_type"] == "image":
@@ -147,7 +147,7 @@ def admin_dashboard():
                         <div class="rf-table-row"><span style="color:#A493C2;">Extracted OCR Text</span><span style="color:#FFFFFF;">"{c.get('ocr_text', 'None detected')}"</span></div>
                         <div class="rf-table-row" style="border-bottom:none;"><span style="color:#A493C2;">Speech Audio</span><span style="color:#FFFFFF;">"{c.get('audio_transcript', 'No speech')}"</span></div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
 
                     st.markdown(f"**AI Reasoning Explanation**:\n> *{c.get('explanation', '')}*")
                     

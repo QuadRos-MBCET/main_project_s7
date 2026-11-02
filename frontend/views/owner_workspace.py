@@ -82,7 +82,7 @@ def owner_dashboard():
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
         
         ad_title = st.text_input("Creative Title", placeholder="e.g. Organic Apple Juice / Casino Slot Promo / Paisa Double Scheme")
         ad_caption = st.text_area("Ad Copy / Caption", placeholder="e.g. Double your money guaranteed / Fresh organic apples")
@@ -102,7 +102,7 @@ def owner_dashboard():
                 <div class="rf-table-row"><span style="color:#A493C2;">Payload Size</span><span style="color:#E2D9F3;">{file_size_kb} KB</span></div>
                 <div class="rf-table-row" style="border-bottom:none;"><span style="color:#A493C2;">Timestamp</span><span style="color:#A493C2;">{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</span></div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
             
             # PRIVACY REQUIREMENT: Do NOT render media player or image on Brand Owner page
             
@@ -313,11 +313,11 @@ def owner_dashboard():
                     <div style="width: 52px;"></div>
                 </div>
                 <div class="rf-browser-body">
-            """, unsafe_allow_html=True)
+            """)
 
             # Circular Risk Gauge with RiteFlow Theme
             render_risk_gauge(risk_score, label="Multimodal Threat Index")
-            st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+            render_html("<div style='height:12px;'></div>")
 
             # Dual-Encoded Verdict Badge (Icon + Text + Tint)
             if classification == "UNSAFE_FOR_ALL" or action == "REJECT":
@@ -410,7 +410,7 @@ def owner_dashboard():
                     <span style="color:#E2D9F3; font-weight:600;">{float(matrix.get('advertisement_risks', {}).get('scam', 0.0)):.2f}</span>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             # Close Browser Body & Frame
             st.markdown("</div></div>", unsafe_allow_html=True)
@@ -549,4 +549,4 @@ def owner_dashboard():
                     </p>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)

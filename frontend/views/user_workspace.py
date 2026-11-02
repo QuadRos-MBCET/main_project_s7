@@ -48,13 +48,9 @@ annotate_live_frame = sooraj_classifier.annotate_live_frame
 Realtime30FPSVisionEngine = sooraj_classifier.Realtime30FPSVisionEngine
 
 from frontend.services.safead_client import SafeAdClient
-from frontend.styles.safead_theme import render_safead_brand, render_stories_bar, render_svg_icon
+from frontend.styles.safead_theme import render_safead_brand, render_stories_bar, render_svg_icon, render_html
 import sqlite3
 
-def render_html(html_str: str):
-    """Safely renders HTML without Markdown interpreting indented lines as code blocks."""
-    cleaned = "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
-    st.markdown(cleaned, unsafe_allow_html=True)
 
 # Persistent User Database for Account Registrations
 USER_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../safead_users.db"))
@@ -1002,7 +998,7 @@ def user_dashboard():
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # Top Tabs: Instagram Home Page vs Reels Tab
     c_tab1, c_tab2, c_tab3 = st.columns([1, 1, 0.8])
@@ -1152,7 +1148,7 @@ def user_dashboard():
                         </div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
                 ad_vid = top_ad.get("video_path")
                 if ad_vid and os.path.exists(ad_vid):
@@ -1370,7 +1366,7 @@ def user_dashboard():
             # INTERACTIVE COMMENTS DRAWER
             # -----------------------------------------------------------------
             if st.session_state["show_comments_for"] == reel_id:
-                st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+                render_html("<div style='height:12px;'></div>")
                 st.markdown("""
                 <div style="background:#181818; border:1px solid #262626; border-radius:12px; padding:14px; margin-bottom:12px;">
                     <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:10px; border-bottom:1px solid #262626; padding-bottom:6px;">
