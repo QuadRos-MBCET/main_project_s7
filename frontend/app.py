@@ -84,11 +84,11 @@ col_logo, col_nav, col_action = st.columns([1.5, 2.5, 1.2], vertical_alignment="
 with col_logo:
     st.markdown("""
     <div style="display:flex; align-items:center; gap:10px; padding:2px 0;">
-        <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(108,92,231,0.5);">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+        <div style="width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg, #4F46E5 0%, #818CF8 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 0 16px rgba(79,70,229,0.55);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
         </div>
         <span style="font-family:'Outfit', sans-serif; font-size:20px; font-weight:800; letter-spacing:-0.03em; color:#FFFFFF;">
-            Safe<span style="color:#A29BFE;">Ad</span>
+            Safe<span style="color:#C7D2FE;">Ad</span>
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -122,9 +122,9 @@ with col_action:
 
     st.markdown(f"""
     <div style="display:flex; justify-content:flex-end; align-items:center;">
-        <div style="display:inline-flex; align-items:center; gap:7px; background:#151D30; border:1px solid rgba(108,92,231,0.25); padding:6px 14px; border-radius:9999px;">
+        <div style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); padding:7px 18px; border-radius:9999px; box-shadow:0 0 16px rgba(79,70,229,0.5); cursor:pointer;">
             <span style="width:6px; height:6px; border-radius:50%; background:{dot_color}; box-shadow:0 0 6px {dot_color};"></span>
-            <span style="font-size:12px; font-weight:600; color:#FFFFFF;">{btn_text}</span>
+            <span style="font-size:12px; font-weight:700; color:#FFFFFF;">{btn_text}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
