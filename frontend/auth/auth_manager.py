@@ -190,7 +190,6 @@ def login_page():
         """, unsafe_allow_html=True)
         if st.button("Enter User Platform →", key="btn_user", use_container_width=True, type="secondary"):
             st.session_state["role"] = "USER"
-            st.session_state["global_role_selector"] = "User Platform"
             st.rerun()
 
     # Card 2: Advertiser Studio
@@ -226,7 +225,6 @@ def login_page():
         """, unsafe_allow_html=True)
         if st.button("Launch Advertiser Studio →", key="btn_owner", use_container_width=True, type="primary"):
             st.session_state["role"] = "ADVERTISEMENT_OWNER"
-            st.session_state["global_role_selector"] = "Advertiser Studio"
             st.rerun()
 
     # Card 3: Compliance & Admin Review
@@ -262,5 +260,4 @@ def login_page():
         """, unsafe_allow_html=True)
         if st.button("Open Compliance Desk →", key="btn_admin", use_container_width=True, type="secondary"):
             st.session_state["role"] = "ADMIN"
-            st.session_state["global_role_selector"] = "Compliance Admin"
             st.rerun()

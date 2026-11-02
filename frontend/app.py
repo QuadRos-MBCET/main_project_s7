@@ -68,8 +68,13 @@ def on_role_selector_change():
     selected_label = st.session_state.get("global_role_selector")
     if selected_label in ROLE_MAP:
         st.session_state["role"] = ROLE_MAP[selected_label]
+    else:
+        st.session_state["role"] = None
 
-current_role_label = REV_ROLE_MAP.get(st.session_state["role"], None)
+# Synchronize segmented control state with current role BEFORE widget is instantiated
+expected_role_label = REV_ROLE_MAP.get(st.session_state.get("role"), None)
+if "global_role_selector" in st.session_state and st.session_state["global_role_selector"] != expected_role_label:
+    st.session_state["global_role_selector"] = expected_role_label
 
 # -----------------------------------------------------------------------------
 # 2. PERSISTENT RITEFLOW TOP BAR WITH ROLE SWITCHER
@@ -93,7 +98,7 @@ with col_nav:
     selected_role_label = st.segmented_control(
         label="Role Switcher Navigation",
         options=role_options,
-        default=current_role_label,
+        default=expected_role_label,
         key="global_role_selector",
         label_visibility="collapsed",
         on_change=on_role_selector_change
@@ -180,7 +185,6 @@ with st.sidebar:
             st.session_state["user_auth_state"] = "LOGIN"
             st.session_state["logged_in_username"] = None
             st.session_state["role"] = None
-            st.session_state["global_role_selector"] = None
             st.rerun()
 
 # -----------------------------------------------------------------------------
