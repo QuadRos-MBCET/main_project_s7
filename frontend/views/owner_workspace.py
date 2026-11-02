@@ -67,6 +67,7 @@ def owner_dashboard():
             st.success(msg)
         st.session_state["owner_action_msg"] = None
         
+    active_pipeline_mode = st.session_state.get("pipeline_mode", "strategy_d")
     col_up, col_res = st.columns([1, 1.25], gap="large")
     
     with col_up:
@@ -337,7 +338,7 @@ def owner_dashboard():
                 st.markdown("<div class='badge-safe'>✓ &nbsp;SAFE FOR ALL — APPROVED FOR BROADCAST</div>", unsafe_allow_html=True)
                 
             # Engine Stage and Mode indicator
-            mode_badge = str(rep.get("pipeline_mode", active_pipeline_mode)).upper()
+            mode_badge = str(rep.get("pipeline_mode") or active_pipeline_mode or "strategy_d").upper()
             st.caption(f"🔧 **Moderation Engine**: `{mode_badge}` | **Policy Stage**: `{rep.get('policy_stage', 'Standard Fusion')}`")
 
             # Metrics Row (RiteFlow Cards)
