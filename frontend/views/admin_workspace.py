@@ -73,13 +73,20 @@ def admin_dashboard():
     reviewed_cases = st.session_state["reviewed_cases"]
 
     try:
-        from frontend.styles.instagram_theme import render_instagram_logo
-        render_instagram_logo(subtitle="SAFETY DESK")
+        from frontend.styles.safead_theme import render_safead_brand, render_svg_icon
+        render_safead_brand(subtitle="GOVERNANCE DESK • HITL AUDIT")
     except Exception:
         pass
 
-    st.header("🛡️ SAFEAD AI — HUMAN REVIEW DASHBOARD")
-    st.caption("Review advertisements awaiting human moderator decision")
+    st.markdown('''
+    <div style="margin-bottom: 20px;">
+        <div class="safead-eyebrow">TRUST & SAFETY GOVERNANCE</div>
+        <div class="safead-title">
+            Human-in-the-Loop <span class="safead-highlight">Moderation Desk</span>
+        </div>
+        <p style="color:#C2BAD8; font-size:14px; margin:0 0 16px 0;">Audit campaign uncertainties, adjudicate policy disputes, and monitor compliance logs.</p>
+    </div>
+    ''', unsafe_allow_html=True)
     
     if "admin_action_msg" in st.session_state and st.session_state["admin_action_msg"]:
         msg = st.session_state["admin_action_msg"]
@@ -93,7 +100,15 @@ def admin_dashboard():
     
     with tab1:
         if not pending_cases:
-            st.success("🎉 **No Pending Reviews**: All submitted cases have been reviewed! There are no advertisements in the pending review queue.")
+            st.markdown('''
+            <div class="safead-card" style="text-align:center; padding:36px 20px;">
+                <div style="width:48px; height:48px; border-radius:50%; background:rgba(45,226,192,0.12); border:1px solid rgba(45,226,192,0.3); display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
+                    <span style="color:#2DE2C0; font-size:24px;">✓</span>
+                </div>
+                <div style="font-size:18px; font-weight:700; color:#FFFFFF; margin-bottom:6px;">Queue Clear — All Campaigns Audited</div>
+                <div style="font-size:13px; color:#C2BAD8;">There are currently no advertisements awaiting human moderator intervention.</div>
+            </div>
+            ''', unsafe_allow_html=True)
         else:
             st.markdown(f"### Pending Review Queue ({len(pending_cases)} case(s))")
             

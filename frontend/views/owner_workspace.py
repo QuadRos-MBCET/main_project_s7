@@ -108,12 +108,20 @@ def owner_dashboard():
     """, unsafe_allow_html=True)
     
     try:
-        from frontend.styles.instagram_theme import render_instagram_logo
-        render_instagram_logo(subtitle="CREATOR STUDIO")
+        from frontend.styles.safead_theme import render_safead_brand, render_risk_gauge, render_svg_icon
+        render_safead_brand(subtitle="CREATOR STUDIO • PRE-FLIGHT AUDIT")
     except Exception:
         pass
         
-    st.header("📢 Brand Owner Advertisement Safety Portal")
+    st.markdown('''
+    <div style="margin-bottom: 20px;">
+        <div class="safead-eyebrow">ENTERPRISE CAMPAIGN SAFETY</div>
+        <div class="safead-title">
+            Creative <span class="safead-highlight">Pre-Flight Audit</span>
+        </div>
+        <p style="color:#C2BAD8; font-size:14px; margin:0 0 16px 0;">Pre-screen ad creative assets across multimodal threat detectors before deployment.</p>
+    </div>
+    ''', unsafe_allow_html=True)
     
     if "owner_action_msg" in st.session_state and st.session_state["owner_action_msg"]:
         msg = st.session_state["owner_action_msg"]
@@ -341,17 +349,21 @@ def owner_dashboard():
                     "⚠️ Google Colab GPU was offline or unreachable. Automatically executed local Learned Random Forest fallback."
                 )
 
-            # Prominent Classification Badge Display
+            # Circular Risk Gauge (Quantexa Style)
+            render_risk_gauge(risk_score, label="Multimodal Threat Index")
+            st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+
+            # Dual-Encoded Verdict Badge (Icon + Text + Tint)
             if classification == "UNSAFE_FOR_ALL" or action == "REJECT":
-                st.markdown("<div class='badge-reject'>UNSAFE FOR ALL — REJECT DO NOT PUBLISH</div>", unsafe_allow_html=True)
+                st.markdown("<div class='badge-danger'>✕ &nbsp;UNSAFE FOR ALL — REJECT (DO NOT PUBLISH)</div>", unsafe_allow_html=True)
             elif classification == "SAFE_18_PLUS":
-                st.markdown("<div class='badge-18'>18+ — AGE RESTRICTED</div>", unsafe_allow_html=True)
+                st.markdown("<div class='badge-warning'>⚠ &nbsp;AGE RESTRICTED — 18+ AUDIENCE ONLY</div>", unsafe_allow_html=True)
             elif classification == "SAFE_14_PLUS":
-                st.markdown("<div class='badge-14'>14+ — AGE RESTRICTED</div>", unsafe_allow_html=True)
+                st.markdown("<div class='badge-14'>ℹ &nbsp;AGE RESTRICTED — 14+ AUDIENCE ONLY</div>", unsafe_allow_html=True)
             elif classification == "REQUIRES_HUMAN_REVIEW":
-                st.markdown("<div class='badge-hitl'>REQUIRES HUMAN REVIEW</div>", unsafe_allow_html=True)
+                st.markdown("<div class='badge-hitl'>⚑ &nbsp;HUMAN REVIEW REQUIRED (UNCERTAINTY GATE)</div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='badge-approve'>SAFE FOR ALL — APPROVED</div>", unsafe_allow_html=True)
+                st.markdown("<div class='badge-safe'>✓ &nbsp;SAFE FOR ALL — APPROVED FOR BROADCAST</div>", unsafe_allow_html=True)
                 
             # Engine Stage and Mode indicator
             mode_badge = str(rep.get("pipeline_mode", active_pipeline_mode)).upper()

@@ -48,7 +48,7 @@ annotate_live_frame = sooraj_classifier.annotate_live_frame
 Realtime30FPSVisionEngine = sooraj_classifier.Realtime30FPSVisionEngine
 
 from frontend.services.safead_client import SafeAdClient
-from frontend.styles.instagram_theme import render_instagram_logo, render_stories_bar
+from frontend.styles.safead_theme import render_safead_brand, render_stories_bar, render_svg_icon
 import sqlite3
 
 def render_html(html_str: str):
@@ -544,12 +544,11 @@ def user_dashboard():
         with c_center:
             st.markdown("""
             <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-family:'Grand Hotel', cursive, -apple-system, sans-serif; font-size:52px; background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1.2;">
-                    Instagram
+                <div class="safead-eyebrow">IDENTITY & ACCESS MANAGEMENT</div>
+                <div class="safead-title">
+                    Safe<span class="safead-highlight">Ad</span> User Portal
                 </div>
-                <div style="display:inline-block; background:rgba(0,149,246,0.15); border:1px solid rgba(0,149,246,0.4); color:#0095f6; font-size:11px; font-weight:800; padding:3px 12px; border-radius:6px; letter-spacing:1px; margin-top:6px;">
-                    SAFEAD AI USER PORTAL
-                </div>
+                <p style="color:#C2BAD8; font-size:14px; margin-top:6px;">Sign in to access your age-verified social media feed</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -608,18 +607,35 @@ def user_dashboard():
     elif st.session_state["user_auth_state"] == "SIGNUP":
         st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
-        render_instagram_logo(subtitle="CREATE ACCOUNT & VERIFY KYC")
+        render_safead_brand(subtitle="IDENTITY ONBOARDING & KYC")
 
-        # Top Card with Only Username and Password (+ Confirm Password) Textboxes & Sign In Button
+        # 3-STEP KYC STEPPER (QUANTEXA STYLE)
         st.markdown("""
-        <div style="background:linear-gradient(135deg, #181818 0%, #1a1a1a 100%); border:1px solid #262626; border-radius:14px; padding:20px 24px; margin-bottom:20px;">
+        <div class="safead-stepper">
+            <div class="safead-step completed">
+                <div class="safead-step-number">1</div>
+                <span>Account Credentials</span>
+            </div>
+            <div class="safead-step-divider"></div>
+            <div class="safead-step active">
+                <div class="safead-step-number">2</div>
+                <span>Official ID Scan & OCR</span>
+            </div>
+            <div class="safead-step-divider"></div>
+            <div class="safead-step active">
+                <div class="safead-step-number">3</div>
+                <span>Live Biometrics (ArcFace)</span>
+            </div>
+        </div>
+        
+        <div class="safead-card" style="padding:22px 26px; margin-bottom:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
-                    <h3 style="margin:0; font-size:18px; color:#ffffff; font-weight:700;">👤 Account Registration</h3>
-                    <p style="margin:0; font-size:12px; color:#8e8e8e;">Create your login credentials. Complete the ID & live biometric verification below to activate your account.</p>
+                    <div class="safead-eyebrow">STEP 1 OF 3 • PROFILE SETUP</div>
+                    <div style="font-size:18px; color:#FFFFFF; font-weight:700;">Account Credentials</div>
+                    <p style="margin:4px 0 0 0; font-size:13px; color:#C2BAD8;">Create your user credentials. Complete steps 2 & 3 below to verify identity.</p>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
 
         col_reg1, col_reg2, col_reg3 = st.columns([1.5, 1.5, 1.5])
         with col_reg1:
@@ -961,7 +977,7 @@ def user_dashboard():
     user_norm = st.session_state.get("verified_age_norm", "UNDER_14")
 
     # App Header with User Greeting and Verified Badge
-    render_instagram_logo(subtitle="AURA SOCIAL")
+    render_safead_brand(subtitle="AGE-VERIFIED SOCIAL FEED")
 
     # User Profile Info & Navigation Sub-Bar
     st.markdown(f"""
@@ -989,12 +1005,12 @@ def user_dashboard():
     # Top Tabs: Instagram Home Page vs Reels Tab
     c_tab1, c_tab2, c_tab3 = st.columns([1, 1, 0.8])
     with c_tab1:
-        if st.button("🏠 Instagram Home", key="tab_home_btn", use_container_width=True,
+        if st.button("📰 Curated Content Feed", key="tab_home_btn", use_container_width=True,
                      type="primary" if st.session_state["user_subtab"] == "feed" else "secondary"):
             st.session_state["user_subtab"] = "feed"
             st.rerun()
     with c_tab2:
-        if st.button("🎥 Reels Tab", key="tab_reels_btn", use_container_width=True,
+        if st.button("🎥 Short-Form Reels", key="tab_reels_btn", use_container_width=True,
                      type="primary" if st.session_state["user_subtab"] == "reels" else "secondary"):
             st.session_state["user_subtab"] = "reels"
             st.rerun()
