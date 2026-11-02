@@ -41,17 +41,17 @@ except ImportError:
     from views.admin_workspace import admin_dashboard
 
 st.set_page_config(
-    page_title="SafeAd AI • Multimodal Decision Intelligence",
-    page_icon="🛡️",
+    page_title="SafeAd AI • Decision Intelligence Platform",
+    page_icon="🔮",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Inject Quantexa-Inspired Enterprise Design System
+# Inject RiteFlow Dark SaaS Design System
 inject_safead_styles()
 
 # -----------------------------------------------------------------------------
-# 1. SESSION STATE INITIALIZATION
+# 1. SESSION STATE INITIALIZATION & ROLE MAPPINGS
 # -----------------------------------------------------------------------------
 if "role" not in st.session_state:
     st.session_state["role"] = None
@@ -69,33 +69,29 @@ def on_role_selector_change():
     if selected_label in ROLE_MAP:
         st.session_state["role"] = ROLE_MAP[selected_label]
 
-# Sync selector key with current role state
 current_role_label = REV_ROLE_MAP.get(st.session_state["role"], None)
 
 # -----------------------------------------------------------------------------
-# 2. PERSISTENT ENTERPRISE TOP BAR WITH ROLE SWITCHER
+# 2. PERSISTENT RITEFLOW TOP BAR WITH ROLE SWITCHER
 # -----------------------------------------------------------------------------
-col_brand, col_nav, col_profile = st.columns([1.6, 2.4, 1.2], vertical_alignment="center")
+col_logo, col_nav, col_action = st.columns([1.5, 2.5, 1.2], vertical_alignment="center")
 
-with col_brand:
+with col_logo:
     st.markdown("""
-    <div style="display:flex; align-items:center; gap:10px; padding:4px 0;">
-        <span style="font-family:'Manrope', sans-serif; font-size:22px; font-weight:800; letter-spacing:-0.03em; color:#FFFFFF;">
-            Safe<span style="color:#2DE2C0;">Ad</span>
-        </span>
-        <span style="background:rgba(45, 226, 192, 0.12); border:1px solid rgba(45, 226, 192, 0.35); color:#2DE2C0; font-size:9px; font-weight:800; padding:2px 7px; border-radius:5px; letter-spacing:0.12em; text-transform:uppercase;">
-            ENTERPRISE
+    <div style="display:flex; align-items:center; gap:10px; padding:2px 0;">
+        <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(108,92,231,0.5);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+        </div>
+        <span style="font-family:'Outfit', sans-serif; font-size:20px; font-weight:800; letter-spacing:-0.03em; color:#FFFFFF;">
+            Safe<span style="color:#A29BFE;">Ad</span>
         </span>
     </div>
     """, unsafe_allow_html=True)
 
 with col_nav:
-    # Segmented control for instant switching across all three platform roles
     role_options = ["User Platform", "Advertiser Studio", "Compliance Admin"]
-    default_idx = role_options.index(current_role_label) if current_role_label in role_options else None
-    
     selected_role_label = st.segmented_control(
-        label="Platform Role Switcher",
+        label="Role Switcher Navigation",
         options=role_options,
         default=current_role_label,
         key="global_role_selector",
@@ -103,43 +99,43 @@ with col_nav:
         on_change=on_role_selector_change
     )
 
-with col_profile:
+with col_action:
     role = st.session_state["role"]
     if role == "USER":
-        uname = st.session_state.get("logged_in_username", "guest_user") if st.session_state.get("user_auth_state") == "AUTHENTICATED" else "Visitor"
-        badge_color = "#2DE2C0"
-        badge_text = f"@{uname}"
+        uname = st.session_state.get("logged_in_username", "Guest") if st.session_state.get("user_auth_state") == "AUTHENTICATED" else "Visitor"
+        btn_text = f"@{uname}"
+        dot_color = "#10B981"
     elif role == "ADVERTISEMENT_OWNER":
-        badge_color = "#A855F7"
-        badge_text = "@advertiser_studio"
+        btn_text = "@advertiser"
+        dot_color = "#6C5CE7"
     elif role == "ADMIN":
-        badge_color = "#3B82F6"
-        badge_text = "@trust_safety_officer"
+        btn_text = "@compliance"
+        dot_color = "#3B82F6"
     else:
-        badge_color = "#8E83AA"
-        badge_text = "Select Role"
+        btn_text = "Select Portal"
+        dot_color = "#6C7A9C"
 
     st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px;">
-        <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(28, 17, 51, 0.7); border:1px solid rgba(168, 147, 217, 0.2); padding:5px 12px; border-radius:9999px;">
-            <span style="width:6px; height:6px; border-radius:50%; background:{badge_color}; box-shadow:0 0 6px {badge_color};"></span>
-            <span style="font-size:12px; font-weight:600; color:#FFFFFF;">{badge_text}</span>
+    <div style="display:flex; justify-content:flex-end; align-items:center;">
+        <div style="display:inline-flex; align-items:center; gap:7px; background:#151D30; border:1px solid rgba(108,92,231,0.25); padding:6px 14px; border-radius:9999px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:{dot_color}; box-shadow:0 0 6px {dot_color};"></span>
+            <span style="font-size:12px; font-weight:600; color:#FFFFFF;">{btn_text}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR CONTROLS & NAVIGATION
+# 3. SIDEBAR NAVIGATION
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("""
-    <div style="padding:10px 0 16px 0; border-bottom:1px solid rgba(168,147,217,0.18); margin-bottom:16px;">
-        <div style="font-family:'Manrope', sans-serif; font-size:22px; font-weight:800; color:#FFFFFF;">
-            Safe<span style="color:#2DE2C0;">Ad</span> AI
+    <div style="padding:10px 0 16px 0; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+        <div style="font-family:'Outfit', sans-serif; font-size:22px; font-weight:800; color:#FFFFFF;">
+            Safe<span style="color:#A29BFE;">Ad</span> AI
         </div>
-        <div style="font-size:10px; font-weight:700; color:#A493C2; letter-spacing:0.12em; text-transform:uppercase; margin-top:2px;">
+        <div style="font-size:10px; font-weight:700; color:#A2AECB; letter-spacing:0.08em; text-transform:uppercase; margin-top:2px;">
             Decision Intelligence Suite
         </div>
     </div>
@@ -148,14 +144,14 @@ with st.sidebar:
     if role:
         role_label = role.replace('_', ' ').title()
         st.markdown(f"""
-        <div style="background:rgba(28,17,51,0.65); border:1px solid rgba(168,147,217,0.18); border-radius:12px; padding:12px 14px; margin-bottom:18px;">
-            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#A493C2; font-weight:700;">Active Workspace</div>
+        <div style="background:#151D30; border:1px solid rgba(108,92,231,0.2); border-radius:12px; padding:12px 14px; margin-bottom:18px;">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#A2AECB; font-weight:700;">Active Portal</div>
             <div style="font-size:14px; font-weight:700; color:#FFFFFF; margin-top:3px;">{role_label}</div>
         </div>
         """, unsafe_allow_html=True)
 
         if role == "USER":
-            st.caption("User Navigation")
+            st.caption("Navigation")
             if st.session_state.get("user_auth_state") == "AUTHENTICATED":
                 subtab = st.session_state.get("user_subtab", "feed")
                 if st.button("📰 Curated Social Feed", key="sb_home", use_container_width=True, type="primary" if subtab == "feed" else "secondary"):
@@ -169,12 +165,12 @@ with st.sidebar:
                 if st.button("🔑 Log In", key="sb_login_nav", use_container_width=True, type="primary" if auth_state == "LOGIN" else "secondary"):
                     st.session_state["user_auth_state"] = "LOGIN"
                     st.rerun()
-                if st.button("📝 Register / KYC Onboarding", key="sb_signup_nav", use_container_width=True, type="primary" if auth_state == "SIGNUP" else "secondary"):
+                if st.button("📝 Register / KYC", key="sb_signup_nav", use_container_width=True, type="primary" if auth_state == "SIGNUP" else "secondary"):
                     st.session_state["user_auth_state"] = "SIGNUP"
                     st.rerun()
 
         st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
-        if st.button("🚪 Reset Role / Sign Out", key="sb_logout", use_container_width=True):
+        if st.button("🚪 Switch Account / Logout", key="sb_logout", use_container_width=True):
             if "vision_engine" in st.session_state:
                 try:
                     st.session_state["vision_engine"].stop()

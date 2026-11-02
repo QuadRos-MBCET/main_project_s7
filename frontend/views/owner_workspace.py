@@ -26,6 +26,8 @@ try:
 except ImportError:
     SafeAdClient = None
 
+from frontend.styles.safead_theme import render_risk_gauge, render_svg_icon
+
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8002/api/v1")
 
 def check_backend_online():
@@ -37,89 +39,21 @@ def check_backend_online():
 
 
 def owner_dashboard():
-    # Insert custom styling exactly from Joseph's branch
-    st.markdown("""
-        <style>
-        .badge-reject {
-            background-color: #ef4444;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .badge-hitl {
-            background-color: #8b5cf6;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .badge-18 {
-            background-color: #f59e0b;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .badge-14 {
-            background-color: #3b82f6;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .badge-approve {
-            background-color: #10b981;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .matrix-card {
-            background-color: transparent;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 10px;
-        }
-        .colab-card {
-            border: 1px solid #3b82f6;
-            background-color: rgba(59, 130, 246, 0.05);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    try:
-        from frontend.styles.safead_theme import render_safead_brand, render_risk_gauge, render_svg_icon
-        render_safead_brand(subtitle="CREATOR STUDIO • PRE-FLIGHT AUDIT")
-    except Exception:
-        pass
-        
+    # -------------------------------------------------------------------------
+    # HEADER BANNER (RiteFlow Style)
+    # -------------------------------------------------------------------------
     st.markdown('''
-    <div style="margin-bottom: 20px;">
-        <div class="safead-eyebrow">ENTERPRISE CAMPAIGN SAFETY</div>
-        <div class="safead-title">
-            Creative <span class="safead-highlight">Pre-Flight Audit</span>
+    <div style="margin-bottom: 24px;">
+        <div class="rf-eyebrow-pill" style="margin-bottom: 12px;">
+            <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#6C5CE7; box-shadow:0 0 8px #6C5CE7;"></span>
+            ENTERPRISE CAMPAIGN SAFETY
         </div>
-        <p style="color:#C2BAD8; font-size:14px; margin:0 0 16px 0;">Pre-screen ad creative assets across multimodal threat detectors before deployment.</p>
+        <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif;">
+            Creative <span class="rf-italic-serif">Pre-Flight Audit</span>
+        </h1>
+        <p style="color:#A493C2; font-size:14px; margin:6px 0 0 0;">
+            Pre-screen ad creative assets across multimodal threat detectors before deployment.
+        </p>
     </div>
     ''', unsafe_allow_html=True)
     
@@ -133,10 +67,22 @@ def owner_dashboard():
             st.success(msg)
         st.session_state["owner_action_msg"] = None
         
-    col_up, col_res = st.columns([1, 1.2])
+    col_up, col_res = st.columns([1, 1.25], gap="large")
     
     with col_up:
-        st.subheader("SECTION 1 — Upload Advertisement Creative")
+        st.markdown(f"""
+        <div class="rf-card" style="margin-bottom: 16px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                <div style="width:32px; height:32px; border-radius:8px; background:rgba(108,92,231,0.18); border:1px solid rgba(108,92,231,0.3); display:flex; align-items:center; justify-content:center;">
+                    {render_svg_icon("cpu", size=16, color="#6C5CE7")}
+                </div>
+                <div>
+                    <div style="font-size:16px; font-weight:700; color:#FFFFFF; font-family:'Outfit',sans-serif;">Upload Advertisement Creative</div>
+                    <div style="font-size:12px; color:#A493C2;">Provide media assets and metadata for AI pre-flight scan</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         ad_title = st.text_input("Creative Title", placeholder="e.g. Organic Apple Juice / Casino Slot Promo / Paisa Double Scheme")
         ad_caption = st.text_area("Ad Copy / Caption", placeholder="e.g. Double your money guaranteed / Fresh organic apples")
@@ -148,11 +94,15 @@ def owner_dashboard():
             file_ext = os.path.splitext(uploaded_file.name)[1].lower()
             media_type = "video" if file_ext in [".mp4", ".avi", ".mov", ".mkv", ".webm"] else "image"
             
-            st.markdown("#### Media File Details")
-            st.write(f"- **Filename**: `{uploaded_file.name}`")
-            st.write(f"- **Media Type**: `{media_type.upper()} ({file_ext})`")
-            st.write(f"- **File Size**: `{file_size_kb} KB` ({len(file_bytes)} bytes)")
-            st.write(f"- **Upload Timestamp**: `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`")
+            st.markdown(f"""
+            <div style="background:rgba(17,23,38,0.7); border:1px solid rgba(108,92,231,0.2); border-radius:10px; padding:12px 14px; margin: 12px 0;">
+                <div style="font-size:12px; font-weight:700; color:#E2D9F3; margin-bottom:6px; letter-spacing:0.04em; text-transform:uppercase;">Asset Manifest</div>
+                <div class="rf-table-row"><span style="color:#A493C2;">Filename</span><span style="color:#FFFFFF; font-family:monospace;">{uploaded_file.name}</span></div>
+                <div class="rf-table-row"><span style="color:#A493C2;">Media Type</span><span style="color:#E2D9F3; font-weight:600;">{media_type.upper()} ({file_ext})</span></div>
+                <div class="rf-table-row"><span style="color:#A493C2;">Payload Size</span><span style="color:#E2D9F3;">{file_size_kb} KB</span></div>
+                <div class="rf-table-row" style="border-bottom:none;"><span style="color:#A493C2;">Timestamp</span><span style="color:#A493C2;">{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</span></div>
+            </div>
+            """, unsafe_allow_html=True)
             
             # PRIVACY REQUIREMENT: Do NOT render media player or image on Brand Owner page
             
@@ -228,7 +178,7 @@ def owner_dashboard():
                     else:
                         st.info("⚪ Not Verified / Local Fallback Active")
             
-            st.markdown("---")
+            st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
             if st.button("🚀 ANALYZE ADVERTISEMENT", type="primary", use_container_width=True):
                 if not ad_title:
                     st.error("Please provide a Creative Title before starting analysis.")
@@ -331,7 +281,6 @@ def owner_dashboard():
                     st.session_state["confirm_delete"] = False
                     
     with col_res:
-        st.subheader("SECTION 2 — SafeAd AI Analysis Result")
         if "moderation_report" in st.session_state and st.session_state["moderation_report"]:
             rep = st.session_state["moderation_report"]
             
@@ -349,7 +298,24 @@ def owner_dashboard():
                     "⚠️ Google Colab GPU was offline or unreachable. Automatically executed local Learned Random Forest fallback."
                 )
 
-            # Circular Risk Gauge (Quantexa Style)
+            # -----------------------------------------------------------------
+            # RITEFLOW BROWSER FRAME FOR SCORECARD
+            # -----------------------------------------------------------------
+            st.markdown(f"""
+            <div class="rf-browser-frame">
+                <div class="rf-browser-header">
+                    <div class="rf-browser-dots">
+                        <span class="rf-dot red"></span>
+                        <span class="rf-dot yellow"></span>
+                        <span class="rf-dot green"></span>
+                    </div>
+                    <div class="rf-browser-url">safead.ai/decision-engine/audit-report#{ad_id}</div>
+                    <div style="width: 52px;"></div>
+                </div>
+                <div class="rf-browser-body">
+            """, unsafe_allow_html=True)
+
+            # Circular Risk Gauge with RiteFlow Theme
             render_risk_gauge(risk_score, label="Multimodal Threat Index")
             st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
 
@@ -369,16 +335,18 @@ def owner_dashboard():
             mode_badge = str(rep.get("pipeline_mode", active_pipeline_mode)).upper()
             st.caption(f"🔧 **Moderation Engine**: `{mode_badge}` | **Policy Stage**: `{rep.get('policy_stage', 'Standard Fusion')}`")
 
-            # Metrics Row
+            # Metrics Row (RiteFlow Cards)
             mcol1, mcol2, mcol3 = st.columns(3)
-            mcol1.metric("Risk Score", f"{risk_score:.1f} / 100")
-            
-            is_learned_rf = "learned_rf" in str(rep.get("pipeline_mode", "")).lower()
-            if is_learned_rf and not rep.get("pipeline_mode") == "strategy_d":
-                mcol2.metric("RF Vote Share", f"{int(confidence * 100)}% (Uncalibrated)")
-            else:
-                mcol2.metric("Confidence", f"{int(confidence * 100)}%")
-            mcol3.metric("Latency", f"{float(rep.get('total_processing_time_seconds', 0.0) or 0.0):.2f}s")
+            with mcol1:
+                st.metric("Risk Score", f"{risk_score:.1f} / 100")
+            with mcol2:
+                is_learned_rf = "learned_rf" in str(rep.get("pipeline_mode", "")).lower()
+                if is_learned_rf and not rep.get("pipeline_mode") == "strategy_d":
+                    st.metric("RF Vote Share", f"{int(confidence * 100)}% (Uncalibrated)")
+                else:
+                    st.metric("Confidence", f"{int(confidence * 100)}%")
+            with mcol3:
+                st.metric("Latency", f"{float(rep.get('total_processing_time_seconds', 0.0) or 0.0):.2f}s")
             
             if is_learned_rf and not rep.get("pipeline_mode") == "strategy_d":
                 st.caption("ℹ️ *Note: Random Forest vote share represents tree ensemble consensus and is not a calibrated posterior probability.*")
@@ -405,26 +373,51 @@ def owner_dashboard():
 
             st.markdown(f"**Explanation**:\n\n{rep.get('explanation', '')}")
             
-            # Central SafeAdAssessment Matrix Summary
+            # Central SafeAdAssessment Matrix Summary (RiteFlow Revenue Summary Style)
             st.markdown("### 📊 Safety Evidence Summary")
             ev = rep.get("evidence", {})
             matrix = ev if "visual" in ev else rep.get("assessment_matrix", {})
             
-            st.markdown("<div class='matrix-card'>", unsafe_allow_html=True)
-            e_col1, e_col2 = st.columns(2)
-            with e_col1:
-                st.markdown(f"• **Extracted OCR Text**: *\"{rep.get('extracted_ocr', '') or 'None detected'}\"*")
-                st.markdown(f"• **Visual Safety**: `{'UNSAFE' if matrix.get('visual', {}).get('unsafe') else 'SAFE'}`")
-                st.markdown(f"• **Adult / NSFW Score**: `{float(matrix.get('visual', {}).get('adult', 0.0)):.2f}`")
-            with e_col2:
-                st.markdown(f"• **Audio Speech Transcript**: *\"{rep.get('audio_transcript', '') or 'No audio'}\"*")
-                st.markdown(f"• **Video Kinetic Violence**: `{float(matrix.get('video', {}).get('violence', 0.0)):.2f}`")
-                st.markdown(f"• **Scam / Deceptive Risk**: `{float(matrix.get('advertisement_risks', {}).get('scam', 0.0)):.2f}`")
-            st.markdown("</div>", unsafe_allow_html=True)
+            ocr_text_clean = str(rep.get('extracted_ocr', '') or 'None detected').replace('"', '&quot;')
+            audio_text_clean = str(rep.get('audio_transcript', '') or 'No audio').replace('"', '&quot;')
+            vis_status = 'UNSAFE' if matrix.get('visual', {}).get('unsafe') else 'SAFE'
+            vis_color = '#EF4444' if vis_status == 'UNSAFE' else '#22C55E'
+
+            st.markdown(f"""
+            <div style="background:rgba(11,15,28,0.7); border:1px solid rgba(108,92,231,0.22); border-radius:12px; padding:14px 18px; margin-bottom:14px;">
+                <div class="rf-table-row">
+                    <span style="color:#A493C2;">Extracted OCR Text</span>
+                    <span style="color:#FFFFFF; font-weight:500; max-width:65%; text-align:right;">"{ocr_text_clean}"</span>
+                </div>
+                <div class="rf-table-row">
+                    <span style="color:#A493C2;">Visual Safety Guard</span>
+                    <span style="color:{vis_color}; font-weight:700;">{vis_status}</span>
+                </div>
+                <div class="rf-table-row">
+                    <span style="color:#A493C2;">Adult / NSFW Index</span>
+                    <span style="color:#E2D9F3; font-weight:600;">{float(matrix.get('visual', {}).get('adult', 0.0)):.2f}</span>
+                </div>
+                <div class="rf-table-row">
+                    <span style="color:#A493C2;">Speech Audio Transcript</span>
+                    <span style="color:#FFFFFF; font-weight:500; max-width:65%; text-align:right;">"{audio_text_clean}"</span>
+                </div>
+                <div class="rf-table-row">
+                    <span style="color:#A493C2;">Video Kinetic Violence</span>
+                    <span style="color:#E2D9F3; font-weight:600;">{float(matrix.get('video', {}).get('violence', 0.0)):.2f}</span>
+                </div>
+                <div class="rf-table-row" style="border-bottom:none;">
+                    <span style="color:#A493C2;">Scam / Deceptive Claim</span>
+                    <span style="color:#E2D9F3; font-weight:600;">{float(matrix.get('advertisement_risks', {}).get('scam', 0.0)):.2f}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Close Browser Body & Frame
+            st.markdown("</div></div>", unsafe_allow_html=True)
             
             # BRAND OWNER WORKFLOW ACTIONS
-            st.markdown("---")
-            st.subheader("SECTION 3 — Choose Brand Owner Action")
+            st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
+            st.markdown("### ⚡ Brand Owner Actions")
             st.info("ℹ️ **Policy Enforcement**: The AI safety classification cannot be manually overridden by the Brand Owner.")
             
             can_publish = classification not in ["UNSAFE_FOR_ALL", "REQUIRES_HUMAN_REVIEW"] and rep.get("publishable", True)
@@ -449,7 +442,6 @@ def owner_dashboard():
                     if "global_ads" not in st.session_state:
                         st.session_state["global_ads"] = []
                         
-                    # Find if already added
                     ad_exists = any(a.get("ad_id") == ad_id for a in st.session_state["global_ads"])
                     
                     if not ad_exists and can_publish:
@@ -533,4 +525,28 @@ def owner_dashboard():
                         st.success("Advertisement deleted successfully.")
                         st.rerun()
         else:
-            st.info("Upload a creative media file and click **ANALYZE ADVERTISEMENT** to view the safety classification.")
+            # Elegant RiteFlow Browser Frame Empty State
+            st.markdown(f"""
+            <div class="rf-browser-frame">
+                <div class="rf-browser-header">
+                    <div class="rf-browser-dots">
+                        <span class="rf-dot red"></span>
+                        <span class="rf-dot yellow"></span>
+                        <span class="rf-dot green"></span>
+                    </div>
+                    <div class="rf-browser-url">safead.ai/decision-engine/ready</div>
+                    <div style="width: 52px;"></div>
+                </div>
+                <div class="rf-browser-body" style="text-align: center; padding: 48px 24px;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(108, 92, 231, 0.14); border: 1px solid rgba(108, 92, 231, 0.3); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                        {render_svg_icon("cpu", size=26, color="#6C5CE7")}
+                    </div>
+                    <h3 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif;">
+                        Awaiting Creative Asset
+                    </h3>
+                    <p style="margin: 0 auto; max-width: 420px; font-size: 13px; color: #A493C2; line-height: 1.5;">
+                        Upload an advertisement image or video asset on the left and click <b>ANALYZE ADVERTISEMENT</b> to inspect the real-time AI safety scorecard, multimodal threat index, and policy classification.
+                    </p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)

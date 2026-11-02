@@ -538,24 +538,27 @@ def user_dashboard():
     # OPTION 1: LOGIN PAGE
     # =========================================================================
     if st.session_state["user_auth_state"] == "LOGIN":
-        st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
         
         c_l, c_center, c_r = st.columns([1, 1.8, 1])
         with c_center:
             st.markdown("""
             <div style="text-align: center; margin-bottom: 24px;">
-                <div class="safead-eyebrow">IDENTITY & ACCESS MANAGEMENT</div>
-                <div class="safead-title">
-                    Safe<span class="safead-highlight">Ad</span> User Portal
+                <div class="rf-eyebrow-pill" style="margin-bottom: 12px;">
+                    <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#6C5CE7; box-shadow:0 0 8px #6C5CE7;"></span>
+                    IDENTITY & ACCESS MANAGEMENT
                 </div>
-                <p style="color:#C2BAD8; font-size:14px; margin-top:6px;">Sign in to access your age-verified social media feed</p>
+                <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif;">
+                    Safe<span class="rf-italic-serif">Ad</span> User Portal
+                </h1>
+                <p style="color:#A493C2; font-size:14px; margin-top:6px;">Sign in to access your age-verified social media feed</p>
             </div>
             """, unsafe_allow_html=True)
 
             # Login Card containing ONLY username, password, login button, and register link
             st.markdown("""
-            <div style="background:#121212; border:1px solid #262626; border-radius:14px; padding:24px 28px; margin-bottom:16px;">
-                <div style="font-size:16px; font-weight:700; color:#ffffff; margin-bottom:16px; text-align:center;">
+            <div class="rf-card" style="padding:28px 30px; margin-bottom:16px;">
+                <div style="font-size:18px; font-weight:700; color:#ffffff; margin-bottom:18px; text-align:center; font-family:'Outfit',sans-serif;">
                     Log In to Your Account
                 </div>
             """, unsafe_allow_html=True)
@@ -582,16 +585,16 @@ def user_dashboard():
 
             # Developer testing account note
             st.markdown("""
-                <div style="background:#181818; border:1px dashed #3f3f46; border-radius:8px; padding:10px 14px; margin-top:16px; font-size:12px; color:#a1a1aa; text-align:center;">
-                    💡 <b>Developer Testing Account:</b> Username: <code style="color:#38bdf8;">sourav</code> &nbsp;|&nbsp; Password: <code style="color:#38bdf8;">sourav</code>
+                <div style="background:rgba(11,15,28,0.7); border:1px dashed rgba(108,92,231,0.35); border-radius:10px; padding:12px 14px; margin-top:18px; font-size:12px; color:#A493C2; text-align:center;">
+                    💡 <b>Developer Test Account:</b> Username: <code style="color:#6C5CE7; font-weight:700;">sourav</code> &nbsp;|&nbsp; Password: <code style="color:#6C5CE7; font-weight:700;">sourav</code>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
             # Registration redirection box
             st.markdown("""
-            <div style="background:#121212; border:1px solid #262626; border-radius:14px; padding:16px 20px; text-align:center; margin-bottom:20px;">
-                <span style="color:#a8a8a8; font-size:13px;">Don't have an account? </span>
+            <div class="rf-card" style="padding:16px 20px; text-align:center; margin-bottom:20px;">
+                <span style="color:#A493C2; font-size:13px;">Don't have an account? </span>
             </div>
             """, unsafe_allow_html=True)
 
@@ -609,33 +612,32 @@ def user_dashboard():
 
         render_safead_brand(subtitle="IDENTITY ONBOARDING & KYC")
 
-        # 3-STEP KYC STEPPER (QUANTEXA STYLE)
+        # 3-STEP KYC STEPPER (RiteFlow Dark SaaS Style)
         st.markdown("""
-        <div class="safead-stepper">
-            <div class="safead-step completed">
-                <div class="safead-step-number">1</div>
-                <span>Account Credentials</span>
+        <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin: 18px 0 28px 0; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:#6C5CE7; color:#FFFFFF; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px rgba(108,92,231,0.5);">1</div>
+                <span style="font-size:13px; font-weight:700; color:#FFFFFF;">Account Credentials</span>
             </div>
-            <div class="safead-step-divider"></div>
-            <div class="safead-step active">
-                <div class="safead-step-number">2</div>
-                <span>Official ID Scan & OCR</span>
+            <div style="width:36px; height:1px; background:rgba(108,92,231,0.4);"></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:rgba(108,92,231,0.2); border:1px solid #6C5CE7; color:#E2D9F3; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center;">2</div>
+                <span style="font-size:13px; font-weight:600; color:#E2D9F3;">Official ID Scan & OCR</span>
             </div>
-            <div class="safead-step-divider"></div>
-            <div class="safead-step active">
-                <div class="safead-step-number">3</div>
-                <span>Live Biometrics (ArcFace)</span>
+            <div style="width:36px; height:1px; background:rgba(108,92,231,0.4);"></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:28px; height:28px; border-radius:50%; background:rgba(108,92,231,0.2); border:1px solid #6C5CE7; color:#E2D9F3; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</div>
+                <span style="font-size:13px; font-weight:600; color:#E2D9F3;">Live Biometrics (ArcFace)</span>
             </div>
         </div>
         
-        <div class="safead-card" style="padding:22px 26px; margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div>
-                    <div class="safead-eyebrow">STEP 1 OF 3 • PROFILE SETUP</div>
-                    <div style="font-size:18px; color:#FFFFFF; font-weight:700;">Account Credentials</div>
-                    <p style="margin:4px 0 0 0; font-size:13px; color:#C2BAD8;">Create your user credentials. Complete steps 2 & 3 below to verify identity.</p>
-                </div>
-            </div>""", unsafe_allow_html=True)
+        <div class="rf-card" style="padding:22px 26px; margin-bottom:20px;">
+            <div style="margin-bottom:14px;">
+                <div class="rf-eyebrow-pill" style="margin-bottom:8px;">STEP 1 OF 3 • PROFILE SETUP</div>
+                <div style="font-size:18px; color:#FFFFFF; font-weight:700; font-family:'Outfit',sans-serif;">Account Credentials</div>
+                <p style="margin:4px 0 0 0; font-size:13px; color:#A493C2;">Create your user credentials. Complete steps 2 & 3 below to verify identity.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
         col_reg1, col_reg2, col_reg3 = st.columns([1.5, 1.5, 1.5])
         with col_reg1:
@@ -851,32 +853,32 @@ def user_dashboard():
             c_r1, c_r2, c_r3, c_r4 = st.columns(4)
             with c_r1:
                 st.markdown(f"""
-                <div class="metric-card" style="background:#181818; border:1px solid #262626; border-radius:12px; padding:12px; text-align:center;">
-                    <div class="metric-val" style="font-size:22px; font-weight:700; color:#38bdf8;">{verif_res.get('face_similarity', 0.0):.1%}</div>
-                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">Face Match Score</div>
+                <div class="rf-stat-card" style="text-align:center; padding:14px;">
+                    <div class="rf-stat-value" style="font-size:22px; color:#6C5CE7;">{verif_res.get('face_similarity', 0.0):.1%}</div>
+                    <div class="rf-stat-label">Face Match Score</div>
                 </div>
                 """, unsafe_allow_html=True)
             with c_r2:
                 anti_spoof_tag = "🛑 SPOOF" if verif_res.get('is_spoof') else "✅ REAL (LIVE)"
-                color = "#ef4444" if verif_res.get('is_spoof') else "#22c55e"
+                color = "#EF4444" if verif_res.get('is_spoof') else "#22C55E"
                 st.markdown(f"""
-                <div class="metric-card" style="background:#181818; border:1px solid #262626; border-radius:12px; padding:12px; text-align:center;">
-                    <div class="metric-val" style="font-size:18px; font-weight:700; color:{color};">{anti_spoof_tag}</div>
-                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">Liveness Check</div>
+                <div class="rf-stat-card" style="text-align:center; padding:14px;">
+                    <div class="rf-stat-value" style="font-size:18px; color:{color};">{anti_spoof_tag}</div>
+                    <div class="rf-stat-label">Liveness Check</div>
                 </div>
                 """, unsafe_allow_html=True)
             with c_r3:
                 st.markdown(f"""
-                <div class="metric-card" style="background:#181818; border:1px solid #262626; border-radius:12px; padding:12px; text-align:center;">
-                    <div class="metric-val" style="font-size:20px; font-weight:700; color:#a855f7;">{verif_res.get('id_age', 'N/A')} yrs</div>
-                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">Extracted ID Age</div>
+                <div class="rf-stat-card" style="text-align:center; padding:14px;">
+                    <div class="rf-stat-value" style="font-size:20px; color:#A855F7;">{verif_res.get('id_age', 'N/A')} yrs</div>
+                    <div class="rf-stat-label">Extracted ID Age</div>
                 </div>
                 """, unsafe_allow_html=True)
             with c_r4:
                 st.markdown(f"""
-                <div class="metric-card" style="background:#181818; border:1px solid #262626; border-radius:12px; padding:12px; text-align:center;">
-                    <div class="metric-val" style="font-size:18px; font-weight:700; color:#eab308;">{verif_res.get('live_age_category', 'N/A')}</div>
-                    <div class="metric-lbl" style="font-size:11px; color:#8e8e8e;">Live ViT Age Scan</div>
+                <div class="rf-stat-card" style="text-align:center; padding:14px;">
+                    <div class="rf-stat-value" style="font-size:18px; color:#F59E0B;">{verif_res.get('live_age_category', 'N/A')}</div>
+                    <div class="rf-stat-label">Live ViT Age Scan</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -979,24 +981,24 @@ def user_dashboard():
     # App Header with User Greeting and Verified Badge
     render_safead_brand(subtitle="AGE-VERIFIED SOCIAL FEED")
 
-    # User Profile Info & Navigation Sub-Bar
+    # User Profile Info & Navigation Sub-Bar (RiteFlow Style)
     st.markdown(f"""
-    <div style="background:#121212; border:1px solid #262626; border-radius:12px; padding:10px 16px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
-                <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:15px;">
+    <div class="rf-card" style="padding:12px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:2px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(108,92,231,0.35);">
+                <div style="width:100%; height:100%; border-radius:50%; background:#0B0F1C; display:flex; align-items:center; justify-content:center; font-size:16px;">
                     👤
                 </div>
             </div>
             <div>
-                <div style="font-size:14px; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:4px;">
+                <div style="font-size:15px; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:6px; font-family:'Outfit',sans-serif;">
                     @{username}
-                    <span style="color:#0095f6; font-size:13px; font-weight:800;" title="Verified Account">✓</span>
-                    <span style="background:rgba(0,149,246,0.15); border:1px solid rgba(0,149,246,0.3); color:#38bdf8; font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; margin-left:6px;">
+                    <span style="color:#22C55E; font-size:14px; font-weight:800;" title="Verified Account">✓</span>
+                    <span class="rf-badge-safe" style="font-size:10px; padding:2px 8px; margin-left:6px;">
                         {user_norm} ({user_cat})
                     </span>
                 </div>
-                <div style="font-size:11px; color:#8e8e8e;">Verified Identity • Age-Gated Social Feed Active</div>
+                <div style="font-size:11px; color:#A493C2;">Verified Identity • Age-Gated Social Feed Active</div>
             </div>
         </div>
     </div>
@@ -1046,10 +1048,10 @@ def user_dashboard():
         with c_feed:
             # Post 1: Organic Community Post
             st.markdown("""
-            <div style="background:#121212; border:1px solid #262626; border-radius:14px; margin-bottom:20px;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
                 <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:1.5px; display:flex; align-items:center; justify-content:center;">
                             <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:14px;">
                                 🌌
                             </div>
@@ -1069,7 +1071,7 @@ def user_dashboard():
                 st.video(aurora_path, autoplay=False, loop=True)
 
             st.markdown(f"""
-            <div style="background:#121212; border:1px solid #262626; border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
                 <div style="display:flex; gap:14px; font-size:20px; margin-bottom:8px;">
                     <span>❤️</span> <span>💬</span> <span>✈️</span>
                 </div>
@@ -1088,7 +1090,7 @@ def user_dashboard():
             for p_idx, photo in enumerate(age_appropriate_photos[:12]):
                 pol = photo.get("safety_policy", "SAFE_FOR_ALL")
                 render_html(f"""
-                <div style="background:#121212; border:1px solid #262626; border-radius:14px; margin-bottom:20px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
                     <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#0095f6,#38bdf8); padding:1.5px; display:flex; align-items:center; justify-content:center;">
@@ -1110,7 +1112,7 @@ def user_dashboard():
                 if os.path.exists(photo["media_path"]):
                     st.image(photo["media_path"], use_container_width=True)
                 render_html(f"""
-                <div style="background:#121212; border:1px solid #262626; border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <div style="display:flex; gap:14px; font-size:20px;">
                             <span>❤️</span> <span>💬</span> <span>✈️</span>
@@ -1132,7 +1134,7 @@ def user_dashboard():
                 top_ad = owner_ads[0]
                 pol = top_ad.get("safety_policy", "SAFE_FOR_ALL")
                 st.markdown(f"""
-                <div style="background:#121212; border:1px solid #262626; border-radius:14px; margin-bottom:20px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
                     <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#0095f6,#38bdf8); padding:1.5px; display:flex; align-items:center; justify-content:center;">
@@ -1157,7 +1159,7 @@ def user_dashboard():
                     st.video(ad_vid, autoplay=False, loop=True)
 
                 st.markdown(f"""
-                <div style="background:#121212; border:1px solid #262626; border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+                <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <div style="display:flex; gap:14px; font-size:20px;">
                             <span>❤️</span> <span>💬</span> <span>✈️</span>
@@ -1174,10 +1176,10 @@ def user_dashboard():
 
             # Post 3: Second Organic Post
             st.markdown("""
-            <div style="background:#121212; border:1px solid #262626; border-radius:14px; margin-bottom:20px;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
                 <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:1.5px; display:flex; align-items:center; justify-content:center;">
                             <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:14px;">
                                 🏎️
                             </div>
@@ -1197,7 +1199,7 @@ def user_dashboard():
                 st.video(urban_path, autoplay=False, loop=True)
 
             st.markdown(f"""
-            <div style="background:#121212; border:1px solid #262626; border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; border-radius:0 0 14px 14px; padding:12px 16px; margin-top:-20px; margin-bottom:24px;">
                 <div style="display:flex; gap:14px; font-size:20px; margin-bottom:8px;">
                     <span>❤️</span> <span>💬</span> <span>✈️</span>
                 </div>
@@ -1265,9 +1267,9 @@ def user_dashboard():
             # Header Bar
             badge_icon = "✓" if current_reel.get("is_verified") else ""
             render_html(f"""
-            <div style="background:#121212; border:1px solid #262626; border-radius:16px 16px 0 0; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:16px 16px 0 0; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(45deg,#f09433,#dc2743,#bc1888); padding:1.5px; display:flex; align-items:center; justify-content:center;">
+                    <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:1.5px; display:flex; align-items:center; justify-content:center;">
                         <div style="width:100%; height:100%; border-radius:50%; background:#181818; display:flex; align-items:center; justify-content:center; font-size:16px;">
                             {current_reel.get('creator_avatar', '👤')}
                         </div>
@@ -1308,7 +1310,7 @@ def user_dashboard():
                 """
 
             render_html(f"""
-            <div style="background:#121212; border:1px solid #262626; border-top:none; padding:14px 16px; border-radius:0 0 16px 16px;">
+            <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-top:none; padding:14px 16px; border-radius:0 0 16px 16px;">
                 {sponsored_html}
                 <div style="font-size:14px; font-weight:700; color:#ffffff; margin-bottom:4px;">
                     {current_reel.get('title', '')}
