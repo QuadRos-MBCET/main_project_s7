@@ -576,6 +576,11 @@ def inject_safead_styles():
     """Injects the RiteFlow dark SaaS design system."""
     st.markdown(RITEFLOW_CSS, unsafe_allow_html=True)
 
+def render_html(html_str: str):
+    """Safely renders HTML without Markdown interpreting indented lines as code blocks."""
+    cleaned = "\n".join(line.strip() for line in html_str.splitlines() if line.strip())
+    st.markdown(cleaned, unsafe_allow_html=True)
+
 # Aliases for backwards compatibility
 inject_instagram_styles = inject_safead_styles
 

@@ -26,7 +26,7 @@ try:
 except ImportError:
     SafeAdClient = None
 
-from frontend.styles.safead_theme import render_risk_gauge, render_svg_icon
+from frontend.styles.safead_theme import render_risk_gauge, render_svg_icon, render_html
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8002/api/v1")
 
@@ -42,7 +42,7 @@ def owner_dashboard():
     # -------------------------------------------------------------------------
     # HEADER BANNER (RiteFlow Style)
     # -------------------------------------------------------------------------
-    st.markdown('''
+    render_html('''
     <div style="margin-bottom: 24px;">
         <div class="rf-eyebrow-pill" style="margin-bottom: 12px;">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#6C5CE7; box-shadow:0 0 8px #6C5CE7;"></span>
@@ -55,7 +55,7 @@ def owner_dashboard():
             Pre-screen ad creative assets across multimodal threat detectors before deployment.
         </p>
     </div>
-    ''', unsafe_allow_html=True)
+    ''')
     
     if "owner_action_msg" in st.session_state and st.session_state["owner_action_msg"]:
         msg = st.session_state["owner_action_msg"]
@@ -70,7 +70,7 @@ def owner_dashboard():
     col_up, col_res = st.columns([1, 1.25], gap="large")
     
     with col_up:
-        st.markdown(f"""
+        render_html(f"""
         <div class="rf-card" style="margin-bottom: 16px;">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                 <div style="width:32px; height:32px; border-radius:8px; background:rgba(108,92,231,0.18); border:1px solid rgba(108,92,231,0.3); display:flex; align-items:center; justify-content:center;">
@@ -94,7 +94,7 @@ def owner_dashboard():
             file_ext = os.path.splitext(uploaded_file.name)[1].lower()
             media_type = "video" if file_ext in [".mp4", ".avi", ".mov", ".mkv", ".webm"] else "image"
             
-            st.markdown(f"""
+            render_html(f"""
             <div style="background:rgba(17,23,38,0.7); border:1px solid rgba(108,92,231,0.2); border-radius:10px; padding:12px 14px; margin: 12px 0;">
                 <div style="font-size:12px; font-weight:700; color:#E2D9F3; margin-bottom:6px; letter-spacing:0.04em; text-transform:uppercase;">Asset Manifest</div>
                 <div class="rf-table-row"><span style="color:#A493C2;">Filename</span><span style="color:#FFFFFF; font-family:monospace;">{uploaded_file.name}</span></div>
@@ -301,7 +301,7 @@ def owner_dashboard():
             # -----------------------------------------------------------------
             # RITEFLOW BROWSER FRAME FOR SCORECARD
             # -----------------------------------------------------------------
-            st.markdown(f"""
+            render_html(f"""
             <div class="rf-browser-frame">
                 <div class="rf-browser-header">
                     <div class="rf-browser-dots">
@@ -383,7 +383,7 @@ def owner_dashboard():
             vis_status = 'UNSAFE' if matrix.get('visual', {}).get('unsafe') else 'SAFE'
             vis_color = '#EF4444' if vis_status == 'UNSAFE' else '#22C55E'
 
-            st.markdown(f"""
+            render_html(f"""
             <div style="background:rgba(11,15,28,0.7); border:1px solid rgba(108,92,231,0.22); border-radius:12px; padding:14px 18px; margin-bottom:14px;">
                 <div class="rf-table-row">
                     <span style="color:#A493C2;">Extracted OCR Text</span>
@@ -526,7 +526,7 @@ def owner_dashboard():
                         st.rerun()
         else:
             # Elegant RiteFlow Browser Frame Empty State
-            st.markdown(f"""
+            render_html(f"""
             <div class="rf-browser-frame">
                 <div class="rf-browser-header">
                     <div class="rf-browser-dots">

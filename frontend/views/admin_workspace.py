@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import time
 from datetime import datetime
-from frontend.styles.safead_theme import render_svg_icon, render_sparkline
+from frontend.styles.safead_theme import render_svg_icon, render_sparkline, render_html
 
 backend_online = False
 
@@ -10,7 +10,7 @@ def admin_dashboard():
     # -------------------------------------------------------------------------
     # HEADER BANNER (RiteFlow Style)
     # -------------------------------------------------------------------------
-    st.markdown('''
+    render_html('''
     <div style="margin-bottom: 24px;">
         <div class="rf-eyebrow-pill" style="margin-bottom: 12px;">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#6C5CE7; box-shadow:0 0 8px #6C5CE7;"></span>
@@ -41,7 +41,7 @@ def admin_dashboard():
     # -------------------------------------------------------------------------
     # TOP STAT CARDS ROW (RiteFlow Compact Stat Cards)
     # -------------------------------------------------------------------------
-    st.markdown(f"""
+    render_html(f"""
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom: 28px;">
         <!-- Card 1: Pending Queue -->
         <div class="rf-stat-card">
@@ -90,7 +90,7 @@ def admin_dashboard():
     
     with tab1:
         if not pending_cases:
-            st.markdown(f'''
+            render_html(f'''
             <div class="rf-card" style="text-align:center; padding:44px 24px; margin-top:10px;">
                 <div style="width:52px; height:52px; border-radius:50%; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); display:inline-flex; align-items:center; justify-content:center; margin-bottom:14px;">
                     {render_svg_icon("check", size=24, color="#22C55E")}
@@ -114,7 +114,7 @@ def admin_dashboard():
                 col_media, col_evidence = st.columns([1, 1.2], gap="large")
                 
                 with col_media:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="rf-card" style="margin-bottom:16px;">
                         <div style="font-size:16px; font-weight:700; color:#FFFFFF; font-family:'Outfit',sans-serif; margin-bottom:12px;">
                             1. Advertisement Media Inspection
@@ -136,7 +136,7 @@ def admin_dashboard():
                         st.info("📂 Media file loaded for reviewer inspection.")
                         
                 with col_evidence:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="rf-card" style="margin-bottom:16px;">
                         <div style="font-size:16px; font-weight:700; color:#FFFFFF; font-family:'Outfit',sans-serif; margin-bottom:12px;">
                             2. AI Safety Evidence & Reasoning

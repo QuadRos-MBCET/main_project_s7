@@ -1,11 +1,11 @@
 import streamlit as st
-from frontend.styles.safead_theme import render_svg_icon, render_sparkline
+from frontend.styles.safead_theme import render_svg_icon, render_sparkline, render_html
 
 def login_page():
     # -------------------------------------------------------------------------
     # 1. RITEFLOW HERO BANNER (Centered with Italic Serif Accent & Browser Frame)
     # -------------------------------------------------------------------------
-    st.markdown(f"""
+    render_html(f"""
     <div style="text-align: center; padding: 48px 16px 36px 16px; position: relative;">
         <!-- Eyebrow Badge Pill -->
         <div style="margin-bottom: 22px;">
@@ -131,12 +131,12 @@ def login_page():
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # -------------------------------------------------------------------------
     # 2. TRUSTED BY / INDUSTRY STANDARDS MARQUEE
     # -------------------------------------------------------------------------
-    st.markdown("""
+    render_html("""
     <div style="text-align: center; margin: 36px auto 52px auto; max-width: 980px;">
         <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #64748B; margin-bottom: 18px;">
             TRUSTED BY INNOVATIVE TEAMS & COMPLIANCE NETWORKS
@@ -156,12 +156,12 @@ def login_page():
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # -------------------------------------------------------------------------
     # 3. ROLE SELECTION WORKSPACE TILES (RiteFlow Glass Cards with Checklist)
     # -------------------------------------------------------------------------
-    st.markdown("""
+    render_html("""
     <div id="workspaces" style="margin-bottom: 24px; text-align: left;">
         <div class="rf-eyebrow-pill" style="margin-bottom: 10px;">WORKSPACE DIRECTORY</div>
         <h2 style="margin: 0; font-size: 26px; font-weight: 700; color: #FFFFFF; font-family: 'Outfit', sans-serif;">
@@ -171,13 +171,13 @@ def login_page():
             Select your dedicated portal to access audience feeds, creator moderation, or governance desks.
         </p>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     c1, c2, c3 = st.columns(3, gap="medium")
 
     # Card 1: User / Consumer Experience
     with c1:
-        st.markdown(f"""
+        render_html(f"""
         <div class="rf-card" style="height: 350px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(79, 70, 229, 0.16); border: 1px solid rgba(99, 102, 241, 0.35); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
@@ -205,14 +205,14 @@ def login_page():
             </div>
             <div style="font-size: 11px; color: #64748B; font-weight: 600; margin-top:14px;">@social_explorer</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
         if st.button("Enter User Platform →", key="btn_user", use_container_width=True, type="secondary"):
             st.session_state["role"] = "USER"
             st.rerun()
 
     # Card 2: Advertiser Studio
     with c2:
-        st.markdown(f"""
+        render_html(f"""
         <div class="rf-card" style="height: 350px; display: flex; flex-direction: column; justify-content: space-between; border-color: rgba(99, 102, 241, 0.45); box-shadow: 0 0 30px rgba(79, 70, 229, 0.18);">
             <div>
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(79, 70, 229, 0.25); border: 1px solid rgba(99, 102, 241, 0.5); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
@@ -240,14 +240,14 @@ def login_page():
             </div>
             <div style="font-size: 11px; color: #64748B; font-weight: 600; margin-top:14px;">@advertiser_studio</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
         if st.button("Launch Advertiser Studio →", key="btn_owner", use_container_width=True, type="primary"):
             st.session_state["role"] = "ADVERTISEMENT_OWNER"
             st.rerun()
 
     # Card 3: Compliance & Admin Review
     with c3:
-        st.markdown(f"""
+        render_html(f"""
         <div class="rf-card" style="height: 350px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(79, 70, 229, 0.16); border: 1px solid rgba(99, 102, 241, 0.35); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
@@ -275,7 +275,7 @@ def login_page():
             </div>
             <div style="font-size: 11px; color: #64748B; font-weight: 600; margin-top:14px;">@safead_compliance</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
         if st.button("Open Compliance Desk →", key="btn_admin", use_container_width=True, type="secondary"):
             st.session_state["role"] = "ADMIN"
             st.rerun()
