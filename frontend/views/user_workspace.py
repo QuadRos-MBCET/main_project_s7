@@ -978,7 +978,7 @@ def user_dashboard():
     render_safead_brand(subtitle="AGE-VERIFIED SOCIAL FEED")
 
     # User Profile Info & Navigation Sub-Bar (RiteFlow Style)
-    st.markdown(f"""
+    render_html(f"""
     <div class="rf-card" style="padding:12px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:12px;">
             <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#6C5CE7,#8B5CF6); padding:2px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(108,92,231,0.35);">
@@ -1129,7 +1129,7 @@ def user_dashboard():
             if owner_ads:
                 top_ad = owner_ads[0]
                 pol = top_ad.get("safety_policy", "SAFE_FOR_ALL")
-                st.markdown(f"""
+                render_html(f"""
                 <div style="background:rgba(17,23,38,0.75); border:1px solid rgba(108,92,231,0.22); border-radius:14px; margin-bottom:20px;">
                     <div style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:10px;">
