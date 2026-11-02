@@ -243,17 +243,17 @@ def login_page():
                 <div style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 18px;">
                     Experience a policy-guarded social feed with real-time biometric age verification and personalized safety filters.
                 </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-bottom: 20px;">
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                <div class="rf-checklist">
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Biometric Age Verification</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Safe Social Feed & Reels</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Policy-Protected Ad Delivery</span>
                     </div>
                 </div>
@@ -281,17 +281,17 @@ def login_page():
                 <div style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 18px;">
                     Audit ad creative assets with multimodal AI pre-flight scanning, visual risk indexing, and instant compliance feedback.
                 </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-bottom: 20px;">
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                <div class="rf-checklist">
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Qwen3-VL & Random Forest Fusion</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Pre-Flight Risk Scorecards</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Images, Videos, and PDF Assets</span>
                     </div>
                 </div>
@@ -319,17 +319,17 @@ def login_page():
                 <div style="font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 18px;">
                     Human-in-the-loop oversight desk for reviewing policy escalations, managing appeals, and tracking audit logs.
                 </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-bottom: 20px;">
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                <div class="rf-checklist">
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>HITL Review Queue</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Immutable Compliance Logs</span>
                     </div>
-                    <div class="rf-circle-check">
-                        {render_svg_icon("check", size=11, color="#6366F1")}
+                    <div class="rf-check-row">
+                        <span class="rf-circle-check">{render_svg_icon("check", size=10, color="#FFFFFF")}</span>
                         <span>Policy Override Adjudication</span>
                     </div>
                 </div>
