@@ -126,6 +126,8 @@ def save_new_user(username: str, password: str, category: str, norm: str):
 # =============================================================================
 # CURATED FEED POSTS (AUTHENTIC USER PICTURES)
 # =============================================================================
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+
 CURATED_POSTS = [
     {
         "id": "post_1",
