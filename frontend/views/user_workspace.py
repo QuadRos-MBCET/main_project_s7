@@ -147,27 +147,6 @@ DEFAULT_REELS = [
         ]
     },
     {
-        "id": "ad_coding",
-        "type": "sponsored",
-        "creator": "code_academy_pro",
-        "creator_avatar": "💻",
-        "is_verified": True,
-        "sponsored_label": "Sponsored • SafeAd Verified ✅",
-        "safety_policy": "SAFE_FOR_ALL",
-        "title": "Master Python & AI in 30 Days",
-        "caption": "Unlock high-paying AI skills with interactive bite-sized lessons! 🚀 Certified safe for all audiences by SafeAd AI. #coding #python #learntocode #ai #edtech",
-        "cta_text": "Start Free Course ↗",
-        "audio": "Lofi Coding Beats • Deep Focus Flow 🎵",
-        "likes": 64200,
-        "comments_count": 845,
-        "shares_count": 12400,
-        "video_path": os.path.join(BASE_DIR, "sample_ad_media/coding_lessons.mp4"),
-        "comments": [
-            {"user": "sophia_tech", "text": "Completed this last month, landed my first freelance gig!", "time": "5h", "likes": 95},
-            {"user": "dev_dan", "text": "Is this beginner friendly?", "time": "1d", "likes": 14}
-        ]
-    },
-    {
         "id": "reel_aurora",
         "type": "organic",
         "creator": "aurora_explorers",
@@ -183,26 +162,6 @@ DEFAULT_REELS = [
         "comments": [
             {"user": "wanderlust_jen", "text": "Bucket list dream destination 😍", "time": "1h", "likes": 512},
             {"user": "alex_lens", "text": "The green color grading is pure magic!", "time": "3h", "likes": 204}
-        ]
-    },
-    {
-        "id": "ad_geometry",
-        "type": "sponsored",
-        "creator": "visual_math_lab",
-        "creator_avatar": "📐",
-        "is_verified": True,
-        "sponsored_label": "Sponsored • SafeAd Verified ✅",
-        "safety_policy": "SAFE_FOR_ALL",
-        "title": "Interactive 3D Geometry App",
-        "caption": "Visualizing complex 3D topological surfaces and mathematical patterns! SafeAd AI certified educational ad. #math #geometry #education #interactive",
-        "cta_text": "Try 3D Demo ↗",
-        "audio": "Acoustic Math • Classical Study 🎵",
-        "likes": 49800,
-        "comments_count": 612,
-        "shares_count": 9800,
-        "video_path": os.path.join(BASE_DIR, "sample_ad_media/geometry_class.mp4"),
-        "comments": [
-            {"user": "math_prof_dave", "text": "Showing this to my students tomorrow! Excellent visualization.", "time": "3h", "likes": 140}
         ]
     },
     {
@@ -1240,7 +1199,20 @@ def user_dashboard():
             active_reels = [r for r in active_reels if r["type"] == "sponsored"]
 
         if not active_reels:
-            st.info(f"No reels available in this category for age group '{user_cat}'.")
+            if st.session_state["reels_filter"] == "SPONSORED":
+                render_html("""
+                <div class="rf-card" style="text-align:center; padding:48px 24px; margin:24px auto; max-width:480px;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(79,70,229,0.18); border:1px solid rgba(99,102,241,0.3); display:inline-flex; align-items:center; justify-content:center; margin-bottom:14px;">
+                        🛡️
+                    </div>
+                    <div style="font-size:17px; font-weight:700; color:#FFFFFF; margin-bottom:8px; font-family:'Outfit',sans-serif;">No Brand Owner Ads Active</div>
+                    <div style="font-size:13px; color:#94A3B8; line-height:1.5;">
+                        All current placeholder ads have been removed. When advertisers upload and approve campaigns in the Advertiser Studio, verified creatives will appear here.
+                    </div>
+                </div>
+                """)
+            else:
+                st.info(f"No reels available in this category for age group '{user_cat}'.")
             return
 
         total_reels = len(active_reels)

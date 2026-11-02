@@ -498,8 +498,8 @@ div.stButton > button[kind="secondary"]:hover {
     background: rgba(79, 70, 229, 0.12) !important;
 }
 
-/* Top Bar Action Portal Pill Button */
-div[data-testid="stColumn"]:last-child .stButton > button {
+/* Top Bar Action Portal Pill Button (Scoped strictly to top_portal_pill_btn) */
+.st-key-top_portal_pill_btn button {
     background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(129, 140, 248, 0.45) !important;
@@ -513,7 +513,7 @@ div[data-testid="stColumn"]:last-child .stButton > button {
     cursor: pointer !important;
     transition: all 0.2s ease !important;
 }
-div[data-testid="stColumn"]:last-child .stButton > button:hover {
+.st-key-top_portal_pill_btn button:hover {
     box-shadow: 0 0 24px rgba(99, 102, 241, 0.75) !important;
     transform: translateY(-1px) !important;
     border-color: #C7D2FE !important;
