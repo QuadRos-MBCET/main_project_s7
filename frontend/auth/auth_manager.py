@@ -4,13 +4,13 @@ import streamlit as st
 from frontend.styles.safead_theme import render_svg_icon, render_sparkline, render_html
 
 def get_safead_metrics():
-    """Queries safead.db for live platform metrics or falls back to production telemetry."""
+    """Queries safead.db strictly for live platform metrics (starts at 0 until ads are uploaded)."""
     db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../safead.db"))
-    total_screened = 1420
-    safe_ads = 1048
-    age_gated = 272
-    hitl_cases = 72
-    violations = 28
+    total_screened = 0
+    safe_ads = 0
+    age_gated = 0
+    hitl_cases = 0
+    violations = 0
 
     if os.path.exists(db_path):
         try:
@@ -18,33 +18,43 @@ def get_safead_metrics():
             c = conn.cursor()
             c.execute("SELECT COUNT(*) FROM advertisements")
             row = c.fetchone()
-            db_total = row[0] if row else 0
-            if db_total > 0:
-                total_screened = db_total
-                c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='SAFE_FOR_ALL'")
-                r_safe = c.fetchone()
-                safe_ads = r_safe[0] if r_safe else 0
-                c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification IN ('SAFE_18_PLUS', 'SAFE_14_PLUS')")
-                r_age = c.fetchone()
-                age_gated = r_age[0] if r_age else 0
-                c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='REQUIRES_HUMAN_REVIEW'")
-                r_hitl = c.fetchone()
-                hitl_cases = r_hitl[0] if r_hitl else 0
-                c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='UNSAFE_FOR_ALL'")
-                r_viol = c.fetchone()
-                violations = r_viol[0] if r_viol else 0
+            total_screened = row[0] if row else 0
+
+            c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='SAFE_FOR_ALL'")
+            r_safe = c.fetchone()
+            safe_ads = r_safe[0] if r_safe else 0
+
+            c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification IN ('SAFE_18_PLUS', 'SAFE_14_PLUS')")
+            r_age = c.fetchone()
+            age_gated = r_age[0] if r_age else 0
+
+            c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='REQUIRES_HUMAN_REVIEW'")
+            r_hitl = c.fetchone()
+            hitl_cases = r_hitl[0] if r_hitl else 0
+
+            c.execute("SELECT COUNT(*) FROM moderation_results WHERE classification='UNSAFE_FOR_ALL'")
+            r_viol = c.fetchone()
+            violations = r_viol[0] if r_viol else 0
+
             conn.close()
         except Exception:
             pass
 
-    compliance_pct = round((safe_ads + age_gated) / max(1, total_screened) * 100, 1)
+    has_data = total_screened > 0
+    compliance_pct = round((safe_ads + age_gated) / total_screened * 100, 1) if has_data else 0.0
+
     return {
         "total": f"{total_screened:,}",
         "safe": f"{safe_ads:,} ads",
         "age_gated": f"{age_gated:,} ads",
         "hitl": f"{hitl_cases:,} ads",
         "violations": f"{violations:,} ads",
-        "compliance_pct": f"{compliance_pct}%"
+        "compliance_pct": f"{compliance_pct}%" if has_data else "0.0%",
+        "has_data": has_data,
+        "progress_width": f"{min(100, max(0, int(compliance_pct)))}%" if has_data else "0%",
+        "latency_text": "Avg decision latency: 1.2s" if has_data else "Avg decision latency: Ready (0.0s)",
+        "stream_status": "Active" if has_data else "Standby",
+        "stream_sub": "Multi-stage safety arbitrations" if has_data else "Awaiting live ad uploads"
     }
 
 def login_page():
@@ -139,9 +149,9 @@ def login_page():
                                 <div style="font-size:18px; font-weight:700; color:#10B981; font-family:'Outfit',sans-serif;">{metrics['compliance_pct']}</div>
                             </div>
                         </div>
-                        <div style="font-size:11px; color:#64748B; margin-bottom:4px;">Avg decision latency: 1.2s</div>
+                        <div style="font-size:11px; color:#64748B; margin-bottom:4px;">{metrics['latency_text']}</div>
                         <div style="height:4px; width:100%; background:rgba(255,255,255,0.06); border-radius:9999px; overflow:hidden;">
-                            <div style="height:100%; width:98%; background:linear-gradient(90deg, #4F46E5 0%, #10B981 100%); border-radius:9999px;"></div>
+                            <div style="height:100%; width:{metrics['progress_width']}; background:linear-gradient(90deg, #4F46E5 0%, #10B981 100%); border-radius:9999px;"></div>
                         </div>
                     </div>
 
@@ -174,9 +184,9 @@ def login_page():
                     <!-- Panel 3: Real-Time Decision Stream + Sparkline -->
                     <div class="rf-stat-card">
                         <div class="rf-stat-label">Real-time Stream</div>
-                        <div class="rf-stat-value" style="font-size:32px; margin: 4px 0 8px 0; color:#818CF8;">Active</div>
-                        <div style="font-size:12px; color:#94A3B8; margin-bottom:12px;">Multi-stage safety arbitrations</div>
-                        {render_sparkline([12, 16, 14, 22, 18, 25, 20, 28, 24, 35, 42, 49], width=210, height=44, color="#6366F1")}
+                        <div class="rf-stat-value" style="font-size:32px; margin: 4px 0 8px 0; color:#818CF8;">{metrics['stream_status']}</div>
+                        <div style="font-size:12px; color:#94A3B8; margin-bottom:12px;">{metrics['stream_sub']}</div>
+                        {render_sparkline([12, 16, 14, 22, 18, 25, 20, 28, 24, 35, 42, 49] if metrics['has_data'] else [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], width=210, height=44, color="#6366F1")}
                     </div>
                 </div>
             </div>
