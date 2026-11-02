@@ -5,6 +5,7 @@ from typing import Tuple
 
 SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 SUPPORTED_VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".m4v", ".3gp"}
+SUPPORTED_DOC_EXTS = {".pdf"}
 
 def validate_advertisement_file(file_path: str) -> Tuple[bool, str, str]:
     """
@@ -36,5 +37,20 @@ def validate_advertisement_file(file_path: str) -> Tuple[bool, str, str]:
             return True, "video", "Valid video file."
         except Exception as e:
             return False, "video", f"Corrupted video file: {e}"
+
+    elif ext in SUPPORTED_DOC_EXTS:
+        try:
+            import pymupdf
+            doc = pymupdf.open(file_path)
+            page_count = len(doc)
+            doc.close()
+            return True, "pdf", f"Valid PDF document ({page_count} pages)."
+        except Exception as e:
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(file_path)
+                return True, "pdf", f"Valid PDF document ({len(reader.pages)} pages)."
+            except Exception as e2:
+                return False, "pdf", f"Corrupted PDF document: {e2}"
 
     return False, "unknown", f"Unsupported media extension: {ext}"

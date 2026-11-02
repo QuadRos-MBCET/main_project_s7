@@ -107,9 +107,32 @@ def run_safead_inference(
     frames = []
     sampling_meta = {}
 
+    pdf_extracted_text = ""
     if media_type == "video":
         frames, sampling_meta = extract_adaptive_keyframes(file_path, target_frames=16, return_metadata=True)
         print(f"[SafeAd AI] Adaptive sampling extracted {len(frames)} keyframes. Strategy: {sampling_meta.get('sampling_strategy')}")
+    elif media_type == "pdf":
+        try:
+            import pymupdf
+            doc = pymupdf.open(file_path)
+            frames = []
+            pdf_text_list = []
+            for page in doc:
+                pix = page.get_pixmap(dpi=150)
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                frames.append(img)
+                pdf_text_list.append(page.get_text())
+                if len(frames) >= 6:
+                    break
+            doc.close()
+            pdf_extracted_text = " ".join(pdf_text_list).strip()
+            sampling_meta = {"duration": 0.0, "total_frames": len(frames), "sampling_strategy": "PDF Page Render"}
+            print(f"[SafeAd AI] Rendered {len(frames)} PDF pages into vision frames.")
+        except Exception as e_pdf:
+            print(f"[SafeAd AI] PDF frame extraction error: {e_pdf}")
+            frames = []
+            pdf_extracted_text = ""
+            sampling_meta = {"duration": 0.0, "total_frames": 0, "sampling_strategy": "PDF Error"}
     else:
         try:
             if file_path and os.path.exists(file_path):
@@ -125,14 +148,14 @@ def run_safead_inference(
 
     # STEP 3: Multilingual OCR Analysis
     step3_start = time.time()
-    if media_type == "video" and frames:
+    if (media_type in ["video", "pdf"]) and frames:
         ocr_res = ocr_service.extract_from_video_frames(frames)
     else:
         ocr_res = ocr_service.extract_from_image(file_path if (file_path and os.path.exists(file_path)) else (frames[0] if frames else ""))
     stage_timings["step3_ocr"] = round(time.time() - step3_start, 4)
 
 
-    ocr_text_combined = f"{title or ''} {caption or ''} {ocr_res.get('ocr_text', '')}".strip()
+    ocr_text_combined = f"{title or ''} {caption or ''} {pdf_extracted_text} {ocr_res.get('ocr_text', '')}".strip()
     ocr_text_safety = text_safety_detector.predict_text(ocr_text_combined)
 
     # STEP 4: Visual Safety & Adult/NSFW Analysis (Llama Guard Vision & Falconsai ViT)

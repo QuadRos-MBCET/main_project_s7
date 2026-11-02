@@ -108,26 +108,24 @@ with col_action:
     role = st.session_state["role"]
     if role == "USER":
         uname = st.session_state.get("logged_in_username", "Guest") if st.session_state.get("user_auth_state") == "AUTHENTICATED" else "Visitor"
-        btn_text = f"@{uname}"
-        dot_color = "#10B981"
+        btn_text = f"● @{uname}"
+        help_msg = "Active in User Platform. Click to return to Portal Selection."
     elif role == "ADVERTISEMENT_OWNER":
-        btn_text = "@advertiser"
-        dot_color = "#6C5CE7"
+        btn_text = "● @advertiser"
+        help_msg = "Active in Advertiser Studio. Click to return to Portal Selection."
     elif role == "ADMIN":
-        btn_text = "@compliance"
-        dot_color = "#3B82F6"
+        btn_text = "● @compliance"
+        help_msg = "Active in Compliance Admin. Click to return to Portal Selection."
     else:
-        btn_text = "Select Portal"
-        dot_color = "#6C7A9C"
+        btn_text = "● Select Portal"
+        help_msg = "Click to open Advertiser Decision Studio."
 
-    st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center;">
-        <div style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); padding:7px 18px; border-radius:9999px; box-shadow:0 0 16px rgba(79,70,229,0.5); cursor:pointer;">
-            <span style="width:6px; height:6px; border-radius:50%; background:{dot_color}; box-shadow:0 0 6px {dot_color};"></span>
-            <span style="font-size:12px; font-weight:700; color:#FFFFFF;">{btn_text}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button(btn_text, key="top_portal_pill_btn", help=help_msg, use_container_width=True):
+        if role:
+            st.session_state["role"] = None
+        else:
+            st.session_state["role"] = "ADVERTISEMENT_OWNER"
+        st.rerun()
 
 st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
 

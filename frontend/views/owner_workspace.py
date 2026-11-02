@@ -86,13 +86,18 @@ def owner_dashboard():
         
         ad_title = st.text_input("Creative Title", placeholder="e.g. Organic Apple Juice / Casino Slot Promo / Paisa Double Scheme")
         ad_caption = st.text_area("Ad Copy / Caption", placeholder="e.g. Double your money guaranteed / Fresh organic apples")
-        uploaded_file = st.file_uploader("Select Image or Video Media File", type=["jpg", "jpeg", "png", "webp", "mp4", "avi", "mov"])
+        uploaded_file = st.file_uploader("Select Image, Video, or PDF Creative Asset", type=["jpg", "jpeg", "png", "webp", "mp4", "avi", "mov", "pdf"])
         
         if uploaded_file is not None:
             file_bytes = uploaded_file.getvalue()
             file_size_kb = round(len(file_bytes) / 1024.0, 1)
             file_ext = os.path.splitext(uploaded_file.name)[1].lower()
-            media_type = "video" if file_ext in [".mp4", ".avi", ".mov", ".mkv", ".webm"] else "image"
+            if file_ext in [".mp4", ".avi", ".mov", ".mkv", ".webm"]:
+                media_type = "video"
+            elif file_ext == ".pdf":
+                media_type = "pdf"
+            else:
+                media_type = "image"
             
             render_html(f"""
             <div style="background:rgba(17,23,38,0.7); border:1px solid rgba(108,92,231,0.2); border-radius:10px; padding:12px 14px; margin: 12px 0;">
@@ -212,7 +217,7 @@ def owner_dashboard():
 
                     if check_backend_online():
                         try:
-                            files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type or "video/mp4")}
+                            files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type or ("application/pdf" if file_ext == ".pdf" else "video/mp4"))}
                             data = {"title": ad_title, "caption": ad_caption, "user_id": 1}
                             resp = requests.post(f"{BACKEND_URL}/advertisements/upload", files=files, data=data, timeout=30)
                             if resp.status_code == 200:

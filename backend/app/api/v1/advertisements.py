@@ -50,7 +50,7 @@ async def check_advertisement(
         content = await file.read()
         f.write(content)
         
-    media_type = "video" if file_ext in [".mp4", ".avi", ".mov"] else "image"
+    media_type = "video" if file_ext in [".mp4", ".avi", ".mov"] else ("pdf" if file_ext == ".pdf" else "image")
     
     # Create DB record
     ad = Advertisement(
@@ -140,7 +140,7 @@ async def upload_advertisement(
         content = await file.read()
         f.write(content)
         
-    media_type = "video" if file_ext in [".mp4", ".avi", ".mov"] else "image"
+    media_type = "video" if file_ext in [".mp4", ".avi", ".mov"] else ("pdf" if file_ext == ".pdf" else "image")
     ad = Advertisement(
         title=title,
         caption=caption,
