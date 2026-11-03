@@ -4,22 +4,22 @@ echo =====================================================================
 echo    Starting SafeAd AI Unified Platform Services...
 echo =====================================================================
 cd /d "%~dp0"
-set PYTHONPATH=%CD%;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age
+set PYTHONPATH=%CD%;%CD%\joseph_safead_core\backend2jb;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age
 set HF_HUB_OFFLINE=1
 set TRANSFORMERS_OFFLINE=1
 
 echo [1/3] Starting SafeAd Backend API on Port 8002...
-start "SafeAd Backend (Port 8002)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8002"
+start "SafeAd Backend (Port 8002)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core\backend2jb;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8002"
 
 timeout /t 3 /nobreak >nul
 
 echo [2/3] Starting Face-Age API on Port 8001...
-start "Face-Age API (Port 8001)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && set HF_HUB_OFFLINE=1 && set TRANSFORMERS_OFFLINE=1 && python sooraj_face_age_core\face-age\face_age_api.py"
+start "Face-Age API (Port 8001)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core\backend2jb;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && set HF_HUB_OFFLINE=1 && set TRANSFORMERS_OFFLINE=1 && python sooraj_face_age_core\face-age\face_age_api.py"
 
 timeout /t 3 /nobreak >nul
 
 echo [3/3] Starting Streamlit Web App on Port 8501...
-start "Streamlit Frontend (Port 8501)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && set HF_HUB_OFFLINE=1 && set TRANSFORMERS_OFFLINE=1 && streamlit run frontend/app.py --server.port 8501"
+start "Streamlit Frontend (Port 8501)" cmd /k "set PYTHONPATH=%CD%;%CD%\joseph_safead_core\backend2jb;%CD%\joseph_safead_core;%CD%\sooraj_face_age_core\face-age && set HF_HUB_OFFLINE=1 && set TRANSFORMERS_OFFLINE=1 && streamlit run frontend/app.py --server.port 8501"
 
 echo.
 echo =====================================================================

@@ -77,11 +77,20 @@ def sample_video_frames(video_path: str, max_frames: int = MAX_VIDEO_FRAMES) -> 
     cap.release()
     return sampled_frames
 
-def run_safead_inference(file_path: str, title: str = "", caption: str = "") -> dict:
+def run_safead_inference(file_path: str, title: str = "", caption: str = "", pipeline_mode: Optional[str] = None, **kwargs) -> dict:
     """
     Runs the complete memory-efficient advertisement safety inference pipeline.
     Suitable for Google Colab Free execution.
     """
+    try:
+        import sys
+        jb_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend2jb"))
+        if jb_dir not in sys.path:
+            sys.path.insert(0, jb_dir)
+        from backend2jb.ai.pipeline import run_safead_inference as _backend2jb_inference
+        return _backend2jb_inference(file_path, title=title, caption=caption, pipeline_mode=pipeline_mode, **kwargs)
+    except Exception as _e:
+        pass
     is_valid, media_type = validate_advertisement_input(file_path)
     if not is_valid:
         return {

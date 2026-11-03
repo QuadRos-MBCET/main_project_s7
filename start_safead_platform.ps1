@@ -6,7 +6,7 @@ Write-Host "====================================================================
 $root = $PSScriptRoot
 if (-not $root) { $root = Get-Location }
 
-$env:PYTHONPATH = "$root;$root\joseph_safead_core;$root\sooraj_face_age_core\face-age"
+$env:PYTHONPATH = "$root;$root\joseph_safead_core\backend2jb;$root\joseph_safead_core;$root\sooraj_face_age_core\face-age"
 $env:HF_HUB_OFFLINE = "1"
 $env:TRANSFORMERS_OFFLINE = "1"
 
