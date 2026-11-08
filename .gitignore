@@ -37,3 +37,8 @@ datasets/
 ~$*
 *.pdf
 results/versioned_evaluations/
+
+safead_ai_walkthrough_60fps.mp4
+voiceover.mp3
+walkthrough_voiceover.mp3
+raw_record/
